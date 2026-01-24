@@ -1,36 +1,4 @@
 services:
-  backend:
-    build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
-    container_name: monorepo-backend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./apps/backend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    command: npm run start:dev
-    depends_on:
-      - db
-
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-    container_name: monorepo-frontend
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    command: npm run dev
-    depends_on:
-      - backend
-
   db:
     image: postgres:17-alpine
     container_name: monorepo-db
@@ -42,6 +10,11 @@ services:
       - POSTGRES_DB=mydb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Critical for 8GB RAM: Limit memory so DB doesn't eat everything
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
 volumes:
   postgres_data:
