@@ -1,0 +1,16 @@
+# Use a specific version for consistency
+FROM node:24-alpine
+
+WORKDIR /app
+
+# Copy only package files first to cache "npm install"
+COPY package*.json ./
+
+# Install dependencies inside the container
+RUN npm install
+
+# Copy the rest of the code
+COPY . .
+
+# Start in development mode (enables NestJS hot reload)
+CMD ["npm", "run", "start:dev"]

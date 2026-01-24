@@ -1,0 +1,15 @@
+FROM node:24-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Next.js telemetry disable for speed/privacy
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN npm install
+
+COPY . .
+
+# Start Next.js in dev mode
+CMD ["npm", "run", "dev"]
