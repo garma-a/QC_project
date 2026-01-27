@@ -2,6 +2,18 @@ import { pgEnum, pgTable, serial, text, varchar, timestamp, integer, boolean, do
 
 export const roleEnum = pgEnum('role_enum', ['INTERN', 'ENGINEER', 'ADMIN']);
 
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: varchar('email', { length: 256 }).unique().notNull(),
+  passwordHash: text('password_hash').notNull(),
+  phone: text('phone'), 
+  role: roleEnum('role').default('INTERN'),
+  isActive: boolean('is_active').default(true), 
+});
+
 export const sections = pgTable('sections', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
