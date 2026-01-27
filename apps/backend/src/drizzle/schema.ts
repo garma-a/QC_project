@@ -63,3 +63,18 @@ export const qcResults = pgTable('qc_results', {
   testId: integer('test_id').references(() => qcTests.id).notNull(),
   performedBy: integer('performed_by').references(() => users.id).notNull(),
 });
+
+export const alerts = pgTable('alerts', {
+  id: serial('id').primaryKey(),
+  type: text('type'), // e.g., 'Warning', 'Critical'
+  priority: text('priority'),
+  message: text('message'), 
+  resultId: integer('result_id').references(() => qcResults.id).notNull()
+});
+
+export const usersToAlerts = pgTable('users_to_alerts', {
+  userId: integer('user_id').references(() => users.id).notNull(),
+  alertId: integer('alert_id').references(() => alerts.id).notNull(),
+  isAcknowledged: boolean('is_acknowledged').default(false), // now per user
+  acknowledgedAt: timestamp('acknowledged_at'), // optional timestamp
+});
