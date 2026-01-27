@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, serial, text, varchar, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable, serial, text, varchar, timestamp, integer, boolean, doublePrecision} from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['INTERN', 'ENGINEER', 'ADMIN']);
 
@@ -16,5 +16,27 @@ export const machines = pgTable('machines', {
   sectionId: integer('section_id')
     .references(() => sections.id)
     .notNull(), 
+});
+
+export const qcTests = pgTable('qc_tests', {
+  id: serial('id').primaryKey(),
+  testName: text('test_name').notNull(),
+  testType: text('test_type'),
+  
+  
+  targetValue: doublePrecision('target_value'),
+  mean: doublePrecision('mean'),
+  standardDevi: doublePrecision('standard_devi'),
+  
+  
+  upperControlLimit: doublePrecision('upper_control_limit'),
+  lowerControlLimit: doublePrecision('lower_control_limit'),
+  upperWarningLimit: doublePrecision('upper_warning_limit'),
+  lowerWarningLimit: doublePrecision('lower_warning_limit'),
+
+  
+  machineId: integer('machine_id')
+    .references(() => machines.id)
+    .notNull(),
 });
 
