@@ -66,7 +66,7 @@ export const qcResults = pgTable('qc_results', {
 
 export const alerts = pgTable('alerts', {
   id: serial('id').primaryKey(),
-  type: text('type'), // e.g., 'Warning', 'Critical'
+  type: text('type'),
   priority: text('priority'),
   message: text('message'), 
   resultId: integer('result_id').references(() => qcResults.id).notNull()
@@ -75,6 +75,6 @@ export const alerts = pgTable('alerts', {
 export const usersToAlerts = pgTable('users_to_alerts', {
   userId: integer('user_id').references(() => users.id).notNull(),
   alertId: integer('alert_id').references(() => alerts.id).notNull(),
-  isAcknowledged: boolean('is_acknowledged').default(false), // now per user
-  acknowledgedAt: timestamp('acknowledged_at'), // optional timestamp
+  isAcknowledged: boolean('is_acknowledged').default(false), 
+  acknowledgedAt: timestamp('acknowledged_at'), 
 });
