@@ -52,3 +52,14 @@ export const qcTests = pgTable('qc_tests', {
     .notNull(),
 });
 
+export const qcResults = pgTable('qc_results', {
+  id: serial('id').primaryKey(),
+  measuredValue: doublePrecision('measured_value').notNull(), 
+  testDate: timestamp('test_date').defaultNow(),
+  status: text('status'), 
+  comments: text('comments'),
+
+  
+  testId: integer('test_id').references(() => qcTests.id).notNull(),
+  performedBy: integer('performed_by').references(() => users.id).notNull(),
+});
