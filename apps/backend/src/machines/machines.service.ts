@@ -31,8 +31,7 @@ export class MachinesService {
     const result = await this.databaseService.db
       .select()
       .from(schema.machines)
-      .where(eq(schema.machines.id, id))
-      .limit(1);
+      .where(eq(schema.machines.id, id));
 
     if (result.length === 0) {
       throw new NotFoundException(`Machine with ID #${id} not found`);
