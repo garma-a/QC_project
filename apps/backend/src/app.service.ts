@@ -11,6 +11,7 @@ export class AppService {
     return 'Hello World!';
   }
   async createTestUser() {
+
     const newUser = await this.databaseService.db.insert(schema.users).values({
       firstName: "garma",
       lastName: "test",
@@ -20,8 +21,9 @@ export class AppService {
       role: "INTERN",
     }).returning();
 
-    return newUser;
-  }
+
+  return newUser;
+}
 
   async deleteUserByEmail(email: string) {
     const deletedUser = await this.databaseService.db
