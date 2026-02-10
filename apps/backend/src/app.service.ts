@@ -11,13 +11,15 @@ export class AppService {
     return 'Hello World!';
   }
   async createTestUser() {
-    //   const newUser = await this.databaseService.db.insert(schema.users).values({
-    //     name: 'Garma',
-    //     email: 'test@example.com',
-    //     role: 'ADMIN',
-    //   }).returning();
-    //
-    //   return newUser;
+    const newUser = await this.databaseService.db.insert(schema.users).values({
+      firstName: 'Garma',
+      lastName: 'test',
+      email: 'test@example.com',
+      passwordHash: 'temporary_hashed_password',
+      role: 'ADMIN',
+    }).returning();
+
+    return newUser;
   }
 
   async deleteUserByEmail(email: string) {
