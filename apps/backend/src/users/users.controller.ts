@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -18,4 +18,12 @@ export class UsersController {
                 return await this.userService.createUser(adminCreateUserDto);
 
         }
+
+     @Delete(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('ADMIN')
+    async deleteUser(@Param('id', ParseIntPipe) id: number) {
+            return this.userService.deactivateUser(id);
+        }
+
 }

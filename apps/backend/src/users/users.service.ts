@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { users } from '../drizzle/schema'; 
 import * as argon2 from 'argon2';
@@ -36,4 +36,19 @@ export class UsersService {
     return safeUser;
 
 }
+
+    async deactivateUser(id: number) {
+  const [user] = await this.databaseService.db
+    .update(users)
+    .set({ isActive: false })
+    .where(eq(users.id, id))
+    .returning();
+
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  return { message: 'User deactivated successfully' };
+}
+
 }

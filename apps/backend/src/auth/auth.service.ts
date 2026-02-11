@@ -23,6 +23,9 @@ export class AuthService {
     const passwordMatches = await argon2.verify(user.passwordHash, loginDto.password);
     if (!passwordMatches) throw new UnauthorizedException('Invalid credentials');
 
+    if (!user.isActive) {
+    throw new UnauthorizedException('Account is deactivated');
+    }
     
     const payload = { sub: user.id, role: user.role };
     return { access_token: this.jwtService.sign(payload) };
