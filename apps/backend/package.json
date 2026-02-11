@@ -28,6 +28,8 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.5",
 
@@ -40,6 +42,8 @@
     "class-validator": "^0.14.3",
 
     "drizzle-orm": "^0.45.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "pg": "^8.17.2",
     "postgres": "^3.4.8",
     "reflect-metadata": "^0.2.2",
@@ -56,6 +60,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.19.7",
+    "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.16.0",
     "@types/supertest": "^6.0.3",
     "drizzle-kit": "^0.31.8",
