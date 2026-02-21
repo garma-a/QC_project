@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import * as schema from '../drizzle/schema.js';
+import * as schema from '../drizzle/schema';
 
 @Injectable()
 export class DatabaseService {
