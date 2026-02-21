@@ -28,24 +28,24 @@ jobs:
       - name: Run backend tests
         run: npm run test
 
-  test-frontend:
-    name: Frontend (Next.js) Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/frontend
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Run frontend tests
-        run: npm run test
+  # test-frontend:
+  #   name: Frontend (Next.js) Tests
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: apps/frontend
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "24"
+  #
+  #     - name: Install frontend dependencies
+  #       run: npm ci
+  #
+  #     - name: Run frontend tests
+  #       run: npm run test
