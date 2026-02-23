@@ -11,7 +11,7 @@ import { UpdateMachineDto } from "./dto/update-machine.dto";
 import { MachinesService } from "./machines.service";
 
 describe("MachinesService", () => {
-  let service: MachinesService;
+  let machineService: MachinesService;
   const dbMock = {
     insert: jest.fn().mockReturnThis(),
     values: jest.fn().mockReturnThis(),
@@ -57,19 +57,19 @@ describe("MachinesService", () => {
         { provide: DatabaseService, useValue: databaseServiceMock },
       ],
     }).compile();
-    service = module.get<MachinesService>(MachinesService);
+    machineService = module.get<MachinesService>(MachinesService);
     jest.clearAllMocks();
   });
 
   it("should be defined", () => {
-    expect(service).toBeDefined();
+    expect(machineService).toBeDefined();
   });
 
   describe("create", () => {
     it("returns the created machine on success", async () => {
       dbMock.returning.mockResolvedValue([machine]);
 
-      await expect(service.create(createDto)).resolves.toEqual(machine);
+      await expect(machineService.create(createDto)).resolves.toEqual(machine);
       expect(dbMock.insert).toHaveBeenCalledTimes(1);
       expect(dbMock.values).toHaveBeenCalledTimes(1);
       expect(dbMock.returning).toHaveBeenCalledTimes(1);
@@ -78,7 +78,7 @@ describe("MachinesService", () => {
     it("throws BadRequestException for invalid section id", async () => {
       dbMock.returning.mockRejectedValue({ code: "23503" });
 
-      await expect(service.create(createDto)).rejects.toBeInstanceOf(
+      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -86,7 +86,7 @@ describe("MachinesService", () => {
     it("throws ConflictException for duplicate machine", async () => {
       dbMock.returning.mockRejectedValue({ code: "23505" });
 
-      await expect(service.create(createDto)).rejects.toBeInstanceOf(
+      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
         ConflictException,
       );
     });
@@ -94,7 +94,7 @@ describe("MachinesService", () => {
     it("throws InternalServerErrorException for unknown db error", async () => {
       dbMock.returning.mockRejectedValue({ code: "99999" });
 
-      await expect(service.create(createDto)).rejects.toBeInstanceOf(
+      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
         InternalServerErrorException,
       );
     });
@@ -104,7 +104,7 @@ describe("MachinesService", () => {
     it("returns all machines", async () => {
       dbMock.from.mockResolvedValue(machineList);
 
-      await expect(service.findAll()).resolves.toEqual(machineList);
+      await expect(machineService.findAll()).resolves.toEqual(machineList);
       expect(dbMock.select).toHaveBeenCalledTimes(1);
       expect(dbMock.from).toHaveBeenCalledTimes(1);
     });
@@ -115,7 +115,7 @@ describe("MachinesService", () => {
       dbMock.from.mockReturnThis();
       dbMock.where.mockResolvedValue([machine]);
 
-      await expect(service.findOne(1)).resolves.toEqual(machine);
+      await expect(machineService.findOne(1)).resolves.toEqual(machine);
       expect(dbMock.select).toHaveBeenCalledTimes(1);
       expect(dbMock.from).toHaveBeenCalledTimes(1);
       expect(dbMock.where).toHaveBeenCalledTimes(1);
@@ -125,7 +125,7 @@ describe("MachinesService", () => {
       dbMock.from.mockReturnThis();
       dbMock.where.mockResolvedValue([]);
 
-      await expect(service.findOne(999)).rejects.toBeInstanceOf(
+      await expect(machineService.findOne(999)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -136,7 +136,7 @@ describe("MachinesService", () => {
       dbMock.where.mockReturnThis();
       dbMock.returning.mockResolvedValue([machine]);
 
-      await expect(service.update(1, updateDto)).resolves.toEqual(machine);
+      await expect(machineService.update(1, updateDto)).resolves.toEqual(machine);
       expect(dbMock.update).toHaveBeenCalledTimes(1);
       expect(dbMock.set).toHaveBeenCalledTimes(1);
       expect(dbMock.where).toHaveBeenCalledTimes(1);
@@ -147,7 +147,7 @@ describe("MachinesService", () => {
       dbMock.where.mockReturnThis();
       dbMock.returning.mockResolvedValue([]);
 
-      await expect(service.update(999, updateDto)).rejects.toBeInstanceOf(
+      await expect(machineService.update(999, updateDto)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -156,7 +156,7 @@ describe("MachinesService", () => {
       dbMock.where.mockReturnThis();
       dbMock.returning.mockRejectedValue({ code: "23503" });
 
-      await expect(service.update(1, updateDto)).rejects.toBeInstanceOf(
+      await expect(machineService.update(1, updateDto)).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -167,7 +167,7 @@ describe("MachinesService", () => {
       dbMock.where.mockReturnThis();
       dbMock.returning.mockResolvedValue([machine]);
 
-      await expect(service.remove(1)).resolves.toEqual(machine);
+      await expect(machineService.remove(1)).resolves.toEqual(machine);
       expect(dbMock.delete).toHaveBeenCalledTimes(1);
       expect(dbMock.where).toHaveBeenCalledTimes(1);
       expect(dbMock.returning).toHaveBeenCalledTimes(1);
@@ -177,7 +177,7 @@ describe("MachinesService", () => {
       dbMock.where.mockReturnThis();
       dbMock.returning.mockResolvedValue([]);
 
-      await expect(service.remove(999)).rejects.toBeInstanceOf(
+      await expect(machineService.remove(999)).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
