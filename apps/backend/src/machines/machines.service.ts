@@ -77,7 +77,7 @@ export class MachinesService {
     if (error.code === '23505') {
       throw new ConflictException('A machine with these details already exists.');
     }
-    console.error(error);
+    //console.error(error);
     throw new InternalServerErrorException('An unexpected database error occurred.');
   }
 }

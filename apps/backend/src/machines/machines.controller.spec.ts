@@ -8,7 +8,13 @@ describe('MachinesController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MachinesController],
-      providers: [MachinesService],
+      providers: [
+        MachinesService,
+        {
+          provide: require('./machines.service').DatabaseService || require('src/database/database.service').DatabaseService,
+          useValue: { db: {} },
+        },
+      ],
     }).compile();
 
     controller = module.get<MachinesController>(MachinesController);
