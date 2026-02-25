@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { IsEmail, IsOptional, IsEnum } from 'class-validator';
 import { UserRole } from './admin-create-user.dto';
 
 export class AdminUpdateUserDto {
@@ -11,10 +11,6 @@ export class AdminUpdateUserDto {
   @IsOptional()
   @IsEmail()
   email?: string;
-
-  @IsOptional()
-  @MinLength(8)
-  password?: string;
 
   @IsOptional()
   @IsEnum(UserRole)

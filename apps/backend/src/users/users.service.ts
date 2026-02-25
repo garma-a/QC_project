@@ -4,6 +4,7 @@ import { users } from '../drizzle/schema';
 import * as argon2 from 'argon2';
 import { DatabaseService } from 'src/database/database.service';
 import { eq } from 'drizzle-orm';
+import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
 
 @Injectable()
 export class UsersService {
@@ -49,6 +50,28 @@ export class UsersService {
   }
 
   return { message: 'User deactivated successfully' };
+}
+
+async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
+  // 1. Check if user exists
+  const [existingUser] = await this.databaseService.db
+    .select()
+    .from(users)
+    .where(eq(users.id, id));
+
+  if (!existingUser) {
+    throw new NotFoundException('User not found');
+  }
+
+  // 2. Update the user
+  // Drizzle's .set() automatically ignores 'undefined' values in the DTO
+  const [updatedUser] = await this.databaseService.db
+    .update(users)
+    .set(adminUpdateUserDto) 
+    .where(eq(users.id, id))
+    .returning();
+
+  return updatedUser;
 }
 
 }
