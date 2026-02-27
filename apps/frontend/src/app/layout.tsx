@@ -21,10 +21,10 @@ export default function RootLayout({
           <AuthProvider>
             <div className="flex h-screen bg-gradient-to-br from-[#faf8f5] via-[#fff8f0] to-[#fef3e2] dark:from-[#121212] dark:via-[#1a1a1a] dark:to-[#1e1e1e] transition-colors myc-pattern relative overflow-hidden">
               <PageBackground />
-              
+
               {/* The Sidebar will sit on the left of every page */}
               <Sidebar />
-              
+
               {/* This 'children' variable represents whatever page folder you are currently inside */}
               <main className="flex-1 overflow-auto relative z-10">
                 {children}
