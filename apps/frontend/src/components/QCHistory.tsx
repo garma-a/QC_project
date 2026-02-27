@@ -219,8 +219,13 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
                             >
                               <div className="flex items-center gap-2">
                                 <div 
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: point.fill }}
+                                  className={`w-3 h-3 rounded-full ${
+                                    point.status === 'reject'
+                                      ? 'bg-[#c41e3a] dark:bg-[#e84855]'
+                                      : point.status === 'warning'
+                                      ? 'bg-[#b8860b] dark:bg-[#ffd700]'
+                                      : 'bg-[#22c55e] dark:bg-[#4ade80]'
+                                  }`}
                                 />
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
                                   {point.date.split(' ')[0]}
