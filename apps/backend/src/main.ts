@@ -9,19 +9,21 @@ import { ValidationPipe } from '@nestjs/common';
 
 
 async function bootstrap() {
+
   const app = await NestFactory.create(AppModule);
+  // do not forget to add the origin of the frontend application
   app.enableCors();
   app.setGlobalPrefix('api/v1');
 
   const httpAdapter = app.get(HttpAdapterHost);
 
   app.useGlobalPipes(
-  new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true, 
-  }),
-);
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('QC-Project API')
