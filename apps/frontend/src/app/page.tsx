@@ -1,10 +1,5 @@
-'use client';
-import { Button } from "@/components/ui/button"
-import { finalizeBundlerFromConfig } from "next/dist/lib/bundler";
-export default function Home() {
+import { redirect } from "next/navigation";
 
-  return (<>
-    < Button ></Button >
-  </>
-  );
+export default function Home() {
+  redirect("/dashboard");
 }
