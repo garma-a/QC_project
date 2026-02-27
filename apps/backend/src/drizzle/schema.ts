@@ -19,6 +19,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   role: roleEnum('role').default('INTERN'),
   isActive: boolean('is_active').default(true),
+  sectionId: integer('section_id').references(() => sections.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   specialization: specializationEnum('specialization'),
@@ -156,7 +157,11 @@ export const alertsRelations = relations(alerts, ({ one, many }) => ({
   recipients: many(usersToAlerts),
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
+  section: one(sections, {
+  fields: [users.sectionId],
+  references: [sections.id],
+}),
   performedResults: many(qcResults),
   alertNotifications: many(usersToAlerts),
 }));
