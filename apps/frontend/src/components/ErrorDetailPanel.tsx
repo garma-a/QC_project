@@ -8,6 +8,8 @@ interface ErrorDetailPanelProps {
   onClose: () => void;
 }
 
+type ErrorSeverity = MachineError["severity"];
+
 export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
   if (!error) return null;
 
@@ -15,7 +17,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
   const hasRange =
     error.lowRange !== undefined && error.highRange !== undefined;
 
-  const getSeverityBgColor = (severity: string) => {
+  const getSeverityBgColor = (severity: ErrorSeverity): string => {
     switch (severity) {
       case "critical":
         return "bg-red-50 dark:bg-red-900/20";
@@ -28,7 +30,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
     }
   };
 
-  const getSeverityIcon = (severity: string) => {
+  const getSeverityIcon = (severity: ErrorSeverity): JSX.Element => {
     switch (severity) {
       case "critical":
         return (
@@ -221,7 +223,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
                       Recent Values (Last 6)
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {error.recentValues.map((val, idx) => {
+                      {error.recentValues.map((val: number, idx: number) => {
                         const isOutOfRange =
                           hasRange &&
                           (val < (error.lowRange ?? -Infinity) ||
@@ -279,7 +281,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
                 Affected Tests
               </h4>
               <div className="flex flex-wrap gap-2">
-                {error.affectedTests.map((test) => (
+                {error.affectedTests.map((test: string) => (
                   <span
                     key={test}
                     className="inline-flex items-center rounded-full px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -306,7 +308,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
               ⚠️ Possible Causes
             </h4>
             <ul className="space-y-2">
-              {error.possibleCauses.map((cause, index) => (
+              {error.possibleCauses.map((cause: string, index: number) => (
                 <li key={index} className="flex gap-3">
                   <span className="text-[#c41e3a] dark:text-[#e84855] font-bold flex-shrink-0 text-lg">
                     •
@@ -325,7 +327,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
               ✓ Suggested Solutions
             </h4>
             <ol className="space-y-3">
-              {error.suggestedSolutions.map((solution, index) => (
+              {error.suggestedSolutions.map((solution: string, index: number) => (
                 <li
                   key={index}
                   className="flex gap-3 text-gray-700 dark:text-gray-300"
@@ -354,7 +356,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
           {/* Help & Action */}
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-800 dark:text-blue-300 mb-4">
-              📚 For persistent issues, consult your equipment's technical
+              📚 For persistent issues, consult your equipment&apos;s technical
               documentation or contact your service provider.
             </p>
             <div className="grid grid-cols-2 gap-2">
