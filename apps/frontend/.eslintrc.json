@@ -1,0 +1,26 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    // Elevates unused variables from a silent issue to an error, 
+    // but ignores variables starting with an underscore (e.g., _req)
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    // Warns you if you try to bypass TypeScript by using 'any'
+    "@typescript-eslint/no-explicit-any": "warn",
+    // Enforces the use of 'const' if a variable is never reassigned
+    "prefer-const": "error",
+    // Prevents React from complaining about missing imports in Next.js 
+    "react/react-in-jsx-scope": "off"
+  }
+}
