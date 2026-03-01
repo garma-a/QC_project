@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { User, users as initialUsers } from '../data/users';
 
 interface AuthContextType {
@@ -15,20 +15,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(initialUsers);
-
-  // Check for saved session on mount
-  useEffect(() => {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     if (typeof window === 'undefined') {
-      return;
+      return null;
     }
 
     const savedUser = window.localStorage?.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+    if (!savedUser) {
+      return null;
     }
-  }, []);
+
+    try {
+      return JSON.parse(savedUser) as User;
+    } catch {
+      window.localStorage?.removeItem('currentUser');
+      return null;
+    }
+  });
+  const [users, setUsers] = useState<User[]>(initialUsers);
 
   const login = (username: string, password: string): boolean => {
     const user = users.find(u => u.username === username && u.password === password);

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { AlertCircle, AlertTriangle, CheckCircle, X } from "lucide-react";
 import { MachineError, machines } from "../data/mockData";
 
@@ -30,7 +31,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
     }
   };
 
-  const getSeverityIcon = (severity: ErrorSeverity): JSX.Element => {
+  const getSeverityIcon = (severity: ErrorSeverity): ReactElement => {
     switch (severity) {
       case "critical":
         return (

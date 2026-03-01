@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CheckCircle, AlertCircle, Calendar, User, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, XCircle } from 'lucide-react';
 import { qcHistory, machines, categories } from '../data/mockData';
-import { applyWestgardRules, getPointColor } from '../utils/westgardRules';
+import { applyWestgardRules } from '../utils/westgardRules';
 
 interface QCHistoryProps {
   searchTerm: string;
@@ -94,7 +94,6 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
           <div className="space-y-3">
             {testGroupsWithAnalysis.map(group => {
               const machine = machines.find(m => m.id === group.machineId);
-              const hasViolations = group.analysis.violations.length > 0;
               const hasRejects = group.analysis.violations.some(v => v.severity === 'reject');
               const hasWarnings = group.analysis.violations.some(v => v.severity === 'warning');
               const isExpanded = expandedTest === group.key;
