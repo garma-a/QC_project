@@ -1,9 +1,21 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceLine, Scatter, ScatterChart, ZAxis, ComposedChart } from 'recharts';
+import { useMemo, useState } from 'react';
+import {
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Scatter,
+  Tooltip,
+  type TooltipProps,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { useTheme } from '../contexts/ThemeContext';
-import { Activity, TrendingUp, BarChart3, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
 import { applyWestgardRules, getPointColor, formatWestgardStats } from '../utils/westgardRules';
 import { getAvailableMachines, getAvailableTests, getQCData } from '../utils/dataProcessor';
 
@@ -11,38 +23,116 @@ interface MachineChartsProps {
   machineId?: string; // Optional now as we have internal selection
 }
 
+interface ChartDataPoint {
+  date: string;
+  value: number;
+  mean: number;
+  plus1s: number;
+  plus2s: number;
+  plus3s: number;
+  minus1s: number;
+  minus2s: number;
+  minus3s: number;
+  status: 'normal' | 'warning' | 'reject';
+  zScore: number;
+  violations: string;
+  fill: string;
+}
+
+interface WestgardTooltipProps extends TooltipProps<number, string> {
+  tooltipBorder: string;
+  active?: boolean;
+  payload?: Array<{ payload: ChartDataPoint }>;
+}
+
+function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProps) {
+  const data = payload?.[0]?.payload as ChartDataPoint | undefined;
+
+  if (!active || !data) {
+    return null;
+  }
+
+  return (
+    <div
+      className="bg-white dark:bg-[#1e1e1e] border-2 rounded-xl p-4 shadow-lg z-50"
+      style={{ borderColor: tooltipBorder }}
+    >
+      <p className="font-bold text-gray-900 dark:text-white mb-2">{data.date}</p>
+      <p className="text-gray-700 dark:text-gray-300">
+        <span className="font-semibold">Value:</span> {data.value.toFixed(3)}
+      </p>
+      <p className="text-gray-700 dark:text-gray-300">
+        <span className="font-semibold">Z-Score:</span> {data.zScore.toFixed(2)} SD
+      </p>
+      <p className="flex items-center gap-2 mt-2">
+        {data.status === 'normal' && (
+          <>
+            <CheckCircle2 size={16} className="text-green-500" />
+            <span className="text-green-600 dark:text-green-400 font-semibold">Normal</span>
+          </>
+        )}
+        {data.status === 'warning' && (
+          <>
+            <AlertTriangle size={16} className="text-yellow-500" />
+            <span className="text-yellow-600 dark:text-yellow-400 font-semibold">Warning</span>
+          </>
+        )}
+        {data.status === 'reject' && (
+          <>
+            <XCircle size={16} className="text-red-500" />
+            <span className="text-red-600 dark:text-red-400 font-semibold">Reject</span>
+          </>
+        )}
+      </p>
+      {data.violations && (
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          Rules: {data.violations}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function MachineCharts({ machineId: initialMachineId }: MachineChartsProps) {
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // State for selection
-  const [selectedMachine, setSelectedMachine] = useState<string>(initialMachineId || '');
-  const [selectedTest, setSelectedTest] = useState<string>('');
 
   // Get available options
   const machines = useMemo(() => getAvailableMachines(), []);
-  const tests = useMemo(() => selectedMachine ? getAvailableTests(selectedMachine) : [], [selectedMachine]);
+  const initialMachine =
+    initialMachineId && machines.includes(initialMachineId)
+      ? initialMachineId
+      : (machines[0] ?? '');
 
-  // Set initial defaults
-  useEffect(() => {
-    setMounted(true);
-    if (!selectedMachine && machines.length > 0) {
-      setSelectedMachine(machines[0]);
+  const [selectedMachine, setSelectedMachine] = useState<string>(initialMachine);
+  const [selectedTest, setSelectedTest] = useState<string>(() => {
+    if (!initialMachine) {
+      return '';
     }
-  }, [machines, selectedMachine]);
 
-  useEffect(() => {
-    if (selectedMachine && tests.length > 0 && !tests.includes(selectedTest)) {
-      setSelectedTest(tests[0]);
-    }
-  }, [selectedMachine, tests, selectedTest]);
+    const initialTests = getAvailableTests(initialMachine);
+    return initialTests[0] ?? '';
+  });
+
+  const tests = useMemo(
+    () => (selectedMachine ? getAvailableTests(selectedMachine) : []),
+    [selectedMachine]
+  );
+  const activeTest = tests.includes(selectedTest) ? selectedTest : (tests[0] ?? '');
+
+  const handleMachineChange = (nextMachine: string) => {
+    const nextTests = getAvailableTests(nextMachine);
+    setSelectedMachine(nextMachine);
+    setSelectedTest((prev) =>
+      nextTests.includes(prev) ? prev : (nextTests[0] ?? '')
+    );
+  };
 
 
   // Get QC Data
   const qcData = useMemo(() => {
-    if (!selectedMachine || !selectedTest) return [];
-    return getQCData(selectedMachine, selectedTest);
-  }, [selectedMachine, selectedTest]);
+    if (!selectedMachine || !activeTest) return [];
+    return getQCData(selectedMachine, activeTest);
+  }, [selectedMachine, activeTest]);
 
   // Apply Westgard Rules
   const westgardAnalysis = useMemo(() => {
@@ -53,32 +143,16 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
   const isDark = theme === 'dark';
   const gridColor = isDark ? '#2a2a2a' : '#fef3e2';
   const textColor = isDark ? '#a0a0a0' : '#666666';
-  const tooltipBg = isDark ? '#1e1e1e' : '#ffffff';
   const tooltipBorder = isDark ? '#e84855' : '#c41e3a';
 
   // Magdi Yacoub Brand Colors
-  const primaryRed = isDark ? '#e84855' : '#c41e3a';
   const secondaryGold = isDark ? '#ffd700' : '#b8860b';
-  const accentNavy = isDark ? '#4a90e2' : '#003366';
   const successGreen = isDark ? '#4ade80' : '#22c55e';
   const warningYellow = isDark ? '#ffd700' : '#b8860b';
   const rejectRed = isDark ? '#e84855' : '#c41e3a';
 
-  if (!mounted) {
-    return (
-      <div className="space-y-6">
-        {[1, 2].map(i => (
-          <div key={i} className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 shadow-lg myc-pattern">
-            <div className="h-8 bg-[#c41e3a]/10 dark:bg-[#e84855]/20 rounded w-1/3 mb-4 animate-pulse" />
-            <div className="w-full h-80 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded animate-pulse" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   // Prepare chart data
-  const chartData = westgardAnalysis.pointsWithStatus.map((point) => ({
+  const chartData: ChartDataPoint[] = westgardAnalysis.pointsWithStatus.map((point) => ({
     date: point.date,
     value: point.value,
     mean: westgardAnalysis.stats.mean,
@@ -94,53 +168,6 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
     fill: getPointColor(point.status, isDark),
   }));
 
-  // Custom tooltip for Westgard chart
-  const WestgardTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length > 0) {
-      const data = payload[0].payload;
-      return (
-        <div
-          className="bg-white dark:bg-[#1e1e1e] border-2 rounded-xl p-4 shadow-lg z-50"
-          style={{ borderColor: tooltipBorder }}
-        >
-          <p className="font-bold text-gray-900 dark:text-white mb-2">{data.date}</p>
-          <p className="text-gray-700 dark:text-gray-300">
-            <span className="font-semibold">Value:</span> {data.value?.toFixed(3)}
-          </p>
-          <p className="text-gray-700 dark:text-gray-300">
-            <span className="font-semibold">Z-Score:</span> {data.zScore?.toFixed(2)} SD
-          </p>
-          <p className="flex items-center gap-2 mt-2">
-            {data.status === 'normal' && (
-              <>
-                <CheckCircle2 size={16} className="text-green-500" />
-                <span className="text-green-600 dark:text-green-400 font-semibold">Normal</span>
-              </>
-            )}
-            {data.status === 'warning' && (
-              <>
-                <AlertTriangle size={16} className="text-yellow-500" />
-                <span className="text-yellow-600 dark:text-yellow-400 font-semibold">Warning</span>
-              </>
-            )}
-            {data.status === 'reject' && (
-              <>
-                <XCircle size={16} className="text-red-500" />
-                <span className="text-red-600 dark:text-red-400 font-semibold">Reject</span>
-              </>
-            )}
-          </p>
-          {data.violations && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              Rules: {data.violations}
-            </p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -155,7 +182,7 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
           <select
             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
             value={selectedMachine}
-            onChange={(e) => setSelectedMachine(e.target.value)}
+            onChange={(e) => handleMachineChange(e.target.value)}
           >
             {machines.map(m => (
               <option key={m} value={m}>{m}</option>
@@ -167,7 +194,7 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
           <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Test Code</label>
           <select
             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-            value={selectedTest}
+            value={activeTest}
             onChange={(e) => setSelectedTest(e.target.value)}
             disabled={!selectedMachine}
           >
@@ -189,7 +216,7 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
               </div>
               <div>
                 <h3 className="text-gray-900 dark:text-white font-bold text-lg">Westgard QC Chart</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Machine: {selectedMachine} | Test: {selectedTest}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Machine: {selectedMachine} | Test: {activeTest}</p>
               </div>
             </div>
 
@@ -269,7 +296,10 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
                   }}
                   width={60}
                 />
-                <Tooltip content={<WestgardTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                <Tooltip
+                  content={<WestgardTooltip tooltipBorder={tooltipBorder} />}
+                  cursor={{ strokeDasharray: '3 3' }}
+                />
 
                 {/* Control Limit Lines */}
                 <ReferenceLine y={westgardAnalysis.stats.plus3s} stroke={rejectRed} strokeWidth={2} />
@@ -292,23 +322,20 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
 
                 {/* Data Points */}
                 <Scatter
+                  data={chartData}
                   dataKey="value"
-                  fill={secondaryGold}
-                  shape={(props: any) => {
-                    const { cx, cy, payload } = props;
-                    const color = payload.fill;
-                    return (
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={6}
-                        fill={color}
-                        stroke={isDark ? '#000' : '#fff'}
-                        strokeWidth={1.5}
-                      />
-                    );
-                  }}
-                />
+                  shape="circle"
+                  isAnimationActive={false}
+                >
+                  {chartData.map((point, index) => (
+                    <Cell
+                      key={`${point.date}-${index}`}
+                      fill={point.fill}
+                      stroke={isDark ? '#000' : '#fff'}
+                      strokeWidth={1.5}
+                    />
+                  ))}
+                </Scatter>
               </ComposedChart>
             </ResponsiveContainer>
           </div>

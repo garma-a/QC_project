@@ -13,17 +13,47 @@ import { allErrors, MachineError } from "@/data/mockData";
 import { ErrorDetailPanel } from "@/components/ErrorDetailPanel";
 
 type FilterPeriod = "24h" | "48h" | "1week" | "all";
+type SeverityFilter = "all" | "critical" | "warning" | "info";
+type StatusFilter = "all" | "active" | "resolved";
+
+interface SeverityOption {
+  value: SeverityFilter;
+  label: string;
+}
+
+interface StatusOption {
+  value: StatusFilter;
+  label: string;
+}
+
+const severityOptions: SeverityOption[] = [
+  { value: "all", label: "All Severities" },
+  { value: "critical", label: "critical" },
+  { value: "warning", label: "warning" },
+  { value: "info", label: "info" },
+];
+
+const statusOptions: StatusOption[] = [
+  { value: "all", label: "All Statuses" },
+  { value: "active", label: "active" },
+  { value: "resolved", label: "resolved" },
+];
+
+const isSeverityFilter = (value: string): value is SeverityFilter => {
+  return severityOptions.some((option) => option.value === value);
+};
+
+const isStatusFilter = (value: string): value is StatusFilter => {
+  return statusOptions.some((option) => option.value === value);
+};
 
 export default function ErrorsPage() {
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("24h");
   const [selectedError, setSelectedError] = useState<MachineError | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [severityFilter, setSeverityFilter] = useState<
-    "all" | "critical" | "warning" | "info"
-  >("all");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "resolved"
-  >("active");
+  const [severityFilter, setSeverityFilter] =
+    useState<SeverityFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
 
   // Filter errors based on time period
   const filteredByTime = useMemo(() => {
@@ -175,28 +205,29 @@ export default function ErrorsPage() {
                   Severity
                 </label>
                 <div className="space-y-2">
-                  {(["all", "critical", "warning", "info"] as const).map(
-                    (sev) => (
+                  {severityOptions.map((option) => (
                       <label
-                        key={sev}
+                        key={option.value}
                         className="flex items-center gap-2 cursor-pointer"
                       >
                         <input
                           type="radio"
                           name="severity"
-                          value={sev}
-                          checked={severityFilter === sev}
-                          onChange={(e) =>
-                            setSeverityFilter(e.target.value as any)
-                          }
+                          value={option.value}
+                          checked={severityFilter === option.value}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (isSeverityFilter(value)) {
+                              setSeverityFilter(value);
+                            }
+                          }}
                           className="w-4 h-4"
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                          {sev === "all" ? "All Severities" : sev}
+                          {option.label}
                         </span>
                       </label>
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
 
@@ -205,21 +236,26 @@ export default function ErrorsPage() {
                   Status
                 </label>
                 <div className="space-y-2">
-                  {(["all", "active", "resolved"] as const).map((status) => (
+                  {statusOptions.map((option) => (
                     <label
-                      key={status}
+                      key={option.value}
                       className="flex items-center gap-2 cursor-pointer"
                     >
                       <input
                         type="radio"
                         name="status"
-                        value={status}
-                        checked={statusFilter === status}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        value={option.value}
+                        checked={statusFilter === option.value}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (isStatusFilter(value)) {
+                            setStatusFilter(value);
+                          }
+                        }}
                         className="w-4 h-4"
                       />
                       <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
-                        {status === "all" ? "All Statuses" : status}
+                        {option.label}
                       </span>
                     </label>
                   ))}
