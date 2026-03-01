@@ -1,20 +1,27 @@
 "use client";
 
-import { useState } from 'react';
 import { X, Heart } from 'lucide-react';
 import { machines, categories } from '../data/mockData';
+import { useQCStore } from '../store/useQCStore';
 
 interface CreateQCTestProps {
   onClose: () => void;
 }
 
 export function CreateQCTest({ onClose }: CreateQCTestProps) {
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedMachine, setSelectedMachine] = useState('');
-  const [testName, setTestName] = useState('');
-  const [result, setResult] = useState('');
-  const [expectedRange, setExpectedRange] = useState('');
-  const [notes, setNotes] = useState('');
+  const selectedCategory = useQCStore((state) => state.selectedCategory);
+  const selectedMachine = useQCStore((state) => state.selectedMachine);
+  const testName = useQCStore((state) => state.testName);
+  const result = useQCStore((state) => state.result);
+  const expectedRange = useQCStore((state) => state.expectedRange);
+  const notes = useQCStore((state) => state.notes);
+  const setSelectedCategory = useQCStore((state) => state.setSelectedCategory);
+  const setSelectedMachine = useQCStore((state) => state.setSelectedMachine);
+  const setTestName = useQCStore((state) => state.setTestName);
+  const setResult = useQCStore((state) => state.setResult);
+  const setExpectedRange = useQCStore((state) => state.setExpectedRange);
+  const setNotes = useQCStore((state) => state.setNotes);
+  const resetForm = useQCStore((state) => state.resetForm);
 
   const filteredMachines = selectedCategory
     ? machines.filter(m => m.category === selectedCategory)
@@ -25,6 +32,12 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
     
     // In a real application, this would submit to a backend
     alert(`QC Test Created!\n\nMachine: ${machines.find(m => m.id === selectedMachine)?.name}\nTest: ${testName}\nResult: ${result}`);
+    resetForm();
+    onClose();
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
@@ -37,7 +50,7 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
             <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">Create New QC Test</h2>
           </div>
           <button 
-            onClick={onClose} 
+            onClick={handleClose} 
             className="text-gray-400 dark:text-gray-500 hover:text-[#c41e3a] dark:hover:text-[#e84855] p-2 rounded-lg hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-all"
           >
             <X size={24} />
@@ -140,7 +153,7 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-6 py-3 rounded-xl border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a]/10 dark:hover:bg-[#e84855]/20 transition-all font-semibold"
             >
               Cancel

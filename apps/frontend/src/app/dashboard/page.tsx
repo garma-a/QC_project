@@ -116,7 +116,7 @@ export default function DashboardPage() {
             <div
               key={machine.id}
               className="group relative bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 hover:shadow-2xl hover:shadow-[#c41e3a]/20 dark:hover:shadow-[#e84855]/30 transition-all cursor-pointer hover:border-[#c41e3a] dark:hover:border-[#e84855] hover:-translate-y-1 myc-pattern"
-              onClick={() => router.push('/monitor')}
+              onClick={() => router.push(`/monitor?machineId=${machine.id}`)}
             >
               {/* Decorative corner accent */}
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full opacity-50" />
