@@ -37,10 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (username: string, password: string): boolean => {
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
-      setCurrentUser(user);
       if (typeof window !== 'undefined') {
         window.localStorage?.setItem('currentUser', JSON.stringify(user));
       }
+      setCurrentUser(user);
       return true;
     }
     return false;

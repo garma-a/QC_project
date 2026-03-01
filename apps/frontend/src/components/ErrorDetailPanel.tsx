@@ -344,11 +344,11 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
 
           {/* AI Insight */}
           {error.aiInsight && (
-            <div className="bg-gradient-to-r from-[#2a2a2a] to-[#2a2a2a] dark:from-[#2a2a2a] dark:to-[#3a3a3a] p-4 rounded-lg border border-[#c41e3a]/30 dark:border-[#e84855]/30">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <div className="bg-blue-50 dark:bg-[#1e1e1e] p-4 rounded-lg border border-blue-200 dark:border-[#4a90e2]/30">
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
                 <span className="text-lg">🤖</span> AI-Powered Insight
               </h4>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
                 {error.aiInsight}
               </p>
             </div>

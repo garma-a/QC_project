@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { Logo, LogoCompact } from "./Logo";
@@ -27,6 +27,7 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const { currentUser, logout, isAdmin } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const menuItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -49,6 +50,11 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
       return pathname === "/";
     }
     return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
   };
 
   return (
@@ -165,7 +171,7 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
 
           {/* Logout Button */}
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a]/10 dark:hover:bg-[#e84855]/20 transition-all font-medium"
           >
             <LogOut size={20} />

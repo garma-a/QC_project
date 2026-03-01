@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
 import { machines, qcHistory, categories } from '@/data/mockData';
 import { MachineCharts } from '@/components/MachineCharts';
@@ -11,6 +11,24 @@ export default function MonitorPage() {
 	const [activeTab, setActiveTab] = useState<'overview' | 'charts'>('overview');
 	const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
 	const router = useRouter();
+	const searchParams = useSearchParams();
+
+	useEffect(() => {
+		const machineIdFromUrl = searchParams.get('machineId');
+		if (!machineIdFromUrl) {
+			return;
+		}
+
+		const machineExists = machines.some((machine) => machine.id === machineIdFromUrl);
+		if (machineExists) {
+			const frameId = window.requestAnimationFrame(() => {
+				setSelectedMachineId(machineIdFromUrl);
+			});
+
+			return () => window.cancelAnimationFrame(frameId);
+		}
+	}, [searchParams]);
+
 	const machine = machines.find(m => m.id === selectedMachineId);
 	const history = qcHistory.filter(qc => qc.machineId === selectedMachineId);
 

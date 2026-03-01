@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Lock, AlertCircle, Moon, Sun, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -11,8 +12,15 @@ export default function LoginPage() {
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
 	const [showDemoAccounts, setShowDemoAccounts] = useState(false);
-	const { login } = useAuth();
+	const { login, currentUser } = useAuth();
 	const { theme, toggleTheme } = useTheme();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (currentUser) {
+			router.replace('/dashboard');
+		}
+	}, [currentUser, router]);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -28,6 +36,10 @@ export default function LoginPage() {
 			setError('Invalid credentials. Please try again.');
 		}
 	};
+
+	if (currentUser) {
+		return null;
+	}
 
 	const fillDemo = (user: 'admin' | 'doctor') => {
 		if (user === 'admin') {
