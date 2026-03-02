@@ -100,6 +100,9 @@ async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
   // apps/backend/src/users/users.service.ts
 
 async getUsers(roleFilter?: UserRole) {
+  if (roleFilter && !Object.values(UserRole).includes(roleFilter)) {
+    throw new BadRequestException(`"${roleFilter}" is not a valid user role.`);
+  }
   const query = this.databaseService.db
     .select({
       id: users.id,
