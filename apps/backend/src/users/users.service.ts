@@ -2,7 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
 import { users } from '../drizzle/schema'; 
 import * as argon2 from 'argon2';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { eq } from 'drizzle-orm';
 import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
 

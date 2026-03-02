@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import * as argon2 from 'argon2';
