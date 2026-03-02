@@ -45,9 +45,11 @@ export class UsersController {
     return this.userService.getUsers(role);
   }
 
-  
-       /* @Get(':id')
+
+       @Get(':id')
+        @UseGuards(JwtAuthGuard, RolesGuard)
+        @Roles('ADMIN')
         async getUserById(@Param('id', ParseIntPipe) id: number) {
         return this.userService.getUserById(id);
-  } */
+  } 
 }

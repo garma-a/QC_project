@@ -3,7 +3,7 @@ import { AdminCreateUserDto, UserRole } from './dto/admin-create-user.dto';
 import { users , sections} from '../drizzle/schema'; 
 import * as argon2 from 'argon2';
 import { DatabaseService } from '../database/database.service';
-import { eq } from 'drizzle-orm';
+import { eq ,and ,ne} from 'drizzle-orm';
 import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
 
 @Injectable()
@@ -74,6 +74,21 @@ async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
   if (!existingUser) {
     throw new NotFoundException('User not found');
   }
+    if (adminUpdateUserDto.email) {
+    const [emailCollision] = await this.databaseService.db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.email, adminUpdateUserDto.email),
+          ne(users.id, id) 
+        )
+      );
+
+    if (emailCollision) {
+      throw new ConflictException(`Email ${adminUpdateUserDto.email} is already in use by another staff member.`);
+    }
+  }
     if (adminUpdateUserDto.sectionId) {
     const [sectionExists] = await this.databaseService.db
       .select()
@@ -122,6 +137,25 @@ async getUsers(roleFilter?: UserRole) {
   }
 
   return await query;
+}
+ // apps/backend/src/users/users.service.ts
+
+async getUserById(id: number) {
+  
+  const [user] = await this.databaseService.db
+    .select()
+    .from(users)
+    .where(eq(users.id, id));
+
+  
+  if (!user) {
+    throw new NotFoundException(`User with ID ${id} not found`);
+  }
+
+  
+  const { passwordHash, ...safeUser } = user;
+  
+  return safeUser;
 }
 
 }
