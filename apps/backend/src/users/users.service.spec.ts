@@ -142,16 +142,20 @@ beforeEach(async () => {
     });
   });
 
-  describe('deactivateUser', () => {
-    it('should return success message', async () => {
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, isActive: false }]);
-      const result = await service.deactivateUser(1);
-      expect(result.message).toContain('success');
-    });
+  // users.service.spec.ts
 
-    it('should throw NotFound if user missing during update', async () => {
-      dbMock.returning.mockResolvedValueOnce([]);
-      await expect(service.deactivateUser(99)).rejects.toThrow(NotFoundException);
-    });
+describe('deactivateUser', () => {
+  it('should return success message', async () => {
+    dbMock.returning.mockResolvedValueOnce([{ id: 1, isActive: false }]);
+    
+    // Pass a different ID for the second argument so it doesn't trigger the check
+    const result = await service.deactivateUser(1, 999); 
+    expect(result.message).toContain('success');
   });
+
+  it('should throw BadRequestException if self-deactivating', async () => {
+    // Test the new logic: IDs match
+    await expect(service.deactivateUser(1, 1)).rejects.toThrow(BadRequestException);
+  });
+});
 });

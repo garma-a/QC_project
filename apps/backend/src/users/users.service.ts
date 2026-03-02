@@ -51,7 +51,10 @@ export class UsersService {
 
 }
 
-    async deactivateUser(id: number) {
+    async deactivateUser(id: number, currentAdminId: number) {
+      if (id === currentAdminId) {
+    throw new BadRequestException("You cannot deactivate your own administrator account.");
+  }
   const [user] = await this.databaseService.db
     .update(users)
     .set({ isActive: false })

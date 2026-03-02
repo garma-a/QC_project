@@ -5,6 +5,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
+import { Request } from '@nestjs/common';
 
 
 
@@ -24,8 +25,8 @@ export class UsersController {
      @Delete(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('ADMIN')
-    async deleteUser(@Param('id', ParseIntPipe) id: number) {
-            return this.userService.deactivateUser(id);
+    async deleteUser(@Param('id', ParseIntPipe) id: number, @Request() req) {
+            return this.userService.deactivateUser(id, req.user.id);
         }
 
         @Patch(':id')
@@ -45,10 +46,9 @@ export class UsersController {
     return this.userService.getUsers(role);
   }
 
-
-       @Get(':id')
         @UseGuards(JwtAuthGuard, RolesGuard)
         @Roles('ADMIN')
+       @Get(':id')
         async getUserById(@Param('id', ParseIntPipe) id: number) {
         return this.userService.getUserById(id);
   } 
