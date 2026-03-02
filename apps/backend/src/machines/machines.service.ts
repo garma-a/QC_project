@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateMachineDto } from './dto/create-machine.dto';
 import { UpdateMachineDto } from './dto/update-machine.dto';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from '../database/database.service';
 import * as schema from "../drizzle/schema";
 import { eq } from 'drizzle-orm';
 

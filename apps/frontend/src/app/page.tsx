@@ -1,10 +1,20 @@
-'use client';
-import { Button } from "@/components/ui/button"
-import { finalizeBundlerFromConfig } from "next/dist/lib/bundler";
-export default function Home() {
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
-  return (<>
-    < Button ></Button >
-  </>
-  );
+export default function Home() {
+  const router = useRouter();
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    if (currentUser) {
+      router.replace("/dashboard");
+      return;
+    }
+
+    router.replace("/login");
+  }, [currentUser, router]);
+
+  return null;
 }

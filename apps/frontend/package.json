@@ -1,27 +1,28 @@
 {
-  "engine":{
-    "node":">=24.0.0",
-    "npm": ">=11.0.0"
+"engines": {
+    "bun": ">=1.0.0"
   },
-
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+"scripts": {
+    "dev": "bun --bun next dev",
+    "build": "bun --bun next build",
+    "start": "bun --bun next start",
+    "lint": "bun --bun next lint"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.563.0",
-    "next": "16.1.4",
+    "next": "^16.1.6",
+    "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.0"
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
