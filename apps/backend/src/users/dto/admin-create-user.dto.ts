@@ -1,9 +1,18 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt } from 'class-validator';
 
+// Match these exactly to your schema Enums
 export enum UserRole {
   INTERN = 'INTERN',
   ENGINEER = 'ENGINEER',
   ADMIN = 'ADMIN',
+}
+
+export enum Specialization {
+  HEMATOLOGY = 'HEMATOLOGY',
+  CHEMISTRY = 'CHEMISTRY',
+  MICROBIOLOGY = 'MICROBIOLOGY',
+  IMMUNOLOGY = 'IMMUNOLOGY',
+  OTHER = 'OTHER',
 }
 
 export class AdminCreateUserDto {
@@ -25,4 +34,14 @@ export class AdminCreateUserDto {
 
   @IsOptional()
   isActive?: boolean;
-} 
+
+  // NEW: Link to the laboratory section
+  @IsOptional()
+  @IsInt()
+  sectionId?: number;
+
+  // NEW: Professional focus for targeted alerts
+  @IsOptional()
+  @IsEnum(Specialization)
+  specialization?: Specialization;
+}
