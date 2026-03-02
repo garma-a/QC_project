@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { AdminCreateUserDto } from './dto/admin-create-user.dto';
+import { AdminCreateUserDto, UserRole } from './dto/admin-create-user.dto';
 import { users , sections} from '../drizzle/schema'; 
 import * as argon2 from 'argon2';
 import { DatabaseService } from '../database/database.service';
@@ -96,6 +96,29 @@ async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
   
   const { passwordHash, ...safeUser } = updatedUser;
   return safeUser;
+}
+  // apps/backend/src/users/users.service.ts
+
+async getUsers(roleFilter?: UserRole) {
+  const query = this.databaseService.db
+    .select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+      role: users.role,
+      isActive: users.isActive,
+      sectionName: sections.name, // To display 'Hematology' on the doctor's card
+    })
+    .from(users)
+    .leftJoin(sections, eq(users.sectionId, sections.id));
+
+  // If you only want to show 'ENGINEER' or 'INTERN' on this page
+  if (roleFilter) {
+    return await query.where(eq(users.role, roleFilter));
+  }
+
+  return await query;
 }
 
 }
