@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AdminCreateUserDto } from './dto/admin-create-user.dto';
-import { users } from '../drizzle/schema'; 
+import { users , sections} from '../drizzle/schema'; 
 import * as argon2 from 'argon2';
 import { DatabaseService } from '../database/database.service';
 import { eq } from 'drizzle-orm';
@@ -12,6 +12,17 @@ export class UsersService {
 
    async createUser(adminCreateUserDto: AdminCreateUserDto){
         const hashedPassword = await argon2.hash(adminCreateUserDto.password);
+
+        if (adminCreateUserDto.sectionId) {
+        const [sectionExists] = await this.databaseService.db
+            .select()
+            .from(sections)
+            .where(eq(sections.id, adminCreateUserDto.sectionId));
+
+        if (!sectionExists) {
+            throw new BadRequestException(`Laboratory section with ID ${adminCreateUserDto.sectionId} does not exist.`);
+        }
+    }
             
     const existing = await this.databaseService.db
      .select()
@@ -31,6 +42,8 @@ export class UsersService {
       passwordHash: hashedPassword,
       role: adminCreateUserDto.role ?? 'INTERN',
       isActive: adminCreateUserDto.isActive ?? true,
+      sectionId: adminCreateUserDto.sectionId,
+      specialization: adminCreateUserDto.specialization,
     })
     .returning();
     const { passwordHash, ...safeUser } = createdUser;
@@ -53,7 +66,6 @@ export class UsersService {
 }
 
 async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
-  // 1. Check if user exists
   const [existingUser] = await this.databaseService.db
     .select()
     .from(users)
@@ -62,16 +74,28 @@ async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
   if (!existingUser) {
     throw new NotFoundException('User not found');
   }
+    if (adminUpdateUserDto.sectionId) {
+    const [sectionExists] = await this.databaseService.db
+      .select()
+      .from(sections)
+      .where(eq(sections.id, adminUpdateUserDto.sectionId));
 
-  // 2. Update the user
-  // Drizzle's .set() automatically ignores 'undefined' values in the DTO
+    if (!sectionExists) {
+      throw new BadRequestException(
+        `Cannot move user. Laboratory section with ID ${adminUpdateUserDto.sectionId} does not exist.`
+      );
+    }
+  }
+
   const [updatedUser] = await this.databaseService.db
     .update(users)
     .set(adminUpdateUserDto) 
     .where(eq(users.id, id))
     .returning();
 
-  return updatedUser;
+  
+  const { passwordHash, ...safeUser } = updatedUser;
+  return safeUser;
 }
 
 }
