@@ -20,7 +20,6 @@ export const users = pgTable('users', {
   sectionId: integer('section_id').references(() => sections.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
-  specialization: specializationEnum('specialization'),
 });
 
 export const sections = pgTable('sections', {
@@ -29,6 +28,7 @@ export const sections = pgTable('sections', {
   location: text('location'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
+  specialization: specializationEnum('specialization').default("OTHER"),
 });
 
 export const machines = pgTable('machines', {
@@ -36,7 +36,6 @@ export const machines = pgTable('machines', {
   name: text('name').notNull(),
   hospCode: text('hosp_code'),
   sectionId: integer('section_id').references(() => sections.id).notNull(),
-  // NEW: Live tracking for the dashboard
   currentStatus: machineStatusEnum('current_status').default('IDLE'),
   lastRunAt: timestamp('last_run_at'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -76,7 +75,6 @@ export const qcResults = pgTable('qc_results', {
   testDate: timestamp('test_date').defaultNow(),
   status: statusEnum('status').notNull(),
   comments: text('comments'),
-  // FIXED: Results now point to the Lot, not just the Test
   lotId: integer('lot_id').references(() => controlLots.id).notNull(),
   performedBy: integer('performed_by').references(() => users.id).notNull(),
 });
@@ -97,7 +95,6 @@ export const usersToAlerts = pgTable('users_to_alerts', {
   alertId: integer('alert_id').references(() => alerts.id).notNull(),
   isAcknowledged: boolean('is_acknowledged').default(false),
   acknowledgedAt: timestamp('acknowledged_at'),
-  // NEW: Auditing trail for compliance
   actionTaken: text('action_taken'),
 }, (t) => ({
   pk: primaryKey({ columns: [t.userId, t.alertId] }),
