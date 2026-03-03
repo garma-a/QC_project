@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { UserPlus, Users, Mail, User, Lock, CheckCircle, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogoCompact } from '@/components/Logo';
 import type { User as UserType } from '@/data/users';
@@ -92,9 +93,12 @@ function EditTechnicianModal({ user, onCancel, onSave }: EditTechnicianModalProp
             />
             {profileImage && (
               <div className="mt-3">
-                <img
+                <Image
                   src={profileImage}
                   alt="Technician profile preview"
+                  width={56}
+                  height={56}
+                  unoptimized
                   className="w-14 h-14 rounded-full object-cover border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40"
                 />
               </div>
@@ -349,7 +353,7 @@ export default function UsersPage() {
                   const reader = new FileReader();
                   reader.onload = () => {
                     if (typeof reader.result === 'string') {
-                      setFormData((prev) => ({ ...prev, profileImage: reader.result }));
+                      setFormData((prev) => ({ ...prev, profileImage: reader.result as string }));
                     }
                   };
                   reader.readAsDataURL(file);
@@ -358,9 +362,12 @@ export default function UsersPage() {
               />
               {formData.profileImage && (
                 <div className="mt-3">
-                  <img
+                  <Image
                     src={formData.profileImage}
                     alt="New technician profile preview"
+                    width={56}
+                    height={56}
+                    unoptimized
                     className="w-14 h-14 rounded-full object-cover border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40"
                   />
                 </div>
@@ -398,9 +405,12 @@ export default function UsersPage() {
             >
               <div className="flex items-start gap-4">
                 {technician.profileImage ? (
-                  <img
+                  <Image
                     src={technician.profileImage}
                     alt={`${technician.fullName} profile`}
+                    width={48}
+                    height={48}
+                    unoptimized
                     className="w-12 h-12 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]"
                   />
                 ) : (
@@ -471,9 +481,12 @@ export default function UsersPage() {
       <div className="mt-6 bg-gradient-to-br from-[#b8860b]/5 to-[#fef3e2] dark:from-[#ffd700]/10 dark:to-[#2a2a2a] rounded-2xl border-2 border-[#b8860b]/30 dark:border-[#ffd700]/30 p-6 shadow-lg">
         <div className="flex items-start gap-4">
           {currentUser?.profileImage ? (
-            <img
+            <Image
               src={currentUser.profileImage}
               alt={`${currentUser.fullName} profile`}
+              width={56}
+              height={56}
+              unoptimized
               className="w-14 h-14 rounded-full object-cover flex-shrink-0 shadow-lg ring-4 ring-[#b8860b]/30 dark:ring-[#ffd700]/30"
             />
           ) : (

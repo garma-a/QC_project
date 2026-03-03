@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { User } from '../data/users';
 import { useUserStore } from '@/store/useUserStore';
 
@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const users = useUserStore((state) => state.usersList);
   const addUser = useUserStore((state) => state.addUser);
   const updateUser = useUserStore((state) => state.updateUser);
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     if (typeof window === 'undefined') {
       return null;
     }
@@ -30,27 +30,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      return JSON.parse(savedUser) as User;
+      const parsed = JSON.parse(savedUser) as User;
+      return parsed.id;
     } catch {
       window.localStorage?.removeItem('currentUser');
       return null;
     }
   });
+
+  const currentUser = useMemo(
+    () => users.find((user) => user.id === currentUserId) ?? null,
+    [users, currentUserId],
+  );
+
   useEffect(() => {
-    if (!currentUser) {
-      return;
-    }
-
-    const updatedUser = users.find((user) => user.id === currentUser.id);
-    if (!updatedUser) {
-      return;
-    }
-
-    setCurrentUser(updatedUser);
     if (typeof window !== 'undefined') {
-      window.localStorage?.setItem('currentUser', JSON.stringify(updatedUser));
+      if (currentUser) {
+        window.localStorage?.setItem('currentUser', JSON.stringify(currentUser));
+      } else {
+        window.localStorage?.removeItem('currentUser');
+      }
     }
-  }, [users, currentUser]);
+  }, [currentUser]);
 
   const login = (username: string, password: string): boolean => {
     const user = users.find(u => u.username === username && u.password === password);
@@ -66,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (typeof window !== 'undefined') {
         window.localStorage?.setItem('currentUser', JSON.stringify(activeUser));
       }
-      setCurrentUser(activeUser);
+      setCurrentUserId(activeUser.id);
       return true;
     }
     return false;
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastActiveAt: new Date().toISOString(),
       });
     }
-    setCurrentUser(null);
+    setCurrentUserId(null);
     if (typeof window !== 'undefined') {
       window.localStorage?.removeItem('currentUser');
     }
