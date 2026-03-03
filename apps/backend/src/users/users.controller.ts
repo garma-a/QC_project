@@ -1,11 +1,12 @@
-import { Controller, Post, Body, UseGuards, Delete, Patch, Param, ParseIntPipe, Query, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Delete, Patch, Param, ParseIntPipe, Query, Get, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AdminCreateUserDto, UserRole } from './dto/admin-create-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
-import { Request } from '@nestjs/common';
+import { RequestUser } from 'src/auth/auth.types';
+import { CurrentUser } from './user.decorator';
 
 
 
@@ -25,8 +26,8 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  async deleteUser(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.userService.deactivateUser(id, req.user.userId);
+  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("userId", ParseIntPipe) userId: number) {
+    return this.userService.deactivateUser(id, userId);
   }
 
   @Patch(':id')
