@@ -6,6 +6,7 @@ import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
 import { CurrentUser } from '@/users/user.decorator';
+import { Role } from '@/auth/auth.types';
 
 
 
@@ -41,7 +42,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
 
-  async getUsers(@Query('role') role?: UserRole) {
+  async getUsers(@Query('role') role?: Role) {
 
     return this.userService.getUsers(role);
   }

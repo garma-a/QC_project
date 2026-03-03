@@ -1,5 +1,5 @@
 import { IsEmail, IsOptional, IsEnum, IsInt, IsString, IsBoolean } from 'class-validator';
-import { Role } from '@/auth/auth.types';
+import { Role, Specialization } from '@/auth/auth.types';
 
 export class AdminUpdateUserDto {
   @IsOptional()
