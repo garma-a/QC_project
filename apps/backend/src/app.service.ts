@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from './database/database.service';
-import * as schema from "./drizzle/schema"
+import { DatabaseService } from '@/database/database.service';
+import * as schema from "@/drizzle/schema"
 import { eq } from 'drizzle-orm';
 
 @Injectable()
@@ -11,14 +11,16 @@ export class AppService {
     return 'Hello World!';
   }
   async createTestUser() {
+
     const newUser = await this.databaseService.db.insert(schema.users).values({
       firstName: "garma",
       lastName: "test",
       email: "garma@gmail.com",
       passwordHash: "hashedpassword",
       phone: "1234567890",
-      role: "INTERN",
+      role: "TECHNICIAN",
     }).returning();
+
 
     return newUser;
   }
