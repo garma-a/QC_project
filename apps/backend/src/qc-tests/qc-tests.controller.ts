@@ -1,4 +1,20 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { QcTestsService } from './qc-tests.service';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { CreateQcTestDto } from './dto/create-qc-test.dto';
 
 @Controller('qc-tests')
-export class QcTestsController {}
+@UseGuards(JwtAuthGuard)
+export class QcTestsController {
+    constructor (private readonly qcTestsService:QcTestsService){}
+
+   @Post()
+  async create(@Body() createQcTestDto: CreateQcTestDto) {
+    return this.qcTestsService.create(createQcTestDto);
+  }
+
+  @Get('machine/:machineId')
+  async findByMachine(@Param('machineId', ParseIntPipe) machineId: number) {
+    return this.qcTestsService.getTestsByMachine(machineId);
+  }
+}
