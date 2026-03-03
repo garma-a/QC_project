@@ -133,19 +133,27 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
           {/* User Info */}
           <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
-                {currentUser?.fullName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()}
-              </div>
+              {currentUser?.profileImage ? (
+                <img
+                  src={currentUser.profileImage}
+                  alt={`${currentUser.fullName} profile`}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
+                  {currentUser?.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-gray-900 dark:text-white text-sm font-medium truncate">
                   {currentUser?.fullName}
                 </p>
                 <p className="text-[#b8860b] dark:text-[#ffd700] text-xs truncate font-semibold">
-                  {isAdmin ? "Administrator" : "Doctor"}
+                  {isAdmin ? "Administrator" : "Technician"}
                 </p>
               </div>
             </div>
