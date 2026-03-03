@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MachinesService } from './machines.service';
-import { MachinesController } from './machines.controller';
+import { MachinesService } from '@/machines/machines.service';
+import { MachinesController } from '@/machines/machines.controller';
 
 @Module({
   controllers: [MachinesController],

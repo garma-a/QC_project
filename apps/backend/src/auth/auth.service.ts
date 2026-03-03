@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
-import { users } from '../drizzle/schema';
+import { DatabaseService } from '@/database/database.service';
+import { users } from '@/drizzle/schema';
 import { eq } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto } from '@/auth/dto/login.dto';
 
 @Injectable()
 export class AuthService {

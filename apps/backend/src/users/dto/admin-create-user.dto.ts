@@ -1,17 +1,6 @@
 import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt } from 'class-validator';
+import { Role, Specialization } from '@/auth/auth.types';
 
-export enum UserRole {
-  TECHNICIAN = 'TECHNICIAN',
-  ADMIN = 'ADMIN',
-}
-
-export enum Specialization {
-  HEMATOLOGY = 'HEMATOLOGY',
-  CHEMISTRY = 'CHEMISTRY',
-  MICROBIOLOGY = 'MICROBIOLOGY',
-  IMMUNOLOGY = 'IMMUNOLOGY',
-  OTHER = 'OTHER',
-}
 
 export class AdminCreateUserDto {
   @IsNotEmpty()
@@ -27,8 +16,8 @@ export class AdminCreateUserDto {
   password: string;
 
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsEnum(Role)
+  role?: Role;
 
   @IsOptional()
   isActive?: boolean;

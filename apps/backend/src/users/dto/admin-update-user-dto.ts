@@ -1,11 +1,13 @@
-import { IsEmail, IsOptional, IsEnum, IsInt } from 'class-validator';
-import { UserRole, Specialization } from './admin-create-user.dto';
+import { IsEmail, IsOptional, IsEnum, IsInt, IsString, IsBoolean } from 'class-validator';
+import { Role } from '@/auth/auth.types';
 
 export class AdminUpdateUserDto {
   @IsOptional()
+  @IsString()
   firstName?: string;
 
   @IsOptional()
+  @IsString()
   lastName?: string;
 
   @IsOptional()
@@ -13,18 +15,19 @@ export class AdminUpdateUserDto {
   email?: string;
 
   @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsEnum(Role)
+  role?: Role;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 
-  
+
   @IsOptional()
   @IsInt()
   sectionId?: number;
 
- 
+
   @IsOptional()
   @IsEnum(Specialization)
   specialization?: Specialization;

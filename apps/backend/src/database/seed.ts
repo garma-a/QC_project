@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { sections, users, machines } from '../drizzle/schema';
+import { sections, users, machines } from '@/drizzle/schema';
 //import { eq } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import * as dotenv from 'dotenv';
@@ -14,7 +14,7 @@ const db = drizzle(queryClient);
 // apps/backend/src/database/seed.ts
 
 async function seedWithSection() {
-const [defaultSection] = await db.insert(sections).values({
+  const [defaultSection] = await db.insert(sections).values({
     name: 'General Laboratory',
     location: 'Main Floor - Block A' // Changed from 'description' to 'location'
   }).returning();
@@ -32,13 +32,13 @@ const [defaultSection] = await db.insert(sections).values({
   });
 
   // 3. Now you can safely seed a Machine!
-await db.insert(machines).values({
-  name: 'Sysmex XN-1000',
-  sectionId: defaultSection.id, // Mandatory reference to the section
-  currentStatus: 'IDLE',        // Changed from 'status' to 'currentStatus'
-  hospCode: 'LAB-MAC-001',      // Optional: helps with your hospital tracking
-  specialization: 'HEMATOLOGY'  // Optional: matches your specializationEnum
-});
+  await db.insert(machines).values({
+    name: 'Sysmex XN-1000',
+    sectionId: defaultSection.id, // Mandatory reference to the section
+    currentStatus: 'IDLE',        // Changed from 'status' to 'currentStatus'
+    hospCode: 'LAB-MAC-001',      // Optional: helps with your hospital tracking
+    specialization: 'HEMATOLOGY'  // Optional: matches your specializationEnum
+  });
 
 
 }

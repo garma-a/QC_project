@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
-import { MachinesService } from './machines.service';
-import { CreateMachineDto } from './dto/create-machine.dto';
-import { UpdateMachineDto } from './dto/update-machine.dto';
+import { MachinesService } from '@/machines/machines.service';
+import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
+import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Machines')

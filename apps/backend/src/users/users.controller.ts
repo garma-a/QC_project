@@ -1,12 +1,11 @@
-import { Controller, Post, Body, UseGuards, Delete, Patch, Param, ParseIntPipe, Query, Get, Req } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { AdminCreateUserDto, UserRole } from './dto/admin-create-user.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
-import { RequestUser } from 'src/auth/auth.types';
-import { CurrentUser } from './user.decorator';
+import { Controller, Post, Body, UseGuards, Delete, Patch, Param, ParseIntPipe, Query, Get } from '@nestjs/common';
+import { UsersService } from '@/users/users.service';
+import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/auth/guards/roles.guard';
+import { Roles } from '@/auth/decorators/roles.decorator';
+import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
+import { CurrentUser } from '@/users/user.decorator';
 
 
 

@@ -6,9 +6,9 @@ import {
 } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { DatabaseService } from "src/database/database.service";
-import { CreateMachineDto } from "./dto/create-machine.dto";
-import { UpdateMachineDto } from "./dto/update-machine.dto";
-import { MachinesService } from "./machines.service";
+import { CreateMachineDto } from "@/machines/dto/create-machine.dto";
+import { UpdateMachineDto } from "@/machines/dto/update-machine.dto";
+import { MachinesService } from "@/machines/machines.service";
 
 describe("MachinesService", () => {
   let machineService: MachinesService;

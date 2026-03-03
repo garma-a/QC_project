@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
-import { DatabaseService } from '../database/database.service';
+import { AuthService } from '@/auth/auth.service';
+import { DatabaseService } from '@/database/database.service';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import * as argon2 from 'argon2';

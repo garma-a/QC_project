@@ -1,10 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { AdminCreateUserDto, UserRole } from './dto/admin-create-user.dto';
-import { users, sections } from '../drizzle/schema';
+import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
+import { users, sections } from '@/drizzle/schema';
 import * as argon2 from 'argon2';
-import { DatabaseService } from '../database/database.service';
+import { DatabaseService } from '@/database/database.service';
 import { eq, and, ne } from 'drizzle-orm';
-import { AdminUpdateUserDto } from './dto/admin-update-user-dto';
+import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
+import { Role } from '@/auth/auth.types';
 
 @Injectable()
 export class UsersService {
@@ -43,7 +44,6 @@ export class UsersService {
         role: adminCreateUserDto.role ?? 'TECHNICIAN',
         isActive: adminCreateUserDto.isActive ?? true,
         sectionId: adminCreateUserDto.sectionId,
-        specialization: adminCreateUserDto.specialization,
       })
       .returning();
     const { passwordHash, ...safeUser } = createdUser;
@@ -117,8 +117,8 @@ export class UsersService {
   }
   // apps/backend/src/users/users.service.ts
 
-  async getUsers(roleFilter?: UserRole) {
-    if (roleFilter && !Object.values(UserRole).includes(roleFilter)) {
+  async getUsers(roleFilter?: Role) {
+    if (roleFilter && !Object.values(Role).includes(roleFilter)) {
       throw new BadRequestException(`"${roleFilter}" is not a valid user role.`);
     }
     const query = this.databaseService.db
