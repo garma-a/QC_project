@@ -26,9 +26,9 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("userId", ParseIntPipe) userId: number) {
+  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("sub" as any) userId: number) {
     return this.userService.deactivateUser(id, userId);
-  }
+  } 
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
