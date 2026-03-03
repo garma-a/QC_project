@@ -1,34 +1,41 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt } from 'class-validator';
-import { Role, Specialization } from '@/auth/auth.types';
+  import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt, IsBoolean } from 'class-validator';
+  import { Role } from '@/auth/auth.types';
+  import { ApiProperty } from '@nestjs/swagger';
 
+  export class AdminCreateUserDto {
+    @ApiProperty()
+    @IsNotEmpty()
+    firstName: string;
 
-export class AdminCreateUserDto {
-  @IsNotEmpty()
-  firstName: string;
+    @ApiProperty()
+    @IsNotEmpty()
+    lastName: string;
 
-  @IsNotEmpty()
-  lastName: string;
+    @ApiProperty()
+    @IsEmail()
+    email: string;
 
-  @IsEmail()
-  email: string;
+    @ApiProperty()
+    @MinLength(8)
+    password: string;
 
-  @MinLength(8)
-  password: string;
+    // FIX: Added the 'role' property name below the decorator
+    @ApiProperty({ 
+      enum: Role, 
+      enumName: 'UserRole',
+      type: () => String 
+    })
+    @IsOptional()
+    @IsEnum(Role)
+    role?: Role; // <--- This line was missing in your code!
 
-  @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsBoolean()
+    isActive?: boolean;
 
-  @IsOptional()
-  isActive?: boolean;
-
-  // NEW: Link to the laboratory section
-  @IsOptional()
-  @IsInt()
-  sectionId?: number;
-
-  // NEW: Professional focus for targeted alerts
-  @IsOptional()
-  @IsEnum(Specialization)
-  specialization?: Specialization;
-}
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsInt()
+    sectionId?: number;
+  }
