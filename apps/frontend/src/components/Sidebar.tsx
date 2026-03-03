@@ -12,6 +12,7 @@ import {
   Heart,
   AlertCircle,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "../contexts/ThemeContext";
@@ -134,9 +135,12 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
           <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
             <div className="flex items-center gap-3">
               {currentUser?.profileImage ? (
-                <img
+                <Image
                   src={currentUser.profileImage}
                   alt={`${currentUser.fullName} profile`}
+                  width={40}
+                  height={40}
+                  unoptimized
                   className="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]"
                 />
               ) : (
