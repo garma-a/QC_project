@@ -1,9 +1,7 @@
 import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt } from 'class-validator';
 
-// Match these exactly to your schema Enums
 export enum UserRole {
-  INTERN = 'INTERN',
-  ENGINEER = 'ENGINEER',
+  TECHNICIAN = 'TECHNICIAN',
   ADMIN = 'ADMIN',
 }
 

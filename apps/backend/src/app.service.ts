@@ -18,12 +18,12 @@ export class AppService {
       email: "garma@gmail.com",
       passwordHash: "hashedpassword",
       phone: "1234567890",
-      role: "INTERN",
+      role: "TECHNICIAN",
     }).returning();
 
 
-  return newUser;
-}
+    return newUser;
+  }
 
   async deleteUserByEmail(email: string) {
     const deletedUser = await this.databaseService.db

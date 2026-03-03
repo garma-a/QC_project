@@ -8,10 +8,10 @@ import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
-  constructor( private databaseService: DatabaseService,private jwtService: JwtService) {}
+  constructor(private databaseService: DatabaseService, private jwtService: JwtService) { }
 
   async login(loginDto: LoginDto) {
-   
+
     const [user] = await this.databaseService.db
       .select()
       .from(users)
@@ -19,14 +19,14 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-   
+
     const passwordMatches = await argon2.verify(user.passwordHash, loginDto.password);
     if (!passwordMatches) throw new UnauthorizedException('Invalid credentials');
 
     if (!user.isActive) {
-    throw new UnauthorizedException('Account is deactivated');
+      throw new UnauthorizedException('Account is deactivated');
     }
-    
+
     const payload = { sub: user.id, role: user.role };
     return { access_token: this.jwtService.sign(payload) };
   }
