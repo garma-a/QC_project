@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { sections, users, machines } from '../drizzle/schema'; 
-import { eq } from 'drizzle-orm';
+import { sections, users, machines } from '../drizzle/schema';
+//import { eq } from 'drizzle-orm';
 import * as argon2 from 'argon2';
 import * as dotenv from 'dotenv';
 
@@ -18,7 +18,7 @@ const [defaultSection] = await db.insert(sections).values({
     name: 'General Laboratory',
     location: 'Main Floor - Block A' // Changed from 'description' to 'location'
   }).returning();
-  
+
   console.log('✓ Section created (ID: ' + defaultSection.id + ')');
 
   // 2. Create the Admin (Section is optional here, but good to have)
