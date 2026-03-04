@@ -7,6 +7,7 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
 import { CurrentUser } from '@/users/user.decorator';
 import { Role } from '@/auth/auth.types';
+import { ApiQuery } from '@nestjs/swagger';
 
 
 
@@ -33,7 +34,6 @@ export class UsersController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-
   async updateUser(@Param('id', ParseIntPipe) id: number, @Body() adminUpdateUserDto: AdminUpdateUserDto,) {
     return this.userService.updateUser(id, adminUpdateUserDto);
   }
@@ -41,7 +41,7 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
-
+  @ApiQuery({ name: 'role', enum: Role, enumName: 'Role', required: false })
   async getUsers(@Query('role') role?: Role) {
 
     return this.userService.getUsers(role);
