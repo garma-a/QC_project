@@ -17,7 +17,7 @@ export class UsersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
   async createUser(@Body() adminCreateUserDto: AdminCreateUserDto) {
     return await this.userService.createUser(adminCreateUserDto);
 
@@ -25,14 +25,14 @@ export class UsersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("sub" as any) userId: number) {
+  @Roles(Role.ADMIN)
+  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("userId") userId: number) {
     return this.userService.deactivateUser(id, userId);
-  } 
+  }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
 
   async updateUser(@Param('id', ParseIntPipe) id: number, @Body() adminUpdateUserDto: AdminUpdateUserDto,) {
     return this.userService.updateUser(id, adminUpdateUserDto);
@@ -40,7 +40,7 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
 
   async getUsers(@Query('role') role?: Role) {
 
@@ -48,7 +48,7 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
   @Get(':id')
   async getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.userService.getUserById(id);
