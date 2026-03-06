@@ -1,21 +1,25 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { User, users as initialUsers } from '../data/users';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { User } from '../data/users';
+import { useUserStore } from '@/store/useUserStore';
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
   login: (username: string, password: string) => boolean;
   logout: () => void;
-  addDoctor: (username: string, password: string, fullName: string, email?: string) => boolean;
+  addDoctor: (username: string, password: string, fullName: string, email?: string, profileImage?: string) => boolean;
   isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+  const users = useUserStore((state) => state.usersList);
+  const addUser = useUserStore((state) => state.addUser);
+  const updateUser = useUserStore((state) => state.updateUser);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     if (typeof window === 'undefined') {
       return null;
     }
@@ -26,34 +30,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      return JSON.parse(savedUser) as User;
+      const parsed = JSON.parse(savedUser) as User;
+      return parsed.id;
     } catch {
       window.localStorage?.removeItem('currentUser');
       return null;
     }
   });
-  const [users, setUsers] = useState<User[]>(initialUsers);
+
+  const currentUser = useMemo(
+    () => users.find((user) => user.id === currentUserId) ?? null,
+    [users, currentUserId],
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (currentUser) {
+        window.localStorage?.setItem('currentUser', JSON.stringify(currentUser));
+      } else {
+        window.localStorage?.removeItem('currentUser');
+      }
+    }
+  }, [currentUser]);
 
   const login = (username: string, password: string): boolean => {
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
+      const now = new Date().toISOString();
+      const activeUser: User = {
+        ...user,
+        isActive: true,
+        lastActiveAt: now,
+      };
+
+      updateUser(activeUser);
       if (typeof window !== 'undefined') {
-        window.localStorage?.setItem('currentUser', JSON.stringify(user));
+        window.localStorage?.setItem('currentUser', JSON.stringify(activeUser));
       }
-      setCurrentUser(user);
+      setCurrentUserId(activeUser.id);
       return true;
     }
     return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
+    if (currentUser) {
+      updateUser({
+        ...currentUser,
+        isActive: false,
+        lastActiveAt: new Date().toISOString(),
+      });
+    }
+    setCurrentUserId(null);
     if (typeof window !== 'undefined') {
       window.localStorage?.removeItem('currentUser');
     }
   };
 
-  const addDoctor = (username: string, password: string, fullName: string, email?: string): boolean => {
+  const addDoctor = (username: string, password: string, fullName: string, email?: string, profileImage?: string): boolean => {
     // Check if username already exists
     if (users.find(u => u.username === username)) {
       return false;
@@ -66,10 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: 'doctor',
       fullName,
       email,
-      createdAt: new Date().toISOString().split('T')[0]
+      profileImage,
+      createdAt: new Date().toISOString().split('T')[0],
+      isActive: false,
+      lastActiveAt: new Date().toISOString(),
     };
 
-    setUsers([...users, newDoctor]);
+    addUser(newDoctor);
     return true;
   };
 

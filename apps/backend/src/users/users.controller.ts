@@ -7,6 +7,7 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
 import { CurrentUser } from '@/users/user.decorator';
 import { Role } from '@/auth/auth.types';
+import { ApiQuery } from '@nestjs/swagger';
 
 
 
@@ -17,7 +18,7 @@ export class UsersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
   async createUser(@Body() adminCreateUserDto: AdminCreateUserDto) {
     return await this.userService.createUser(adminCreateUserDto);
 
@@ -25,30 +26,29 @@ export class UsersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("userId", ParseIntPipe) userId: number) {
+  @Roles(Role.ADMIN)
+  async deleteUser(@Param('id', ParseIntPipe) id: number, @CurrentUser("userId") userId: number) {
     return this.userService.deactivateUser(id, userId);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-
+  @Roles(Role.ADMIN)
   async updateUser(@Param('id', ParseIntPipe) id: number, @Body() adminUpdateUserDto: AdminUpdateUserDto,) {
     return this.userService.updateUser(id, adminUpdateUserDto);
   }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-
+  @Roles(Role.ADMIN)
+  @ApiQuery({ name: 'role', enum: Role, enumName: 'Role', required: false })
   async getUsers(@Query('role') role?: Role) {
 
     return this.userService.getUsers(role);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles(Role.ADMIN)
   @Get(':id')
   async getUserById(@Param('id', ParseIntPipe) id: number) {
     return this.userService.getUserById(id);
