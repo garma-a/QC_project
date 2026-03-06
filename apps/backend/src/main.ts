@@ -1,9 +1,7 @@
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
 import { AllExceptionsFilter } from './http-exception.filter.js';
-import { Logger } from '@nestjs/common';
 
 import { ValidationPipe } from '@nestjs/common';
 

@@ -15,7 +15,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 256 }).unique().notNull(),
   passwordHash: text('password_hash').notNull(),
   phone: text('phone'),
-  role: roleEnum('role').default('TECHNICIAN'),
+  role: roleEnum('role').notNull().default('TECHNICIAN'),
   isActive: boolean('is_active').default(true),
   sectionId: integer('section_id').references(() => sections.id),
   createdAt: timestamp('created_at').defaultNow(),

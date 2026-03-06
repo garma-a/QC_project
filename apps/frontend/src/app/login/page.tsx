@@ -41,13 +41,13 @@ export default function LoginPage() {
 		return null;
 	}
 
-	const fillDemo = (user: 'admin' | 'doctor') => {
+	const fillDemo = (user: 'admin' | 'technician') => {
 		if (user === 'admin') {
 			setUsername('admin');
 			setPassword('admin123');
 		} else {
-			setUsername('doctor');
-			setPassword('doctor123');
+			setUsername('Dr. smith');
+			setPassword('password123');
 		}
 		setError('');
 	};
@@ -186,12 +186,12 @@ export default function LoginPage() {
 									</div>
 								</button>
 								<button
-									onClick={() => fillDemo('doctor')}
+									onClick={() => fillDemo('technician')}
 									className="w-full p-3 rounded-lg bg-white dark:bg-[#1e1e1e] border-2 border-[#003366]/20 dark:border-[#4a90e2]/30 hover:border-[#003366] dark:hover:border-[#4a90e2] transition-all text-left"
 								>
-									<div className="font-medium text-gray-900 dark:text-white text-sm">Doctor</div>
+									<div className="font-medium text-gray-900 dark:text-white text-sm">Technician Demo</div>
 									<div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-										Username: <span className="text-[#003366] dark:text-[#4a90e2] font-mono">doctor</span> • Password: <span className="text-[#003366] dark:text-[#4a90e2] font-mono">doctor123</span>
+										Username: <span className="text-[#003366] dark:text-[#4a90e2] font-mono">Dr. smith</span> • Password: <span className="text-[#003366] dark:text-[#4a90e2] font-mono">password123</span>
 									</div>
 								</button>
 							</div>
