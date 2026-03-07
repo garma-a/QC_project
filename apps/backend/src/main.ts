@@ -23,15 +23,14 @@ async function bootstrap() {
     }),
   );
 
-  /*const config = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('QC-Project API')
     .setDescription('The Full documnetation to the QC-Project API')
     .setVersion('1.0')
-    .addTag('users')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/docs', app, document);*/
+  SwaggerModule.setup('api/v1/docs', app, document);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
   await app.listen(process.env.PORT ?? 3000);
 }

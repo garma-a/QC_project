@@ -1,41 +1,63 @@
-  import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt, IsBoolean } from 'class-validator';
-  import { Role } from '@/auth/auth.types';
-  import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt, IsBoolean } from 'class-validator';
+import { Role } from '@/auth/auth.types';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-  export class AdminCreateUserDto {
-    @ApiProperty()
-    @IsNotEmpty()
-    firstName: string;
+export class AdminCreateUserDto {
+  @ApiProperty({
+    description: 'First name of the user',
+    example: 'John',
+  })
+  @IsNotEmpty()
+  firstName: string;
 
-    @ApiProperty()
-    @IsNotEmpty()
-    lastName: string;
+  @ApiProperty({
+    description: 'Last name of the user',
+    example: 'Doe',
+  })
+  @IsNotEmpty()
+  lastName: string;
 
-    @ApiProperty()
-    @IsEmail()
-    email: string;
+  @ApiProperty({
+    description: 'Email address of the user',
+    example: 'john.doe@example.com',
+  })
+  @IsEmail()
+  email: string;
 
-    @ApiProperty()
-    @MinLength(8)
-    password: string;
+  @ApiProperty({
+    description: 'Password for the user account (minimum 8 characters)',
+    example: 'StrongPass123!',
+    minLength: 8,
+  })
+  @MinLength(8)
+  password: string;
 
-    // FIX: Added the 'role' property name below the decorator
-    @ApiProperty({ 
-      enum: Role, 
-      enumName: 'UserRole',
-      type: () => String 
-    })
-    @IsOptional()
-    @IsEnum(Role)
-    role?: Role; // <--- This line was missing in your code!
+  @ApiPropertyOptional({
+    description: 'Role assigned to the user',
+    enum: Role,
+    enumName: 'UserRole',
+    type: () => String,
+    example: Role.ADMIN,
+  })
+  @IsOptional()
+  @IsEnum(Role)
+  role?: Role;
 
-    @ApiProperty({ required: false })
-    @IsOptional()
-    @IsBoolean()
-    isActive?: boolean;
+  @ApiPropertyOptional({
+    description: 'Indicates if the user is active',
+    default: true,
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
-    @ApiProperty({ required: false })
-    @IsOptional()
-    @IsInt()
-    sectionId?: number;
-  }
+  @ApiPropertyOptional({
+    description: 'Section ID associated with the user',
+    example: 42,
+  })
+  @IsOptional()
+  @IsInt()
+  sectionId?: number;
+}
+
