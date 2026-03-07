@@ -7,6 +7,7 @@ import { MachinesModule } from '@/machines/machines.module';
 
 import { UsersModule } from '@/users/users.module';
 import { AuthModule } from '@/auth/auth.module';
+import { ControlLotsModule } from './control-lots/control-lots.module';
 
 
 
@@ -23,6 +24,9 @@ import { AuthModule } from '@/auth/auth.module';
 
 
     UsersModule,
+
+
+    ControlLotsModule,
 
   ],
   controllers: [AppController],
