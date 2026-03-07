@@ -13,7 +13,6 @@ export class ControlLotsController {
     constructor(private readonly controlLotsService: ControlLotsService) { }
 
     @Post()
-
     @Roles(Role.ADMIN)
     create(@Body(new ValidationPipe()) createControlLotDto: CreateControlLotDto) {
         return this.controlLotsService.create(createControlLotDto);
