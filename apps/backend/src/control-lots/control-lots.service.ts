@@ -3,7 +3,7 @@ import { DatabaseService } from '@/database/database.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
 import { eq } from 'drizzle-orm';
-import { controlLots } from '../drizzle/schema.js';
+import { controlLots, qcTests } from '../drizzle/schema.js';
 
 
 @Injectable()
@@ -11,6 +11,17 @@ export class ControlLotsService {
     constructor(private readonly db: DatabaseService) { }
 
     async create(createControlLotDto: CreateControlLotDto) {
+
+        const [test] = await this.db.db
+            .select()
+            .from(qcTests)
+            .where(eq(qcTests.id, createControlLotDto.testId));
+
+        if (!test) {
+            throw new NotFoundException(`QC Test with ID ${createControlLotDto.testId} not found`);
+        }
+
+
         const [newLot] = await this.db.db
             .insert(controlLots)
             .values({
@@ -18,9 +29,9 @@ export class ControlLotsService {
                 expirationDate: new Date(createControlLotDto.expirationDate),
             })
             .returning();
+
         return newLot;
     }
-
     async findAll() {
         return await this.db.db
             .select()
