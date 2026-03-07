@@ -18,17 +18,17 @@ export class ControlLotsController {
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.controlLotsService.findOne(+id);
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.controlLotsService.findOne(id);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body(new ValidationPipe()) updateControlLotDto: UpdateControlLotDto) {
-        return this.controlLotsService.update(+id, updateControlLotDto);
+    update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe()) updateControlLotDto: UpdateControlLotDto) {
+        return this.controlLotsService.update(id, updateControlLotDto);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.controlLotsService.remove(+id);
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.controlLotsService.remove(id);
     }
 }
