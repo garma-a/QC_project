@@ -25,14 +25,14 @@ export class QcTestsService {
       .insert(qcTests)
       .values(createQcTestDto)
       .returning();
-      
+
     return newTest;
   }
 
   async getTestsByMachine(machineId: number) {
     // 1. Check existence using the limit chain
     const machine = await this.databaseService.db
-      .select() 
+      .select()
       .from(machines)
       .where(eq(machines.id, machineId))
       .limit(1);
