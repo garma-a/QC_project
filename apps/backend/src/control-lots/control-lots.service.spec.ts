@@ -52,9 +52,8 @@ describe('ControlLotsService', () => {
     };
 
     it('should create a control lot if QC test exists', async () => {
-      // Mock QC test check (exists)
+      // Arrange
       dbMock.where.mockResolvedValueOnce([{ id: 1, testName: 'Hemoglobin' }]);
-      // Mock insert returning
       dbMock.returning.mockResolvedValueOnce([{
         id: 1,
         ...dto,
@@ -62,60 +61,103 @@ describe('ControlLotsService', () => {
         isActive: true,
       }]);
 
+      // Act
       const result = await service.create(dto);
+
+      // Assert
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock.insert).toHaveBeenCalled();
+      expect(dbMock.returning).toHaveBeenCalled();
       expect(result.id).toBe(1);
       expect(result.lotNumber).toBe('LOT-HGB-2026-A');
+      expect(result.isActive).toBe(true);
     });
 
     it('should throw NotFoundException if QC test does not exist', async () => {
-      // Mock QC test check (not found)
+      // Arrange
       dbMock.where.mockResolvedValueOnce([]);
 
+      // Act & Assert
       await expect(service.create(dto)).rejects.toThrow(NotFoundException);
+      expect(dbMock.insert).not.toHaveBeenCalled();
     });
   });
 
   describe('findAll', () => {
     it('should return all control lots', async () => {
+      // Arrange
       const mockLots = [
         { id: 1, lotNumber: 'LOT-HGB-2026-A' },
         { id: 2, lotNumber: 'LOT-WBC-2026-A' },
       ];
       dbMock.from.mockResolvedValueOnce(mockLots);
 
+      // Act
       const result = await service.findAll();
+
+      // Assert
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock.from).toHaveBeenCalled();
       expect(result).toEqual(mockLots);
+      expect(result).toHaveLength(2);
     });
   });
 
   describe('findOne', () => {
     it('should return a control lot by ID', async () => {
+      // Arrange
       const mockLot = { id: 1, lotNumber: 'LOT-HGB-2026-A', mean: 14.0 };
       dbMock.where.mockResolvedValueOnce([mockLot]);
 
+      // Act
       const result = await service.findOne(1);
+
+      // Assert
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock.where).toHaveBeenCalled();
       expect(result.id).toBe(1);
       expect(result.lotNumber).toBe('LOT-HGB-2026-A');
     });
 
     it('should throw NotFoundException if control lot not found', async () => {
+      // Arrange
       dbMock.where.mockResolvedValueOnce([]);
 
+      // Act & Assert
       await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findByTestId', () => {
     it('should return all lots for a given test ID', async () => {
+      // Arrange
       const mockLots = [
         { id: 1, testId: 1, lotNumber: 'LOT-HGB-2026-A' },
         { id: 3, testId: 1, lotNumber: 'LOT-HGB-2026-B' },
       ];
       dbMock.where.mockResolvedValueOnce(mockLots);
 
+      // Act
       const result = await service.findByTestId(1);
+
+      // Assert
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock.where).toHaveBeenCalled();
       expect(result).toHaveLength(2);
       expect(result[0].testId).toBe(1);
+      expect(result[1].testId).toBe(1);
+    });
+
+    it('should return empty array if no lots exist for the test', async () => {
+      // Arrange
+      dbMock.where.mockResolvedValueOnce([]);
+
+      // Act
+      const result = await service.findByTestId(999);
+
+      // Assert
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 
@@ -123,49 +165,70 @@ describe('ControlLotsService', () => {
     const updateDto: UpdateControlLotDto = { mean: 14.5 };
 
     it('should update a control lot if it exists', async () => {
-      // Mock existence check
+      // Arrange
       dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      // Mock update returning
       dbMock.returning.mockResolvedValueOnce([{ id: 1, mean: 14.5 }]);
 
+      // Act
       const result = await service.update(1, updateDto);
+
+      // Assert
+      expect(dbMock.select).toHaveBeenCalled();
+      expect(dbMock.update).toHaveBeenCalled();
+      expect(dbMock.set).toHaveBeenCalled();
+      expect(dbMock.returning).toHaveBeenCalled();
+      expect(result.id).toBe(1);
       expect(result.mean).toBe(14.5);
     });
 
     it('should handle expirationDate conversion on update', async () => {
+      // Arrange
       const dtoWithDate: UpdateControlLotDto = { expirationDate: '2027-06-30' };
-      // Mock existence check
       dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      // Mock update returning
       dbMock.returning.mockResolvedValueOnce([{ id: 1, expirationDate: new Date('2027-06-30') }]);
 
+      // Act
       const result = await service.update(1, dtoWithDate);
+
+      // Assert
+      expect(dbMock.set).toHaveBeenCalled();
       expect(result.expirationDate).toEqual(new Date('2027-06-30'));
     });
 
     it('should throw NotFoundException if control lot to update does not exist', async () => {
+      // Arrange
       dbMock.where.mockResolvedValueOnce([]);
 
+      // Act & Assert
       await expect(service.update(99, updateDto)).rejects.toThrow(NotFoundException);
+      expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
 
   describe('remove', () => {
     it('should soft-delete a control lot by setting isActive to false', async () => {
-      // Mock existence check
+      // Arrange
       dbMock.where.mockResolvedValueOnce([{ id: 1, isActive: true }]);
-      // Mock update returning
       dbMock.returning.mockResolvedValueOnce([{ id: 1, isActive: false }]);
 
+      // Act
       const result = await service.remove(1);
+
+      // Assert
+      expect(dbMock.update).toHaveBeenCalled();
+      expect(dbMock.set).toHaveBeenCalled();
+      expect(dbMock.returning).toHaveBeenCalled();
       expect(result.message).toContain('deactivated');
       expect(result.lot.isActive).toBe(false);
     });
 
     it('should throw NotFoundException if control lot to remove does not exist', async () => {
+      // Arrange
       dbMock.where.mockResolvedValueOnce([]);
 
+      // Act & Assert
       await expect(service.remove(99)).rejects.toThrow(NotFoundException);
+      expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
 });
