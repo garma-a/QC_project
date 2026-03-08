@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ValidationPipe, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ControlLotsService } from './control-lots.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
@@ -23,7 +23,7 @@ export class ControlLotsController {
     @ApiResponse({ status: 401, description: 'Unauthorized — JWT token missing or invalid.' })
     @ApiResponse({ status: 403, description: 'Forbidden — only admins can create control lots.' })
     @ApiResponse({ status: 404, description: 'QC Test not found — the provided testId does not match any existing test.' })
-    create(@Body(new ValidationPipe()) createControlLotDto: CreateControlLotDto) {
+    create(@Body() createControlLotDto: CreateControlLotDto) {
         return this.controlLotsService.create(createControlLotDto);
     }
 
@@ -53,7 +53,7 @@ export class ControlLotsController {
     @ApiResponse({ status: 401, description: 'Unauthorized — JWT token missing or invalid.' })
     @ApiResponse({ status: 403, description: 'Forbidden — only admins can update control lots.' })
     @ApiResponse({ status: 404, description: 'Control lot not found.' })
-    update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe()) updateControlLotDto: UpdateControlLotDto) {
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateControlLotDto: UpdateControlLotDto) {
         return this.controlLotsService.update(id, updateControlLotDto);
     }
 
