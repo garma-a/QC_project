@@ -7,6 +7,7 @@ import { MachinesModule } from '@/machines/machines.module';
 
 import { UsersModule } from '@/users/users.module';
 import { AuthModule } from '@/auth/auth.module';
+import { QcResultsModule } from './qc-results/qc-results.module';
 
 
 
@@ -23,6 +24,9 @@ import { AuthModule } from '@/auth/auth.module';
 
 
     UsersModule,
+
+
+    QcResultsModule,
 
   ],
   controllers: [AppController],
