@@ -1,58 +1,45 @@
-"use client";
+import { Suspense } from "react";
+import QCClient from "./QCClient";
+import { qcHistory, machines, categories } from "@/data/mockData";
+import type { CategorySchema, MachineSchema, QCTestSchema } from "@/types/schema";
 
-import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { CreateQCTest } from '@/components/CreateQCTest';
-import { QCHistory } from '@/components/QCHistory';
-import { LogoCompact } from '@/components/Logo';
+interface QCDataResponse {
+  qcHistory: QCTestSchema[];
+  machines: MachineSchema[];
+  categories: CategorySchema[];
+}
 
-export default function QCPage() {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
+function QCLoadingSkeleton() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
-        <div className="flex items-center gap-3 flex-1 justify-between">
-          <div />
-          <div className="lg:hidden">
-            <LogoCompact />
-          </div>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
-        >
-          <Plus size={20} />
-          <span className="hidden sm:inline">Create New QC Test</span>
-          <span className="sm:hidden">New Test</span>
-        </button>
-      </div>
-
-      {/* Decorative line */}
-      <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full mb-6" />
-
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60" size={20} />
-          <input
-            type="text"
-            placeholder="Search by machine, test name, or date..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-          />
+      <div className="rounded-2xl border-2 border-[#c41e3a]/20 bg-white p-6 shadow-lg dark:border-[#e84855]/30 dark:bg-[#1e1e1e]">
+        <div className="mb-4 h-6 w-48 animate-pulse rounded-lg bg-[#c41e3a]/10 dark:bg-[#e84855]/20" />
+        <div className="space-y-3">
+          <div className="h-20 animate-pulse rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20" />
+          <div className="h-20 animate-pulse rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20" />
+          <div className="h-20 animate-pulse rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20" />
         </div>
       </div>
-
-      {/* QC History */}
-      <QCHistory searchTerm={searchTerm} />
-
-      {/* Create QC Test Modal */}
-      {showCreateForm && (
-        <CreateQCTest onClose={() => setShowCreateForm(false)} />
-      )}
     </div>
+  );
+}
+
+async function fetchQCData(): Promise<QCDataResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  return {
+    qcHistory,
+    machines,
+    categories,
+  };
+}
+
+export default async function QCPage() {
+  const { qcHistory, machines, categories } = await fetchQCData();
+
+  return (
+    <Suspense fallback={<QCLoadingSkeleton />}>
+      <QCClient qcHistory={qcHistory} machines={machines} categories={categories} />
+    </Suspense>
   );
 }

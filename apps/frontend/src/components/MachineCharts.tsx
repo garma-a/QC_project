@@ -171,7 +171,7 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-4 shadow-lg flex flex-wrap gap-4 items-center">
+      <div className="group qc-main-card p-4 sm:p-4 flex flex-wrap gap-4 items-center">
         <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
           <Filter size={20} />
           <span>Filters:</span>
@@ -207,7 +207,7 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
 
       {/* Westgard QC Chart */}
       {chartData.length > 0 ? (
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg myc-pattern relative">
+        <div className="group qc-main-card myc-pattern relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 relative z-10">
             <div className="flex items-center gap-3">

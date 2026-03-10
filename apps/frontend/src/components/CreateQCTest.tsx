@@ -43,7 +43,7 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40">
+      <div className="group qc-main-card w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-[#c41e3a]/30 dark:border-[#e84855]/40">
         <div className="flex items-center justify-between p-5 sm:p-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 sticky top-0 bg-white dark:bg-[#1e1e1e] z-10">
           <div className="flex items-center gap-3">
             <Heart size={24} className="text-[#c41e3a] dark:text-[#e84855]" fill="currentColor" />
