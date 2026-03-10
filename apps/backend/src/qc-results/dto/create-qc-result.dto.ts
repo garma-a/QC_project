@@ -1,4 +1,3 @@
-import { Optional } from "@nestjs/common";
 import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateQcResultDto {
