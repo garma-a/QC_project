@@ -1,15 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { QcResultsService } from './qc-results.service';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/users/user.decorator';
 
 @Controller('qc-results')
 export class QcResultsController {
-  constructor(private readonly qcResultsService: QcResultsService) {}
+  constructor(private readonly qcResultsService: QcResultsService) { }
 
   @Post()
-  create(@Body() createQcResultDto: CreateQcResultDto) {
-    return this.qcResultsService.create(createQcResultDto);
+  @UseGuards(JwtAuthGuard)
+  create(@Body() createQcResultDto: CreateQcResultDto, @CurrentUser('userId') userId: number) {
+    return this.qcResultsService.create(createQcResultDto, userId);
   }
 
   @Get()
