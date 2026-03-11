@@ -1,9 +1,7 @@
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
 import { AllExceptionsFilter } from './http-exception.filter.js';
-import { Logger } from '@nestjs/common';
 
 import { ValidationPipe } from '@nestjs/common';
 
@@ -29,7 +27,6 @@ async function bootstrap() {
     .setTitle('QC-Project API')
     .setDescription('The Full documnetation to the QC-Project API')
     .setVersion('1.0')
-    .addTag('users')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
