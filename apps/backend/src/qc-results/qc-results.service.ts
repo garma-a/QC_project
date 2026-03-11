@@ -15,7 +15,8 @@ export class QcResultsService {
       .from(controlLots)
       .where(eq(controlLots.id, createQcResultDto.lotId));
 
-    if (!lot) throw new NotFoundException
+    if (!lot) throw new NotFoundException('Control lot not found');
+
 
     if (lot.standardDevi === null || lot.mean === null) {
       throw new BadRequestException('Control lot is missing required statistical values (mean / standard deviation)');
