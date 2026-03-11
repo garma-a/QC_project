@@ -113,7 +113,5 @@ export class QcResultsService {
     return result;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} qcResult`;
-  }
+
 }

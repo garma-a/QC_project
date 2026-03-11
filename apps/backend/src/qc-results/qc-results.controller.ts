@@ -29,9 +29,4 @@ export class QcResultsController {
   update(@Param('id', ParseIntPipe) id: number, @Body() updateQcResultDto: UpdateQcResultDto) {
     return this.qcResultsService.update(id, updateQcResultDto);
   }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.qcResultsService.remove(+id);
-  }
 }
