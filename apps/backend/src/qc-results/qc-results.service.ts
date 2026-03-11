@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
-import { controlLots, qcResults } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { controlLots, qcResults, qcTests, machines } from '@/drizzle/schema';
+import { eq, desc } from 'drizzle-orm';
 import { DatabaseService } from '@/database/database.service';
 
 @Injectable()
@@ -40,8 +40,42 @@ export class QcResultsService {
     return result;
   }
 
-  findAll() {
-    return `This action returns all qcResults`;
+  async findAll(lotId: number) {
+
+    const lot = await this.database.db.query.controlLots.findFirst({
+      where: eq(controlLots.id, lotId),
+      with: {
+        qcTest: {
+          with: {
+            machine: true,
+          },
+        },
+      },
+    });
+
+    if (!lot) throw new NotFoundException('Control lot not found');
+
+    const results = await this.database.db
+      .select()
+      .from(qcResults)
+      .where(eq(qcResults.lotId, lotId))
+      .orderBy(desc(qcResults.testDate));
+
+    return {
+      lot: {
+        id: lot.id,
+        lotNumber: lot.lotNumber,
+        mean: lot.mean,
+        standardDevi: lot.standardDevi,
+        upperControlLimit: lot.upperControlLimit,
+        lowerControlLimit: lot.lowerControlLimit,
+        upperWarningLimit: lot.upperWarningLimit,
+        lowerWarningLimit: lot.lowerWarningLimit,
+        testName: lot.qcTest.testName,
+        machineName: lot.qcTest.machine.name,
+      },
+      results,
+    };
   }
 
   findOne(id: number) {

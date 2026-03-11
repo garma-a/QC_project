@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
 import { QcResultsService } from './qc-results.service';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
@@ -16,8 +16,8 @@ export class QcResultsController {
   }
 
   @Get()
-  findAll() {
-    return this.qcResultsService.findAll();
+  findAll(@Query('lotId', ParseIntPipe) lotId: number) {
+    return this.qcResultsService.findAll(lotId);
   }
 
   @Get(':id')
