@@ -78,8 +78,27 @@ export class QcResultsService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} qcResult`;
+  async findOne(id: number) {
+    const result = await this.database.db.query.qcResults.findFirst({
+      where: eq(qcResults.id, id),
+      with: {
+        controlLot: true,
+      },
+    });
+
+    if (!result) throw new NotFoundException('QC Result not found');
+
+    if (result.controlLot.mean === null || result.controlLot.standardDevi === null) {
+      throw new BadRequestException('Associated control lot is missing statistical data');
+    }
+
+    return {
+      ...result,
+
+      zScore: Number(
+        ((result.measuredValue - result.controlLot.mean) / result.controlLot.standardDevi).toFixed(2),
+      ),
+    };
   }
 
   update(id: number, updateQcResultDto: UpdateQcResultDto) {

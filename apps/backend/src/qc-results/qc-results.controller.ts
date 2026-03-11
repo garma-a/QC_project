@@ -5,12 +5,13 @@ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/users/user.decorator';
 
+@UseGuards(JwtAuthGuard)
 @Controller('qc-results')
 export class QcResultsController {
   constructor(private readonly qcResultsService: QcResultsService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+
   create(@Body() createQcResultDto: CreateQcResultDto, @CurrentUser('userId') userId: number) {
     return this.qcResultsService.create(createQcResultDto, userId);
   }
@@ -21,8 +22,8 @@ export class QcResultsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.qcResultsService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.qcResultsService.findOne(id);
   }
 
   @Patch(':id')
