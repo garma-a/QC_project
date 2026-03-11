@@ -11,7 +11,6 @@ export class QcResultsController {
   constructor(private readonly qcResultsService: QcResultsService) { }
 
   @Post()
-
   create(@Body() createQcResultDto: CreateQcResultDto, @CurrentUser('userId') userId: number) {
     return this.qcResultsService.create(createQcResultDto, userId);
   }
@@ -27,8 +26,8 @@ export class QcResultsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateQcResultDto: UpdateQcResultDto) {
-    return this.qcResultsService.update(+id, updateQcResultDto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateQcResultDto: UpdateQcResultDto) {
+    return this.qcResultsService.update(id, updateQcResultDto);
   }
 
   @Delete(':id')

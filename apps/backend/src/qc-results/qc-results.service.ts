@@ -101,8 +101,16 @@ export class QcResultsService {
     };
   }
 
-  update(id: number, updateQcResultDto: UpdateQcResultDto) {
-    return `This action updates a #${id} qcResult`;
+  async update(id: number, updateQcResultDto: UpdateQcResultDto) {
+    const [result] = await this.database.db
+      .update(qcResults)
+      .set({ comments: updateQcResultDto.comments })
+      .where(eq(qcResults.id, id))
+      .returning();
+
+    if (!result) throw new NotFoundException(`QC Result with ID ${id} not found`);
+
+    return result;
   }
 
   remove(id: number) {
