@@ -1,4 +1,3 @@
-// apps/backend/src/database/seed.ts
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { sections, users, machines, qcTests, controlLots } from '@/drizzle/schema';
@@ -14,11 +13,11 @@ const db = drizzle(queryClient);
 async function seedWithSection() {
   console.log('⏳ Starting professional laboratory seed...');
 
-  // 1. Create the Section with specialization (REQUIRED for new schema)
+  // 1. Create the Section with specialization
   const [hematologySection] = await db.insert(sections).values({
     name: 'Hematology Department',
     location: 'Main Floor - Block B',
-    specialization: 'HEMATOLOGY' // Moved from User to Section
+    specialization: 'HEMATOLOGY'
   }).returning();
 
   console.log('✓ Section created: Hematology (ID: ' + hematologySection.id + ')');
@@ -29,19 +28,19 @@ async function seedWithSection() {
     lastName: 'Admin',
     email: process.env.ADMIN_EMAIL || 'admin@hospital.com',
     passwordHash: await argon2.hash(process.env.ADMIN_PASSWORD || 'Admin123!'),
-    role: 'ADMIN', // Standardized role
+    role: 'ADMIN',
     sectionId: hematologySection.id 
   });
 
   console.log('✓ Admin user created');
 
-  // 3. Create a Technician User (Replacing the old ENGINEER role)
+  // 3. Create a Technician User
   await db.insert(users).values({
     firstName: 'John',
     lastName: 'Doe',
     email: 'tech@hospital.com',
     passwordHash: await argon2.hash('Tech123!'),
-    role: 'TECHNICIAN', // New professional role
+    role: 'TECHNICIAN',
     sectionId: hematologySection.id
   });
 
@@ -51,7 +50,7 @@ async function seedWithSection() {
   const [machine] = await db.insert(machines).values({
     name: 'Sysmex XN-1000',
     hospCode: 'HEM-MAC-001',
-    sectionId: hematologySection.id, // Mandatory reference
+    sectionId: hematologySection.id,
     currentStatus: 'IDLE',
     specialization: 'HEMATOLOGY'
   }).returning();

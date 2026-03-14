@@ -27,7 +27,6 @@ async function bootstrap() {
     .setTitle('QC-Project API')
     .setDescription('The Full documnetation to the QC-Project API')
     .setVersion('1.0')
-    .addTag('users')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);

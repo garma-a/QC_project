@@ -8,6 +8,8 @@ import { MachinesModule } from '@/machines/machines.module';
 import { UsersModule } from '@/users/users.module';
 import { AuthModule } from '@/auth/auth.module';
 import { ControlLotsModule } from './control-lots/control-lots.module';
+import { QcTestsModule } from './qc-tests/qc-tests.module';
+
 
 
 
@@ -27,6 +29,10 @@ import { ControlLotsModule } from './control-lots/control-lots.module';
 
 
     ControlLotsModule,
+    QcTestsModule,
+
+
+   
 
   ],
   controllers: [AppController],
