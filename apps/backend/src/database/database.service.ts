@@ -6,7 +6,7 @@ import * as schema from '../drizzle/schema';
 
 @Injectable()
 export class DatabaseService {
-  public readonly db: PostgresJsDatabase<typeof schema>;
+  public readonly db: NeonHttpDatabase<typeof schema>;
 
   constructor(private configService: ConfigService) {
     const databaseUrl = this.configService.get<string>('DATABASE_URL');
