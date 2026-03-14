@@ -3,7 +3,7 @@ import { DatabaseService } from '@/database/database.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
 import { eq } from 'drizzle-orm';
-import { controlLots, qcTests } from '../drizzle/schema.js';
+import { controlLots, qcTests } from '@/drizzle/schema';
 
 
 @Injectable()
