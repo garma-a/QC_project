@@ -3,8 +3,11 @@ import { IsInt, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-valida
 
 export class CreateMachineDto {
   @ApiProperty({
-    description: 'The operational name of the machine',
+    description: 'The operational name of the machine. Must be at least 2 characters.',
     example: 'Cobas 6000',
+    minLength: 2,
+    type: String,
+    required: true,
   })
   @IsString()
   @IsNotEmpty({ message: 'Machine name is required' })
@@ -12,18 +15,23 @@ export class CreateMachineDto {
   name: string;
 
   @ApiPropertyOptional({
-    description: 'Internal hospital code or asset tag',
+    description: 'Internal hospital code or asset tag. Optional field for tracking equipment.',
     example: 'LAB-EQ-001',
+    type: String,
+    required: false,
   })
   @IsOptional()
   @IsString()
   hospCode?: string;
 
   @ApiProperty({
-    description: 'The ID of the section this machine belongs to',
+    description: 'The numeric ID of the section this machine belongs to. Must be an integer.',
     example: 1,
+    type: Number,
+    required: true,
   })
   @IsInt({ message: 'Section ID must be an integer' })
   @IsNotEmpty()
   sectionId: number;
 }
+
