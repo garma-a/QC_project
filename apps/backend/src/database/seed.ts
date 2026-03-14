@@ -1,4 +1,3 @@
-// apps/backend/src/database/seed.ts
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { sections, users, machines, qcTests, controlLots } from '@/drizzle/schema';
@@ -14,11 +13,11 @@ const db = drizzle(queryClient);
 async function seedWithSection() {
   console.log('⏳ Starting professional laboratory seed...');
 
-  // 1. Create the Section with specialization (REQUIRED for new schema)
+  // 1. Create the Section with specialization
   const [hematologySection] = await db.insert(sections).values({
     name: 'Hematology Department',
     location: 'Main Floor - Block B',
-    specialization: 'HEMATOLOGY' // Moved from User to Section
+    specialization: 'HEMATOLOGY'
   }).returning();
 
   console.log('✓ Section created: Hematology (ID: ' + hematologySection.id + ')');
@@ -29,26 +28,26 @@ async function seedWithSection() {
     lastName: 'Admin',
     email: process.env.ADMIN_EMAIL || 'admin@hospital.com',
     passwordHash: await argon2.hash(process.env.ADMIN_PASSWORD || 'Admin123!'),
-    role: 'ADMIN', // Standardized role
+    role: 'ADMIN',
     sectionId: hematologySection.id 
   });
 
   console.log('✓ Admin user created');
 
-  // 3. Create a Technician User (Replacing the old ENGINEER role)
+  // 3. Create a Technician User
   await db.insert(users).values({
     firstName: 'John',
     lastName: 'Doe',
     email: 'tech@hospital.com',
     passwordHash: await argon2.hash('Tech123!'),
-    role: 'TECHNICIAN', // New professional role
+    role: 'TECHNICIAN',
     sectionId: hematologySection.id
   });
 
   console.log('✓ Technician user created');
 
   // 4. Create a Machine linked to the specialized section
-  const [machine] = await db.insert(machines).values({
+  const [sysmex] = await db.insert(machines).values({
     name: 'Sysmex XN-1000',
     hospCode: 'HEM-MAC-001',
     sectionId: hematologySection.id,
@@ -56,22 +55,22 @@ async function seedWithSection() {
     specialization: 'HEMATOLOGY'
   }).returning();
 
-  console.log('✓ Machine created (ID: ' + machine.id + ')');
+  console.log('✓ Machine created: ' + sysmex.name + ' (ID: ' + sysmex.id + ')');
 
   // 5. Create QC Tests linked to the machine
   const [hgbTest] = await db.insert(qcTests).values({
     testName: 'Hemoglobin (HGB)',
     testType: 'HEMATOLOGY',
-    machineId: machine.id,
+    machineId: sysmex.id,
   }).returning();
 
   const [wbcTest] = await db.insert(qcTests).values({
     testName: 'White Blood Cell (WBC)',
     testType: 'HEMATOLOGY',
-    machineId: machine.id,
+    machineId: sysmex.id,
   }).returning();
 
-  console.log('✓ QC Tests created: HGB (ID: ' + hgbTest.id + '), WBC (ID: ' + wbcTest.id + ')');
+  console.log('✓ QC Tests created for Sysmex: HGB (ID: ' + hgbTest.id + '), WBC (ID: ' + wbcTest.id + ')');
 
   // 6. Create Control Lots with realistic manufacturer values
   await db.insert(controlLots).values({
@@ -85,6 +84,7 @@ async function seedWithSection() {
     lowerControlLimit: 12.5,  // mean - 3SD
     upperWarningLimit: 15.0,  // mean + 2SD
     lowerWarningLimit: 13.0,  // mean - 2SD
+    isActive: true,
   });
 
   await db.insert(controlLots).values({
@@ -98,9 +98,10 @@ async function seedWithSection() {
     lowerControlLimit: 5.1,   // mean - 3SD
     upperWarningLimit: 9.1,   // mean + 2SD
     lowerWarningLimit: 5.9,   // mean - 2SD
+    isActive: true,
   });
 
-  console.log('✓ Control Lots created for HGB and WBC tests');
+  console.log('✓ Control Lots created with target ranges');
 }
 
 seedWithSection()

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+
+
 import * as schema from '../drizzle/schema';
 
 @Injectable()
@@ -18,5 +20,8 @@ export class DatabaseService {
     // Use the standard postgres driver for local development
     const queryClient = postgres(databaseUrl);
     this.db = drizzle(queryClient, { schema });
+
+
+
   }
 }
