@@ -46,55 +46,60 @@ async function seedWithSection() {
 
   console.log('✓ Technician user created');
 
-  // 4. Create the Machine and capture the result in 'sysmex'
-  const [sysmex] = await db.insert(machines).values({
+  // 4. Create a Machine linked to the specialized section
+  const [machine] = await db.insert(machines).values({
     name: 'Sysmex XN-1000',
     hospCode: 'HEM-MAC-001',
     sectionId: hematologySection.id,
     currentStatus: 'IDLE',
     specialization: 'HEMATOLOGY'
-  }).returning(); // .returning() is required to get the ID back
-
-  console.log('✓ Machine created: ' + sysmex.name + ' (ID: ' + sysmex.id + ')');
-
-  // 5. Create QC Tests linked to sysmex.id
-  const [wbcTest] = await db.insert(qcTests).values({
-    testName: 'White Blood Cell Count',
-    testType: 'Complete Blood Count',
-    machineId: sysmex.id,
   }).returning();
 
+  console.log('✓ Machine created and linked to Hematology (ID: ' + machine.id + ')');
+
+  // 5. Create QC Tests linked to the machine
   const [hgbTest] = await db.insert(qcTests).values({
-    testName: 'Hemoglobin',
-    testType: 'Complete Blood Count',
-    machineId: sysmex.id,
+    testName: 'Hemoglobin (HGB)',
+    testType: 'HEMATOLOGY',
+    machineId: machine.id,
   }).returning();
 
-  console.log('✓ QC Tests created for Sysmex');
+  const [wbcTest] = await db.insert(qcTests).values({
+    testName: 'White Blood Cell (WBC)',
+    testType: 'HEMATOLOGY',
+    machineId: machine.id,
+  }).returning();
 
-  // 6. Create Control Lots for target values and ranges
-  await db.insert(controlLots).values([
-    {
-      testId: wbcTest.id,
-      lotNumber: 'WBC-2026-A',
-      expirationDate: new Date('2027-01-01'),
-      targetValue: 7.5,
-      upperControlLimit: 11.0,
-      lowerControlLimit: 4.0,
-      isActive: true,
-    },
-    {
-      testId: hgbTest.id,
-      lotNumber: 'HGB-2026-A',
-      expirationDate: new Date('2027-01-01'),
-      targetValue: 14.5,
-      upperControlLimit: 18.0,
-      lowerControlLimit: 12.0,
-      isActive: true,
-    }
-  ]);
+  console.log('✓ QC Tests created: HGB (ID: ' + hgbTest.id + '), WBC (ID: ' + wbcTest.id + ')');
 
-  console.log('✓ Control Lots created with target ranges');
+  // 6. Create Control Lots with realistic manufacturer values
+  await db.insert(controlLots).values({
+    testId: hgbTest.id,
+    lotNumber: 'LOT-HGB-2026-A',
+    expirationDate: new Date('2026-12-31'),
+    targetValue: 14.0,
+    mean: 14.0,
+    standardDevi: 0.5,
+    upperControlLimit: 15.5,  // mean + 3SD
+    lowerControlLimit: 12.5,  // mean - 3SD
+    upperWarningLimit: 15.0,  // mean + 2SD
+    lowerWarningLimit: 13.0,  // mean - 2SD
+  });
+
+  await db.insert(controlLots).values({
+    testId: wbcTest.id,
+    lotNumber: 'LOT-WBC-2026-A',
+    expirationDate: new Date('2026-12-31'),
+    targetValue: 7.5,
+    mean: 7.5,
+    standardDevi: 0.8,
+    upperControlLimit: 9.9,   // mean + 3SD
+    lowerControlLimit: 5.1,   // mean - 3SD
+    upperWarningLimit: 9.1,   // mean + 2SD
+    lowerWarningLimit: 5.9,   // mean - 2SD
+  });
+
+  console.log('✓ Control Lots created for HGB and WBC tests');
 }
 
 seedWithSection()
