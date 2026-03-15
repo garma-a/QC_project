@@ -1,0 +1,283 @@
+### ===================================================
+### QC Results Controller - /api/v1/qc-results
+### All endpoints require JWT authentication
+### No role restrictions (any authenticated user)
+### Note: No DELETE endpoint exists (by design)
+### ===================================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+# After logging in, paste the JWT tokens below
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@techToken = YOUR_TECHNICIAN_JWT_TOKEN_HERE
+
+### ---------------------------------------------------
+### Get all QC results by lot ID (required query param)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=1
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get all QC results by lot ID - As technician
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=1
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Get all QC results - Non-existent lot ID
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=99999
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get all QC results - Missing lotId (should fail)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get all QC results - Invalid lotId format (should fail)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=abc
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get QC result by ID
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results/1
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get QC result by ID - As technician
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results/1
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Get QC result by ID - Non-existent (should return 404)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results/99999
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get QC result by ID - Invalid ID format (should fail)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results/abc
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Create QC result - With required fields + optional comment
+### (performedBy is auto-set from JWT token)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.6,
+  "lotId": 1,
+  "comments": "Morning QC run, values within expected range"
+}
+
+### ---------------------------------------------------
+### Create QC result - Minimal payload (no comments)
+### (performedBy is auto-set from JWT token)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.8,
+  "lotId": 1
+}
+
+### ---------------------------------------------------
+### Create QC result - As technician
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "measuredValue": 5.3,
+  "lotId": 1,
+  "comments": "Afternoon QC run by technician"
+}
+
+### ---------------------------------------------------
+### Create QC result - Value likely to trigger WARNING
+### (use a value near the warning limits of the control lot)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "measuredValue": 6.0,
+  "lotId": 1,
+  "comments": "Value near upper warning limit"
+}
+
+### ---------------------------------------------------
+### Create QC result - Value likely to trigger FAIL
+### (use a value outside the control limits)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "measuredValue": 8.5,
+  "lotId": 1,
+  "comments": "Value above upper control limit - expected FAIL"
+}
+
+### ---------------------------------------------------
+### Create QC result - Missing measuredValue (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "lotId": 1,
+  "comments": "Missing measured value"
+}
+
+### ---------------------------------------------------
+### Create QC result - Missing lotId (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.5,
+  "comments": "Missing lot ID"
+}
+
+### ---------------------------------------------------
+### Create QC result - Empty body (should fail validation)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### ---------------------------------------------------
+### Create QC result - Invalid measuredValue type (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": "not-a-number",
+  "lotId": 1
+}
+
+### ---------------------------------------------------
+### Create QC result - Invalid lotId type (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.5,
+  "lotId": "not-a-number"
+}
+
+### ---------------------------------------------------
+### Create QC result - Non-existent lot (should fail FK)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.5,
+  "lotId": 99999
+}
+
+### ---------------------------------------------------
+### Create QC result - Extra fields (should be stripped/rejected)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-results
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "measuredValue": 5.5,
+  "lotId": 1,
+  "status": "PASS",
+  "performedBy": 999,
+  "unknownField": "should be rejected"
+}
+
+### ---------------------------------------------------
+### Update QC result - Change comments
+### (Only comments can be updated)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/qc-results/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "comments": "Updated comment: re-verified results are correct"
+}
+
+### ---------------------------------------------------
+### Update QC result - Clear comments
+### ---------------------------------------------------
+PATCH {{baseUrl}}/qc-results/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "comments": ""
+}
+
+### ---------------------------------------------------
+### Update QC result - As technician
+### ---------------------------------------------------
+PATCH {{baseUrl}}/qc-results/1
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "comments": "Technician updated comment"
+}
+
+### ---------------------------------------------------
+### Update QC result - Non-existent (should return 404)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/qc-results/99999
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "comments": "Ghost result"
+}
+
+### ---------------------------------------------------
+### Update QC result - Empty body (no changes)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/qc-results/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### ---------------------------------------------------
+### Access without token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=1
+
+### ---------------------------------------------------
+### Access with invalid token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-results?lotId=1
+Authorization: Bearer invalid-token-here

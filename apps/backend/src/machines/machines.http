@@ -1,0 +1,324 @@
+### ===================================================
+
+
+### Machines Controller - /api/v1/machines
+
+
+### All endpoints are public (no authentication required)
+
+
+### ===================================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+
+### ---------------------------------------------------
+
+
+### Get all machines
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/machines HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Get machine by ID
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/machines/11 HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Get machine by ID - Non-existent (should return 404)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/machines/99999 HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Get machine by ID - Invalid ID format (should fail)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/machines/abc HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Full payload
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "hospCode": "HEM-001",
+  "name": "Hematology Analyzer XN-1000",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Minimal payload (only required fields)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Chemistry Analyzer AU-5800",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Missing name (should fail validation)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Missing sectionId (should fail validation)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Orphan Machine"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Name too short (should fail, min 2 chars)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "A",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Empty body (should fail validation)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Invalid sectionId type (should fail)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Bad Section Machine",
+  "sectionId": "not-a-number"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Extra fields (should be stripped/rejected)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Extra Fields Machine",
+  "sectionId": 1,
+  "unknownField": "should be rejected"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create machine - Non-existent section (should fail FK)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/machines HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "No Section Machine",
+  "sectionId": 99999
+}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Change name
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Updated Hematology Analyzer"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Change hospCode
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "hospCode": "HEM-002"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Change sectionId
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "sectionId": 2
+}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Multiple fields
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/1 HTTP/1.1
+Content-Type: application/json
+
+{
+  "hospCode": "UPD-001",
+  "name": "Fully Updated Machine",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Empty body (no changes)
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/1 HTTP/1.1
+Content-Type: application/json
+
+{}
+
+
+### ---------------------------------------------------
+
+
+### Update machine - Non-existent (should return 404)
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/machines/99999 HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Ghost Machine"
+}
+
+
+### ---------------------------------------------------
+
+
+### Delete machine
+
+
+### ---------------------------------------------------
+
+DELETE {{baseUrl}}/machines/2 HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Delete machine - Non-existent (should return 404)
+
+
+### ---------------------------------------------------
+
+DELETE {{baseUrl}}/machines/99999 HTTP/1.1
