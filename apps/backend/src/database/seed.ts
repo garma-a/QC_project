@@ -1,115 +1,145 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { sections, users, machines, qcTests, controlLots } from '@/drizzle/schema';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '@/app.module';
+import { DatabaseService } from '@/database/database.service';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import * as argon2 from 'argon2';
-import * as dotenv from 'dotenv';
+import {
+  sections,
+  users,
+  machines,
+  qcTests,
+  controlLots,
+  qcResults
+} from '@/drizzle/schema';
 
-dotenv.config();
-
-const databaseUrl = process.env.DATABASE_URL!;
-const queryClient = postgres(databaseUrl);
-const db = drizzle(queryClient);
-
-async function seedWithSection() {
-  console.log('⏳ Starting professional laboratory seed...');
-
-  // 1. Create the Section with specialization
-  const [hematologySection] = await db.insert(sections).values({
-    name: 'Hematology Department',
-    location: 'Main Floor - Block B',
-    specialization: 'HEMATOLOGY'
-  }).returning();
-
-  console.log('✓ Section created: Hematology (ID: ' + hematologySection.id + ')');
-
-  // 2. Create the Admin User
-  await db.insert(users).values({
-    firstName: 'System',
-    lastName: 'Admin',
-    email: process.env.ADMIN_EMAIL || 'admin@hospital.com',
-    passwordHash: await argon2.hash(process.env.ADMIN_PASSWORD || 'Admin123!'),
-    role: 'ADMIN',
-    sectionId: hematologySection.id 
-  });
-
-  console.log('✓ Admin user created');
-
-  // 3. Create a Technician User
-  await db.insert(users).values({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'tech@hospital.com',
-    passwordHash: await argon2.hash('Tech123!'),
-    role: 'TECHNICIAN',
-    sectionId: hematologySection.id
-  });
-
-  console.log('✓ Technician user created');
-
-  // 4. Create a Machine linked to the specialized section
-  const [sysmex] = await db.insert(machines).values({
-    name: 'Sysmex XN-1000',
-    hospCode: 'HEM-MAC-001',
-    sectionId: hematologySection.id,
-    currentStatus: 'IDLE',
-    specialization: 'HEMATOLOGY'
-  }).returning();
-
-  console.log('✓ Machine created: ' + sysmex.name + ' (ID: ' + sysmex.id + ')');
-
-  // 5. Create QC Tests linked to the machine
-  const [hgbTest] = await db.insert(qcTests).values({
-    testName: 'Hemoglobin (HGB)',
-    testType: 'HEMATOLOGY',
-    machineId: sysmex.id,
-  }).returning();
-
-  const [wbcTest] = await db.insert(qcTests).values({
-    testName: 'White Blood Cell (WBC)',
-    testType: 'HEMATOLOGY',
-    machineId: sysmex.id,
-  }).returning();
-
-  console.log('✓ QC Tests created for Sysmex: HGB (ID: ' + hgbTest.id + '), WBC (ID: ' + wbcTest.id + ')');
-
-  // 6. Create Control Lots with realistic manufacturer values
-  await db.insert(controlLots).values({
-    testId: hgbTest.id,
-    lotNumber: 'LOT-HGB-2026-A',
-    expirationDate: new Date('2026-12-31'),
-    targetValue: 14.0,
-    mean: 14.0,
-    standardDevi: 0.5,
-    upperControlLimit: 15.5,  // mean + 3SD
-    lowerControlLimit: 12.5,  // mean - 3SD
-    upperWarningLimit: 15.0,  // mean + 2SD
-    lowerWarningLimit: 13.0,  // mean - 2SD
-    isActive: true,
-  });
-
-  await db.insert(controlLots).values({
-    testId: wbcTest.id,
-    lotNumber: 'LOT-WBC-2026-A',
-    expirationDate: new Date('2026-12-31'),
-    targetValue: 7.5,
-    mean: 7.5,
-    standardDevi: 0.8,
-    upperControlLimit: 9.9,   // mean + 3SD
-    lowerControlLimit: 5.1,   // mean - 3SD
-    upperWarningLimit: 9.1,   // mean + 2SD
-    lowerWarningLimit: 5.9,   // mean - 2SD
-    isActive: true,
-  });
-
-  console.log('✓ Control Lots created with target ranges');
+function deriveQcStatus(
+  measuredValue: number,
+): (typeof qcResults.$inferInsert)['status'] {
+  // Introduce some realistic variation: mostly PASS, with some FAIL and WARN
+  const r = Math.random();
+  if (r < 0.8) {
+    return 'PASS' as (typeof qcResults.$inferInsert)['status'];
+  }
+  if (r < 0.9) {
+    return 'FAIL' as (typeof qcResults.$inferInsert)['status'];
+  }
+  return 'WARN' as (typeof qcResults.$inferInsert)['status'];
 }
 
-seedWithSection()
-  .then(() => {
-    console.log('✅ DATABASE SEEDING COMPLETE');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('❌ SEEDING FAILED:', err);
-    process.exit(1);
-  });
+async function bootstrap() {
+  // Create a headless NestJS app context (no HTTP server)
+  const app = await NestFactory.createApplicationContext(AppModule);
+
+  // Grab your existing database service from the DI container
+  const databaseService = app.get(DatabaseService);
+  const db = databaseService.db;
+
+  try {
+    console.log('📥 loading JSON data from local file...');
+    const filePath = path.join(__dirname, 'big_data.json');
+
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
+
+    console.log('🏗️ Creating default Section and User...');
+
+    // 1. Create a default Section to satisfy foreign keys
+    const [section] = await db.insert(sections).values({
+      name: 'Main Seeded Laboratory',
+      location: 'Autogenerated',
+      specialization: "OTHER",
+    }).returning();
+
+    // 2. Create a default User
+    const [user] = await db.insert(users).values({
+      firstName: 'Auto',
+      lastName: 'Seeder',
+      email: `seeder_${Date.now()}@lab.local`,
+      passwordHash: await argon2.hash('dummy_hash_do_not_use_in_prod'),
+      role: 'ADMIN',
+      sectionId: section.id,
+    }).returning();
+
+    console.log('🔄 Processing JSON data...');
+
+    // 3. Iterate through Equipment (Machines)
+    for (const eqpCode of Object.keys(jsonData)) {
+      console.log(`Setting up Machine ID/Code: ${eqpCode}...`);
+
+      const [machine] = await db.insert(machines).values({
+        name: `Machine ${eqpCode}`,
+        hospCode: '2', // Based on the sample data
+        sectionId: section.id,
+        currentStatus: 'IDLE',
+      }).returning();
+
+      const tests = jsonData[eqpCode];
+
+      // 4. Iterate through Tests for this Machine
+      for (const testCode of Object.keys(tests)) {
+
+        const [qcTest] = await db.insert(qcTests).values({
+          testName: testCode,
+          testType: 'Autogenerated',
+          machineId: machine.id,
+        }).returning();
+
+        // 5. Create a default Control Lot
+        const expirationDate = new Date();
+        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+        const [controlLot] = await db.insert(controlLots).values({
+          testId: qcTest.id,
+          lotNumber: `LOT-${eqpCode}-${testCode}`,
+          expirationDate: expirationDate,
+          targetValue: 0,
+          mean: 0,
+          standardDevi: 0,
+          isActive: true,
+        }).returning();
+
+        const records = tests[testCode];
+        const resultsToInsert: (typeof qcResults.$inferInsert)[] = [];
+
+        // 6. Map the records to QC Results
+        for (const record of records) {
+          // Parse float to protect against strings like "pg/ml" in the JSON
+          const measuredValue = parseFloat(record.TESTRESULT);
+
+          if (isNaN(measuredValue)) {
+            console.warn(`⚠️ Skipping invalid numeric result for Test ${testCode}: "${record.TESTRESULT}"`);
+            continue;
+          }
+
+          resultsToInsert.push({
+            measuredValue: measuredValue,
+            testDate: new Date(record.TESTDATE),
+            status: deriveQcStatus(measuredValue),
+            lotId: controlLot.id,
+            performedBy: user.id,
+          });
+        }
+
+        // 7. Bulk insert in chunks to avoid Postgres parameter limits
+        if (resultsToInsert.length > 0) {
+          const chunkSize = 1000;
+          for (let i = 0; i < resultsToInsert.length; i += chunkSize) {
+            const chunk = resultsToInsert.slice(i, i + chunkSize);
+            await db.insert(qcResults).values(chunk);
+          }
+          console.log(`✅ Inserted ${resultsToInsert.length} results for Test ${testCode}`);
+        }
+      }
+    }
+    console.log('🎉 Database seeding completed successfully!');
+
+  } catch (error) {
+    console.error('❌ Seeding failed:', error);
+  } finally {
+    // Ensure the NestJS application context closes properly so the script exits
+    await app.close();
+  }
+}
+
+bootstrap();
