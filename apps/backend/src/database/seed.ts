@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { DatabaseService } from '@/database/database.service';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import {
   sections,
   users,
@@ -20,10 +22,10 @@ async function bootstrap() {
 
   try {
     console.log('📥 Fetching JSON data from GitHub...');
-    const res = await fetch('https://raw.githubusercontent.com/garma-a/MYH_QC_demo/main/src/data/big_data.json');
+    const filePath = path.join(__dirname, 'big_data.json');
 
-    if (!res.ok) throw new Error(`Failed to fetch data: ${res.statusText}`);
-    const jsonData = await res.json();
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
 
     console.log('🏗️ Creating default Section and User...');
 
