@@ -3,6 +3,7 @@ import { AppModule } from '@/app.module';
 import { DatabaseService } from '@/database/database.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as argon2 from 'argon2';
 import {
   sections,
   users,
@@ -11,6 +12,20 @@ import {
   controlLots,
   qcResults
 } from '@/drizzle/schema';
+
+function deriveQcStatus(
+  measuredValue: number,
+): (typeof qcResults.$inferInsert)['status'] {
+  // Introduce some realistic variation: mostly PASS, with some FAIL and WARN
+  const r = Math.random();
+  if (r < 0.8) {
+    return 'PASS' as (typeof qcResults.$inferInsert)['status'];
+  }
+  if (r < 0.9) {
+    return 'FAIL' as (typeof qcResults.$inferInsert)['status'];
+  }
+  return 'WARN' as (typeof qcResults.$inferInsert)['status'];
+}
 
 async function bootstrap() {
   // Create a headless NestJS app context (no HTTP server)
@@ -21,7 +36,7 @@ async function bootstrap() {
   const db = databaseService.db;
 
   try {
-    console.log('📥 Fetching JSON data from GitHub...');
+    console.log('📥 loading JSON data from local file...');
     const filePath = path.join(__dirname, 'big_data.json');
 
     const fileContent = await fs.readFile(filePath, 'utf-8');
@@ -41,7 +56,7 @@ async function bootstrap() {
       firstName: 'Auto',
       lastName: 'Seeder',
       email: `seeder_${Date.now()}@lab.local`,
-      passwordHash: 'dummy_hash_do_not_use_in_prod',
+      passwordHash: await argon2.hash('dummy_hash_do_not_use_in_prod'),
       role: 'ADMIN',
       sectionId: section.id,
     }).returning();
@@ -100,7 +115,7 @@ async function bootstrap() {
           resultsToInsert.push({
             measuredValue: measuredValue,
             testDate: new Date(record.TESTDATE),
-            status: 'PASS' as const,
+            status: deriveQcStatus(measuredValue),
             lotId: controlLot.id,
             performedBy: user.id,
           });
