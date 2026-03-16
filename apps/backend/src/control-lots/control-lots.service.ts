@@ -8,96 +8,96 @@ import { controlLots, qcTests } from '@/drizzle/schema';
 
 @Injectable()
 export class ControlLotsService {
-    constructor(private readonly db: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService) { }
 
-    async create(createControlLotDto: CreateControlLotDto) {
+  async create(createControlLotDto: CreateControlLotDto) {
 
-        const [test] = await this.db.db
-            .select()
-            .from(qcTests)
-            .where(eq(qcTests.id, createControlLotDto.testId));
+    const [test] = await this.databaseService.db
+      .select()
+      .from(qcTests)
+      .where(eq(qcTests.id, createControlLotDto.testId));
 
-        if (!test) {
-            throw new NotFoundException(`QC Test with ID ${createControlLotDto.testId} not found`);
-        }
-
-
-        const [newLot] = await this.db.db
-            .insert(controlLots)
-            .values({
-                ...createControlLotDto,
-                expirationDate: new Date(createControlLotDto.expirationDate),
-            })
-            .returning();
-
-        return newLot;
-    }
-    async findAll() {
-        return await this.db.db
-            .select()
-            .from(controlLots);
+    if (!test) {
+      throw new NotFoundException(`QC Test with ID ${createControlLotDto.testId} not found`);
     }
 
-    async findOne(id: number) {
-        const [lot] = await this.db.db
-            .select()
-            .from(controlLots)
-            .where(eq(controlLots.id, id));
 
-        if (!lot) {
-            throw new NotFoundException(`Control lot with ID ${id} not found`);
-        }
-        return lot;
+    const [newLot] = await this.databaseService.db
+      .insert(controlLots)
+      .values({
+        ...createControlLotDto,
+        expirationDate: new Date(createControlLotDto.expirationDate),
+      })
+      .returning();
+
+    return newLot;
+  }
+  async findAll() {
+    return await this.databaseService.db
+      .select()
+      .from(controlLots);
+  }
+
+  async findOne(id: number) {
+    const [lot] = await this.databaseService.db
+      .select()
+      .from(controlLots)
+      .where(eq(controlLots.id, id));
+
+    if (!lot) {
+      throw new NotFoundException(`Control lot with ID ${id} not found`);
+    }
+    return lot;
+  }
+
+  async findByTestId(testId: number) {
+    return await this.databaseService.db
+      .select()
+      .from(controlLots)
+      .where(eq(controlLots.testId, testId));
+  }
+
+  async update(id: number, updateControlLotDto: UpdateControlLotDto) {
+    const [existingLot] = await this.databaseService.db
+      .select()
+      .from(controlLots)
+      .where(eq(controlLots.id, id));
+
+    if (!existingLot) {
+      throw new NotFoundException(`Control lot with ID ${id} not found`);
     }
 
-    async findByTestId(testId: number) {
-        return await this.db.db
-            .select()
-            .from(controlLots)
-            .where(eq(controlLots.testId, testId));
+    const updateData: Record<string, unknown> = { ...updateControlLotDto };
+    if (updateControlLotDto.expirationDate) {
+      updateData.expirationDate = new Date(updateControlLotDto.expirationDate);
     }
 
-    async update(id: number, updateControlLotDto: UpdateControlLotDto) {
-        const [existingLot] = await this.db.db
-            .select()
-            .from(controlLots)
-            .where(eq(controlLots.id, id));
+    const [updatedLot] = await this.databaseService.db
+      .update(controlLots)
+      .set(updateData)
+      .where(eq(controlLots.id, id))
+      .returning();
 
-        if (!existingLot) {
-            throw new NotFoundException(`Control lot with ID ${id} not found`);
-        }
+    return updatedLot;
+  }
 
-        const updateData: Record<string, unknown> = { ...updateControlLotDto };
-        if (updateControlLotDto.expirationDate) {
-            updateData.expirationDate = new Date(updateControlLotDto.expirationDate);
-        }
+  async remove(id: number) {
+    const [lot] = await this.databaseService.db
+      .select()
+      .from(controlLots)
+      .where(eq(controlLots.id, id));
 
-        const [updatedLot] = await this.db.db
-            .update(controlLots)
-            .set(updateData)
-            .where(eq(controlLots.id, id))
-            .returning();
-
-        return updatedLot;
+    if (!lot) {
+      throw new NotFoundException(`Control lot with ID ${id} not found`);
     }
 
-    async remove(id: number) {
-        const [lot] = await this.db.db
-            .select()
-            .from(controlLots)
-            .where(eq(controlLots.id, id));
+    const [deactivatedLot] = await this.databaseService.db
+      .update(controlLots)
+      .set({ isActive: false })
+      .where(eq(controlLots.id, id))
+      .returning();
 
-        if (!lot) {
-            throw new NotFoundException(`Control lot with ID ${id} not found`);
-        }
-
-        const [deactivatedLot] = await this.db.db
-            .update(controlLots)
-            .set({ isActive: false })
-            .where(eq(controlLots.id, id))
-            .returning();
-
-        return { message: 'Control lot deactivated successfully', lot: deactivatedLot };
-    }
+    return { message: 'Control lot deactivated successfully', lot: deactivatedLot };
+  }
 }
 
