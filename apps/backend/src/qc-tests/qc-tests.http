@@ -1,0 +1,152 @@
+### ===================================================
+### QC Tests Controller - /api/v1/qc-tests
+### All endpoints require JWT authentication
+### POST requires ADMIN role (note: RolesGuard may not be enforced)
+### ===================================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+# After logging in as admin, paste the JWT token below
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@techToken = YOUR_TECHNICIAN_JWT_TOKEN_HERE
+
+### ---------------------------------------------------
+### Get QC tests by machine ID
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/1
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get QC tests by machine ID - As technician
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/1
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Get QC tests by machine ID - Non-existent machine
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/99999
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get QC tests by machine ID - Invalid ID format
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/abc
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Create QC test - Full payload
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "Complete Blood Count",
+  "testType": "Hematology",
+  "machineId": 1
+}
+
+### ---------------------------------------------------
+### Create QC test - Minimal payload (no testType)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "Glucose Level",
+  "machineId": 1
+}
+
+### ---------------------------------------------------
+### Create QC test - Missing testName (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testType": "Chemistry",
+  "machineId": 1
+}
+
+### ---------------------------------------------------
+### Create QC test - Missing machineId (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "Orphan Test"
+}
+
+### ---------------------------------------------------
+### Create QC test - Empty body (should fail validation)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### ---------------------------------------------------
+### Create QC test - Invalid machineId type (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "Bad Machine Test",
+  "machineId": "not-a-number"
+}
+
+### ---------------------------------------------------
+### Create QC test - Non-existent machine (should fail FK)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "No Machine Test",
+  "machineId": 99999
+}
+
+### ---------------------------------------------------
+### Create QC test - Extra fields (should be stripped/rejected)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testName": "Extra Fields Test",
+  "machineId": 1,
+  "unknownField": "should be rejected"
+}
+
+### ---------------------------------------------------
+### Create QC test - As technician (may or may not be blocked)
+### ---------------------------------------------------
+POST {{baseUrl}}/qc-tests
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "testName": "Tech Created Test",
+  "machineId": 1
+}
+
+### ---------------------------------------------------
+### Access without token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/1
+
+### ---------------------------------------------------
+### Access with invalid token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/qc-tests/machine/1
+Authorization: Bearer invalid-token-here

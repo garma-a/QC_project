@@ -1,0 +1,401 @@
+### ===================================================
+
+
+### Users Controller - /api/v1/users
+
+
+### All endpoints require JWT + ADMIN role
+
+
+### ===================================================
+
+@baseUrl = http://localhost:3000/api/v1
+@token = YOUR_JWT_TOKEN_HERE
+
+# After logging in as admin, paste the JWT token below
+
+
+### ---------------------------------------------------
+
+
+### Get all users
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Get all users - Filter by role (ADMIN)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users?role=ADMIN HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Get all users - Filter by role (TECHNICIAN)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users?role=TECHNICIAN HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Get user by ID
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users/1 HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Get user by ID - Non-existent (should return 404)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users/99999 HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Get user by ID - Invalid ID format (should fail)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users/abc HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Full payload (ADMIN role)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "john.doe@example.com",
+  "firstName": "John",
+  "isActive": true,
+  "lastName": "Doe",
+  "password": "securepass123",
+  "role": "TECHNICIAN",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Minimal payload (TECHNICIAN default)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "jane.smith@example.com",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "password": "securepass123"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - With TECHNICIAN role and section
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "bob.wilson@example.com",
+  "firstName": "Bob",
+  "lastName": "Wilson",
+  "password": "securepass123",
+  "role": "TECHNICIAN",
+  "sectionId": 1
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Missing required fields (should fail)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "Incomplete"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Invalid email (should fail validation)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "not-an-email",
+  "firstName": "Bad",
+  "lastName": "Email",
+  "password": "securepass123"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Password too short (should fail)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "short.pass@example.com",
+  "firstName": "Short",
+  "lastName": "Pass",
+  "password": "abc"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Invalid role (should fail validation)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "bad.role@example.com",
+  "firstName": "Bad",
+  "lastName": "Role",
+  "password": "securepass123",
+  "role": "SUPERADMIN"
+}
+
+
+### ---------------------------------------------------
+
+
+### Create user - Extra fields (should be stripped by whitelist)
+
+
+### ---------------------------------------------------
+
+POST {{baseUrl}}/users HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "extra.fields@example.com",
+  "firstName": "Extra",
+  "lastName": "Fields",
+  "password": "securepass123",
+  "unknownField": "should be rejected"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Change name
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "UpdatedFirst",
+  "lastName": "UpdatedLast"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Change role
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "role": "ADMIN"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Change email
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "updated.email@example.com"
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Deactivate user
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "isActive": false
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Change section
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/2 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sectionId": 2
+}
+
+
+### ---------------------------------------------------
+
+
+### Update user - Non-existent user (should return 404)
+
+
+### ---------------------------------------------------
+
+PATCH {{baseUrl}}/users/99999 HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "Ghost"
+}
+
+
+### ---------------------------------------------------
+
+
+### Delete user
+
+
+### ---------------------------------------------------
+
+DELETE {{baseUrl}}/users/3 HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Delete user - Non-existent (should return 404)
+
+
+### ---------------------------------------------------
+
+DELETE {{baseUrl}}/users/99999 HTTP/1.1
+Authorization: Bearer {{token}}
+
+
+### ---------------------------------------------------
+
+
+### Access without token (should return 401)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users HTTP/1.1
+
+
+### ---------------------------------------------------
+
+
+### Access with invalid token (should return 401)
+
+
+### ---------------------------------------------------
+
+GET {{baseUrl}}/users HTTP/1.1
+Authorization: Bearer invalid-token-here
