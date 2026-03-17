@@ -1,15 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { User } from '../data/users';
+import { UserType as User } from '@/components/client/UsersManager';
 import { useUserStore } from '@/store/useUserStore';
 
 interface AuthContextType {
   currentUser: User | null;
   users: User[];
-  login: (username: string, password: string) => boolean;
+  login: (username: string) => boolean;
   logout: () => void;
-  addDoctor: (username: string, password: string, fullName: string, email?: string, profileImage?: string) => boolean;
   isAdmin: boolean;
 }
 
@@ -17,7 +16,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const users = useUserStore((state) => state.usersList);
-  const addUser = useUserStore((state) => state.addUser);
   const updateUser = useUserStore((state) => state.updateUser);
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => {
     if (typeof window === 'undefined') {
@@ -53,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-  const login = (username: string, password: string): boolean => {
-    const user = users.find(u => u.username === username && u.password === password);
+  // Client-side login now only sets the active user by username.
+  // Real authentication is handled by the loginAccount Server Action.
+  const login = (username: string): boolean => {
+    const user = users.find(u => u.username === username);
     if (user) {
       const now = new Date().toISOString();
       const activeUser: User = {
@@ -77,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentUser) {
       updateUser({
         ...currentUser,
-        isActive: false,
         lastActiveAt: new Date().toISOString(),
       });
     }
@@ -87,33 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addDoctor = (username: string, password: string, fullName: string, email?: string, profileImage?: string): boolean => {
-    // Check if username already exists
-    if (users.find(u => u.username === username)) {
-      return false;
-    }
-
-    const newDoctor: User = {
-      id: `doctor-${Date.now()}`,
-      username,
-      password,
-      role: 'doctor',
-      fullName,
-      email,
-      profileImage,
-      createdAt: new Date().toISOString().split('T')[0],
-      isActive: false,
-      lastActiveAt: new Date().toISOString(),
-    };
-
-    addUser(newDoctor);
-    return true;
-  };
-
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ currentUser, users, login, logout, addDoctor, isAdmin }}>
+    <AuthContext.Provider value={{ currentUser, users, login, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,2595 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "description": "Returns a simple greeting to verify the API is running.",
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": "Hello World!"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/test-user": {
+      "post": {
+        "description": "Creates a hardcoded test user for development purposes. Not intended for production use.",
+        "operationId": "AppController_testCreateUser",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Test user created."
+          }
+        },
+        "summary": "Create a test user (development only)",
+        "tags": [
+          "App"
+        ]
+      },
+      "delete": {
+        "description": "Deletes the test user by email. Not intended for production use.",
+        "operationId": "AppController_testDeleteUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Test user deleted."
+          }
+        },
+        "summary": "Delete a test user (development only)",
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/machines": {
+      "post": {
+        "description": "Creates a new machine entry linked to an existing lab section. The machine starts with `IDLE` status by default. The section must exist or a 400 error is returned.",
+        "operationId": "MachinesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMachineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The machine has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., missing name, name too short, or the specified section does not exist).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A machine with these details already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register a new lab machine",
+        "tags": [
+          "Machines"
+        ]
+      },
+      "get": {
+        "description": "Returns all machines registered in the system, regardless of status.",
+        "operationId": "MachinesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of all machines.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MachineResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List all machines",
+        "tags": [
+          "Machines"
+        ]
+      }
+    },
+    "/api/v1/machines/{id}": {
+      "get": {
+        "description": "Returns the full details of a single machine by its unique ID.",
+        "operationId": "MachinesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the machine",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the machine data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Machine not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get details of a specific machine",
+        "tags": [
+          "Machines"
+        ]
+      },
+      "patch": {
+        "description": "Updates one or more fields of an existing machine. All fields are optional. The section must exist if `sectionId` is provided.",
+        "operationId": "MachinesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the machine to update",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMachineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The machine has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid data (e.g., the specified section does not exist).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Machine not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A machine with these details already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update machine details",
+        "tags": [
+          "Machines"
+        ]
+      },
+      "delete": {
+        "description": "Permanently deletes a machine record. This will fail if the machine has associated QC tests due to foreign key constraints.",
+        "operationId": "MachinesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the machine to delete",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The machine has been successfully deleted. Returns the deleted machine data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Machine not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Remove a machine from the system",
+        "tags": [
+          "Machines"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Authenticate a user with email and password. Returns a JWT access token on success. The token must be included in the `Authorization: Bearer <token>` header for all protected endpoints.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful. Returns a JWT access token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (e.g., missing email, invalid email format, missing password).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials or account is deactivated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "description": "Creates a new user account. Only administrators can create users. The password is hashed before storage. If no role is specified, defaults to TECHNICIAN.",
+        "operationId": "UsersController_createUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully. Returns the user without the password hash.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the specified section does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can create users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A user with this email already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new user (admin only)",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "description": "Returns a list of all users with their section names. Optionally filter by role. The password hash is never included in the response.",
+        "operationId": "UsersController_getUsers",
+        "parameters": [
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "description": "Filter users by role (ADMIN or TECHNICIAN)",
+            "schema": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users with joined section names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserListItemDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid role filter value.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can list users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all users (admin only)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "delete": {
+        "description": "Soft-deletes a user by setting `isActive` to false. Administrators cannot deactivate their own account. The user record is preserved for audit purposes.",
+        "operationId": "UsersController_deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the user to deactivate",
+            "schema": {
+              "example": 2,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deactivated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeactivateUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cannot deactivate your own administrator account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can deactivate users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deactivate a user by ID (admin only)",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "Updates one or more fields of an existing user. All fields are optional. Email uniqueness is enforced. Section existence is validated if provided.",
+        "operationId": "UsersController_updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the user to update",
+            "schema": {
+              "example": 2,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully. Returns the updated user without the password hash.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the specified section does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can update users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email is already in use by another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a user by ID (admin only)",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "description": "Returns the full details of a single user. The password hash is excluded from the response.",
+        "operationId": "UsersController_getUserById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the user",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found. Returns user data without the password hash.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can view user details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user by ID (admin only)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/qc-results": {
+      "post": {
+        "description": "Records a new quality control measurement against a specific control lot. The system automatically calculates the Z-Score based on the lot's mean and standard deviation, then assigns a status: **PASS** (|Z| <= 2), **WARNING** (2 < |Z| <= 3), or **FAIL** (|Z| > 3). The `performedBy` field is automatically set from the authenticated user's JWT token.",
+        "operationId": "QcResultsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQcResultDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The QC result has been successfully recorded and evaluated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, or the control lot is missing required statistical values (mean / standard deviation) needed for evaluation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Control lot not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit a new QC result",
+        "tags": [
+          "QC Results"
+        ]
+      },
+      "get": {
+        "description": "Returns a comprehensive object containing the control lot parameters (mean, SD, limits, test name, machine name) alongside an array of all historical QC results for that lot, ordered by date descending. This data is used to render the Levey-Jennings chart.",
+        "operationId": "QcResultsController_findAll",
+        "parameters": [
+          {
+            "name": "lotId",
+            "required": true,
+            "in": "query",
+            "description": "The ID of the control lot to fetch results for",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the control lot parameters and an array of all associated results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcResultsWithLotResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Control lot not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all QC results for a specific lot",
+        "tags": [
+          "QC Results"
+        ]
+      }
+    },
+    "/api/v1/qc-results/{id}": {
+      "get": {
+        "description": "Returns the full details of a single QC result, including the full control lot data and a dynamically calculated Z-Score based on the current lot statistics.",
+        "operationId": "QcResultsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the QC result",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the QC result with its control lot and dynamically calculated Z-Score.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcResultDetailResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Associated control lot is missing statistical data needed for Z-Score calculation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QC Result not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details of a single QC result",
+        "tags": [
+          "QC Results"
+        ]
+      },
+      "patch": {
+        "description": "Updates only the `comments` field for an existing QC result. The measured value and status cannot be modified to ensure data integrity and audit compliance. Returns the full updated result with Z-Score.",
+        "operationId": "QcResultsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the QC result to update",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQcResultDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated successfully. Returns the full result with Z-Score.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcResultDetailResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QC Result not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a QC result comment",
+        "tags": [
+          "QC Results"
+        ]
+      }
+    },
+    "/api/v1/control-lots": {
+      "post": {
+        "description": "Creates a new control lot linked to a QC test. The control lot contains the manufacturer-provided expected values (mean, SD, control limits) used to evaluate daily QC results. Only admins can create control lots.",
+        "operationId": "ControlLotsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateControlLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The control lot has been successfully created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlLotResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (e.g., missing required fields, invalid date format, or wrong data types).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can create control lots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "QC Test not found -- the provided testId does not match any existing test.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new control lot",
+        "tags": [
+          "Control Lots"
+        ]
+      },
+      "get": {
+        "description": "Returns a list of all control lots in the system, including both active and inactive ones. Any authenticated user can view control lots.",
+        "operationId": "ControlLotsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Array of all control lots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ControlLotResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all control lots",
+        "tags": [
+          "Control Lots"
+        ]
+      }
+    },
+    "/api/v1/control-lots/{id}": {
+      "get": {
+        "description": "Returns the full details of a single control lot, including its statistical parameters (mean, SD, control/warning limits).",
+        "operationId": "ControlLotsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the control lot",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the control lot data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlLotResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Control lot not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a specific control lot by ID",
+        "tags": [
+          "Control Lots"
+        ]
+      },
+      "patch": {
+        "description": "Updates the values of an existing control lot. Use this to correct manufacturer values, adjust limits, or change the active status. Only admins can update control lots.",
+        "operationId": "ControlLotsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the control lot to update",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateControlLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The control lot has been successfully updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlLotResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (e.g., invalid date format or wrong data types).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can update control lots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Control lot not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a control lot",
+        "tags": [
+          "Control Lots"
+        ]
+      },
+      "delete": {
+        "description": "Soft-deletes a control lot by setting `isActive` to false. The lot and its historical QC results are preserved for audit purposes. Only admins can deactivate control lots.",
+        "operationId": "ControlLotsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the control lot to deactivate",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The control lot has been deactivated. Returns a confirmation message and the deactivated lot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlLotDeactivateResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can deactivate control lots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Control lot not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deactivate a control lot",
+        "tags": [
+          "Control Lots"
+        ]
+      }
+    },
+    "/api/v1/qc-tests": {
+      "post": {
+        "description": "Creates a new quality control test definition linked to a specific machine. The machine must exist. Only administrators should create QC tests (note: RolesGuard must be added to enforce this).",
+        "operationId": "QcTestsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQcTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "QC test created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QcTestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (e.g., missing test name or invalid machine ID).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only administrators can create QC tests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Machine not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new QC test",
+        "tags": [
+          "qc-tests"
+        ]
+      }
+    },
+    "/api/v1/qc-tests/machine/{machineId}": {
+      "get": {
+        "description": "Returns all QC test definitions configured on a specific machine. The machine must exist or a 404 is returned.",
+        "operationId": "QcTestsController_findByMachine",
+        "parameters": [
+          {
+            "name": "machineId",
+            "required": true,
+            "in": "path",
+            "description": "The unique ID of the machine",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of QC tests for the specified machine.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QcTestResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT token missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Machine not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get QC tests by machine ID",
+        "tags": [
+          "qc-tests"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "QC-Project API",
+    "description": "The Full documnetation to the QC-Project API",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateMachineDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The operational name of the machine. Must be at least 2 characters.",
+            "example": "Cobas 6000",
+            "minLength": 2
+          },
+          "hospCode": {
+            "type": "string",
+            "description": "Internal hospital code or asset tag. Optional field for tracking equipment.",
+            "example": "LAB-EQ-001"
+          },
+          "sectionId": {
+            "type": "number",
+            "description": "The numeric ID of the section this machine belongs to. Must be an integer.",
+            "example": 1
+          }
+        },
+        "required": [
+          "name",
+          "sectionId"
+        ]
+      },
+      "MachineResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique machine identifier"
+          },
+          "name": {
+            "type": "string",
+            "example": "Cobas 6000",
+            "description": "Operational name of the machine"
+          },
+          "hospCode": {
+            "type": "string",
+            "example": "LAB-EQ-001",
+            "description": "Internal hospital code or asset tag"
+          },
+          "sectionId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the section this machine belongs to"
+          },
+          "currentStatus": {
+            "type": "string",
+            "example": "IDLE",
+            "enum": [
+              "IDLE",
+              "RUNNING",
+              "MAINTENANCE",
+              "OFFLINE",
+              "ERROR"
+            ],
+            "description": "Current operational status of the machine"
+          },
+          "lastRunAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T08:00:00.000Z",
+            "description": "Timestamp of the last QC run"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z",
+            "description": "Creation timestamp"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T12:00:00.000Z",
+            "description": "Last update timestamp"
+          },
+          "specialization": {
+            "type": "string",
+            "example": "HEMATOLOGY",
+            "enum": [
+              "HEMATOLOGY",
+              "CHEMISTRY",
+              "MICROBIOLOGY",
+              "IMMUNOLOGY",
+              "OTHER"
+            ],
+            "description": "Machine specialization"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sectionId",
+          "currentStatus",
+          "createdAt"
+        ]
+      },
+      "ValidationErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/resource"
+          },
+          "message": {
+            "example": [
+              "email must be an email",
+              "password should not be empty"
+            ],
+            "description": "Array of validation error messages",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          }
+        },
+        "required": [
+          "statusCode",
+          "timestamp",
+          "path",
+          "message",
+          "error"
+        ]
+      },
+      "ConflictResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 409
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/resource"
+          },
+          "message": {
+            "type": "string",
+            "example": "A resource with these details already exists."
+          }
+        },
+        "required": [
+          "statusCode",
+          "timestamp",
+          "path",
+          "message"
+        ]
+      },
+      "NotFoundResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 404
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/resource/999"
+          },
+          "message": {
+            "type": "string",
+            "example": "Resource with ID 999 not found"
+          }
+        },
+        "required": [
+          "statusCode",
+          "timestamp",
+          "path",
+          "message"
+        ]
+      },
+      "UpdateMachineDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The operational name of the machine. Must be at least 2 characters.",
+            "example": "Cobas 6000",
+            "minLength": 2
+          },
+          "hospCode": {
+            "type": "string",
+            "description": "Internal hospital code or asset tag. Optional field for tracking equipment.",
+            "example": "LAB-EQ-001"
+          },
+          "sectionId": {
+            "type": "number",
+            "description": "The numeric ID of the section this machine belongs to. Must be an integer.",
+            "example": 1
+          }
+        }
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "User password",
+            "example": "strongPassword123",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "description": "JWT access token used to authenticate subsequent requests. Include in the Authorization header as: Bearer <token>"
+          }
+        },
+        "required": [
+          "access_token"
+        ]
+      },
+      "UnauthorizedResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 401
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/auth/login"
+          },
+          "message": {
+            "type": "string",
+            "example": "Unauthorized"
+          }
+        },
+        "required": [
+          "statusCode",
+          "timestamp",
+          "path",
+          "message"
+        ]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "TECHNICIAN",
+          "ADMIN"
+        ],
+        "description": "Role assigned to the user"
+      },
+      "AdminCreateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "First name of the user",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name of the user",
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the user",
+            "example": "john.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password for the user account (minimum 8 characters)",
+            "example": "StrongPass123!",
+            "minLength": 8
+          },
+          "role": {
+            "description": "Role assigned to the user",
+            "example": "ADMIN",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Indicates if the user is active",
+            "default": true,
+            "example": true
+          },
+          "sectionId": {
+            "type": "number",
+            "description": "Section ID associated with the user",
+            "example": 42
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "password"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique user identifier"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com",
+            "description": "Email address"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+201234567890",
+            "description": "Phone number"
+          },
+          "role": {
+            "type": "string",
+            "example": "TECHNICIAN",
+            "enum": [
+              "TECHNICIAN",
+              "ADMIN"
+            ],
+            "description": "User role"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the user account is active"
+          },
+          "sectionId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the assigned lab section"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z",
+            "description": "Account creation timestamp"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T12:00:00.000Z",
+            "description": "Last update timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "role",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "ForbiddenResponseDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 403
+          },
+          "timestamp": {
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/resource"
+          },
+          "message": {
+            "type": "string",
+            "example": "You do not have permission to perform this action"
+          }
+        },
+        "required": [
+          "statusCode",
+          "timestamp",
+          "path",
+          "message"
+        ]
+      },
+      "DeactivateUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User deactivated successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AdminUpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "User's first name",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "User's last name",
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "description": "User's email address",
+            "example": "john.doe@example.com"
+          },
+          "role": {
+            "description": "User's role",
+            "example": "ADMIN",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the user is active",
+            "example": true
+          },
+          "sectionId": {
+            "type": "number",
+            "description": "Section ID the user belongs to",
+            "example": 42
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "TECHNICIAN",
+          "ADMIN"
+        ]
+      },
+      "UserListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "role": {
+            "type": "string",
+            "example": "TECHNICIAN",
+            "enum": [
+              "TECHNICIAN",
+              "ADMIN"
+            ]
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "sectionName": {
+            "type": "string",
+            "example": "Hematology",
+            "description": "Name of the assigned lab section (joined from sections table)"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "role",
+          "isActive"
+        ]
+      },
+      "CreateQcResultDto": {
+        "type": "object",
+        "properties": {
+          "measuredValue": {
+            "type": "number",
+            "description": "The actual measured value obtained from the lab machine",
+            "example": 14.5
+          },
+          "lotId": {
+            "type": "number",
+            "description": "The ID of the active control lot this measurement belongs to",
+            "example": 1
+          },
+          "comments": {
+            "type": "string",
+            "description": "Optional comments/notes from the technician about this result",
+            "example": "Machine recalibrated before run"
+          }
+        },
+        "required": [
+          "measuredValue",
+          "lotId"
+        ]
+      },
+      "QcResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique QC result identifier"
+          },
+          "measuredValue": {
+            "type": "number",
+            "example": 14.5,
+            "description": "The measured value from the lab instrument"
+          },
+          "testDate": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T08:00:00.000Z",
+            "description": "Date and time the measurement was taken"
+          },
+          "status": {
+            "type": "string",
+            "example": "PASS",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "WARNING"
+            ],
+            "description": "Auto-calculated status based on Z-Score evaluation"
+          },
+          "comments": {
+            "type": "string",
+            "example": "Morning QC run",
+            "description": "Technician comments or notes"
+          },
+          "lotId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the control lot this result belongs to"
+          },
+          "performedBy": {
+            "type": "number",
+            "example": 5,
+            "description": "ID of the user who performed the measurement"
+          }
+        },
+        "required": [
+          "id",
+          "measuredValue",
+          "testDate",
+          "status",
+          "lotId",
+          "performedBy"
+        ]
+      },
+      "LotSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "LOT-HGB-2026-A"
+          },
+          "mean": {
+            "type": "number",
+            "example": 14
+          },
+          "standardDevi": {
+            "type": "number",
+            "example": 0.5
+          },
+          "upperControlLimit": {
+            "type": "number",
+            "example": 15.5
+          },
+          "lowerControlLimit": {
+            "type": "number",
+            "example": 12.5
+          },
+          "upperWarningLimit": {
+            "type": "number",
+            "example": 15
+          },
+          "lowerWarningLimit": {
+            "type": "number",
+            "example": 13
+          },
+          "testName": {
+            "type": "string",
+            "example": "Hemoglobin (HGB)"
+          },
+          "machineName": {
+            "type": "string",
+            "example": "Sysmex XN-1000"
+          }
+        },
+        "required": [
+          "id",
+          "lotNumber",
+          "testName",
+          "machineName"
+        ]
+      },
+      "QcResultsWithLotResponseDto": {
+        "type": "object",
+        "properties": {
+          "lot": {
+            "description": "Control lot parameters and test/machine info",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LotSummaryDto"
+              }
+            ]
+          },
+          "results": {
+            "description": "Array of QC results ordered by date descending",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QcResultResponseDto"
+            }
+          }
+        },
+        "required": [
+          "lot",
+          "results"
+        ]
+      },
+      "ControlLotInResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "testId": {
+            "type": "number",
+            "example": 1
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "LOT-HGB-2026-A"
+          },
+          "expirationDate": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2027-12-31T00:00:00.000Z"
+          },
+          "targetValue": {
+            "type": "number",
+            "example": 14
+          },
+          "mean": {
+            "type": "number",
+            "example": 14
+          },
+          "standardDevi": {
+            "type": "number",
+            "example": 0.5
+          },
+          "upperControlLimit": {
+            "type": "number",
+            "example": 15.5
+          },
+          "lowerControlLimit": {
+            "type": "number",
+            "example": 12.5
+          },
+          "upperWarningLimit": {
+            "type": "number",
+            "example": 15
+          },
+          "lowerWarningLimit": {
+            "type": "number",
+            "example": 13
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "testId",
+          "lotNumber",
+          "expirationDate",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "QcResultDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique QC result identifier"
+          },
+          "measuredValue": {
+            "type": "number",
+            "example": 14.5,
+            "description": "The measured value from the lab instrument"
+          },
+          "testDate": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T08:00:00.000Z",
+            "description": "Date and time the measurement was taken"
+          },
+          "status": {
+            "type": "string",
+            "example": "PASS",
+            "enum": [
+              "PASS",
+              "FAIL",
+              "WARNING"
+            ],
+            "description": "Auto-calculated status based on Z-Score evaluation"
+          },
+          "comments": {
+            "type": "string",
+            "example": "Morning QC run",
+            "description": "Technician comments or notes"
+          },
+          "lotId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the control lot this result belongs to"
+          },
+          "performedBy": {
+            "type": "number",
+            "example": 5,
+            "description": "ID of the user who performed the measurement"
+          },
+          "controlLot": {
+            "description": "Full control lot data associated with this result",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ControlLotInResultDto"
+              }
+            ]
+          },
+          "zScore": {
+            "type": "number",
+            "example": 1,
+            "description": "Dynamically calculated Z-Score: (measuredValue - mean) / standardDeviation"
+          }
+        },
+        "required": [
+          "id",
+          "measuredValue",
+          "testDate",
+          "status",
+          "lotId",
+          "performedBy",
+          "controlLot",
+          "zScore"
+        ]
+      },
+      "UpdateQcResultDto": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "string",
+            "description": "Updated comments/notes from the technician",
+            "example": "Sample was slightly hemolyzed"
+          }
+        }
+      },
+      "CreateControlLotDto": {
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "number",
+            "description": "The ID of the QC test this control lot belongs to",
+            "example": 1
+          },
+          "lotNumber": {
+            "type": "string",
+            "description": "The manufacturer lot number printed on the control material",
+            "example": "LOT-HGB-2026-A"
+          },
+          "expirationDate": {
+            "type": "string",
+            "description": "The expiration date of the control material (ISO 8601 format)",
+            "example": "2026-12-31"
+          },
+          "targetValue": {
+            "type": "number",
+            "description": "The manufacturer-specified target value for this control material",
+            "example": 14
+          },
+          "mean": {
+            "type": "number",
+            "description": "The established mean value from manufacturer or lab evaluation",
+            "example": 14
+          },
+          "standardDevi": {
+            "type": "number",
+            "description": "The standard deviation — measures how spread out QC results are expected to be",
+            "example": 0.5
+          },
+          "upperControlLimit": {
+            "type": "number",
+            "description": "Upper control limit (mean + 3SD) — results above this are out of control",
+            "example": 15.5
+          },
+          "lowerControlLimit": {
+            "type": "number",
+            "description": "Lower control limit (mean - 3SD) — results below this are out of control",
+            "example": 12.5
+          },
+          "upperWarningLimit": {
+            "type": "number",
+            "description": "Upper warning limit (mean + 2SD) — results above this trigger a warning",
+            "example": 15
+          },
+          "lowerWarningLimit": {
+            "type": "number",
+            "description": "Lower warning limit (mean - 2SD) — results below this trigger a warning",
+            "example": 13
+          }
+        },
+        "required": [
+          "testId",
+          "lotNumber",
+          "expirationDate"
+        ]
+      },
+      "ControlLotResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique control lot identifier"
+          },
+          "testId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the QC test this lot belongs to"
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "LOT-HGB-2026-A",
+            "description": "Manufacturer lot number"
+          },
+          "expirationDate": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2027-12-31T00:00:00.000Z",
+            "description": "Expiration date of the control material"
+          },
+          "targetValue": {
+            "type": "number",
+            "example": 14,
+            "description": "Manufacturer-specified target value"
+          },
+          "mean": {
+            "type": "number",
+            "example": 14,
+            "description": "Established mean value"
+          },
+          "standardDevi": {
+            "type": "number",
+            "example": 0.5,
+            "description": "Standard deviation"
+          },
+          "upperControlLimit": {
+            "type": "number",
+            "example": 15.5,
+            "description": "Upper control limit (mean + 3SD)"
+          },
+          "lowerControlLimit": {
+            "type": "number",
+            "example": 12.5,
+            "description": "Lower control limit (mean - 3SD)"
+          },
+          "upperWarningLimit": {
+            "type": "number",
+            "example": 15,
+            "description": "Upper warning limit (mean + 2SD)"
+          },
+          "lowerWarningLimit": {
+            "type": "number",
+            "example": 13,
+            "description": "Lower warning limit (mean - 2SD)"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether this control lot is currently active"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T10:30:00.000Z",
+            "description": "Creation timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "testId",
+          "lotNumber",
+          "expirationDate",
+          "isActive",
+          "createdAt"
+        ]
+      },
+      "UpdateControlLotDto": {
+        "type": "object",
+        "properties": {
+          "expirationDate": {
+            "type": "string",
+            "description": "Updated expiration date of the control material (ISO 8601 format)",
+            "example": "2027-06-30"
+          },
+          "targetValue": {
+            "type": "number",
+            "description": "Updated manufacturer target value",
+            "example": 14.2
+          },
+          "mean": {
+            "type": "number",
+            "description": "Updated mean value",
+            "example": 14.2
+          },
+          "standardDevi": {
+            "type": "number",
+            "description": "Updated standard deviation",
+            "example": 0.6
+          },
+          "upperControlLimit": {
+            "type": "number",
+            "description": "Updated upper control limit (mean + 3SD)",
+            "example": 16
+          },
+          "lowerControlLimit": {
+            "type": "number",
+            "description": "Updated lower control limit (mean - 3SD)",
+            "example": 12.4
+          },
+          "upperWarningLimit": {
+            "type": "number",
+            "description": "Updated upper warning limit (mean + 2SD)",
+            "example": 15.4
+          },
+          "lowerWarningLimit": {
+            "type": "number",
+            "description": "Updated lower warning limit (mean - 2SD)",
+            "example": 13
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the control lot is currently active. Set to false to deactivate.",
+            "example": true
+          }
+        }
+      },
+      "ControlLotDeactivateResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Control lot deactivated successfully"
+          },
+          "lot": {
+            "description": "The deactivated control lot",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ControlLotResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "message",
+          "lot"
+        ]
+      },
+      "CreateQcTestDto": {
+        "type": "object",
+        "properties": {
+          "testName": {
+            "type": "string",
+            "description": "Name of the QC test",
+            "example": "pH Measurement",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "testType": {
+            "type": "string",
+            "description": "Type of the QC test",
+            "example": "Chemical",
+            "maxLength": 50
+          },
+          "machineId": {
+            "type": "number",
+            "description": "ID of the machine associated with this QC test",
+            "example": 42,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "testName",
+          "machineId"
+        ]
+      },
+      "QcTestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1,
+            "description": "Unique QC test identifier"
+          },
+          "testName": {
+            "type": "string",
+            "example": "Complete Blood Count",
+            "description": "Name of the QC test"
+          },
+          "testType": {
+            "type": "string",
+            "example": "Hematology",
+            "description": "Type/category of the QC test"
+          },
+          "machineId": {
+            "type": "number",
+            "example": 1,
+            "description": "ID of the machine this test is configured on"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-03-15T12:00:00.000Z",
+            "description": "Last update timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "testName",
+          "machineId"
+        ]
+      }
+    }
+  }
+}

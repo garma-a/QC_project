@@ -2,7 +2,34 @@
 
 import type { ReactElement } from "react";
 import { AlertCircle, AlertTriangle, CheckCircle, X } from "lucide-react";
-import { MachineError, machines } from "../data/mockData";
+
+type MachineError = {
+  id: string;
+  machineId: string;
+  machineName: string;
+  machineCategory: string;
+  errorCode: string;
+  errorType: string;
+  severity: "critical" | "warning" | "info";
+  description: string;
+  timestamp: string;
+  status: "active" | "resolved";
+  assignedTo?: string;
+  relatedErrorCount: number;
+  lowRange?: number;
+  highRange?: number;
+  units?: string;
+  primaryTestName?: string;
+  primaryTestCode?: string;
+  recentValues?: number[];
+  errorPattern?: "random" | "systematic";
+  westgardRule?: string;
+  patternExplanation?: string;
+  affectedTests?: string[];
+  possibleCauses: string[];
+  suggestedSolutions: string[];
+  aiInsight?: string;
+};
 
 interface ErrorDetailPanelProps {
   error: MachineError | null;
@@ -14,7 +41,6 @@ type ErrorSeverity = MachineError["severity"];
 export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
   if (!error) return null;
 
-  const machine = machines.find((m) => m.id === error.machineId);
   const hasRange =
     error.lowRange !== undefined && error.highRange !== undefined;
 
@@ -54,7 +80,7 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay backdrop (visual only) */}
+      {/* Overlay backdrop */}
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
 
       {/* Detail Panel */}
@@ -176,20 +202,10 @@ export function ErrorDetailPanel({ error, onClose }: ErrorDetailPanelProps) {
                   Model
                 </p>
                 <p className="text-sm text-gray-900 dark:text-white">
-                  {machine?.model || "N/A"}
+                  {"N/A"}
                 </p>
               </div>
             </div>
-            {machine && (
-              <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800">
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  Location
-                </p>
-                <p className="text-sm text-gray-900 dark:text-white">
-                  {machine.location}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Test Range & Recent Values */}

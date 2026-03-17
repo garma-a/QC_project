@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './http-exception.filter.js';
 
 import { ValidationPipe } from '@nestjs/common';
+import { writeFileSync } from 'fs';
 
 
 async function bootstrap() {
@@ -30,6 +31,8 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
+
+  writeFileSync('./swagger.json', JSON.stringify(document, null, 2));
   SwaggerModule.setup('api/v1/docs', app, document);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
   await app.listen(process.env.PORT ?? 3000);
