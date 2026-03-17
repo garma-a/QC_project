@@ -2,9 +2,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api/serverFetch';
 import { UsersManager } from '@/components/client/UsersManager';
-import { UserResponseDto } from '@/lib/types/api';
-
-import { UserType } from '@/components/client/UsersManager';
+import type { UserListItemDto } from '@/lib/types/api';
+import type { UserType } from '@/components/client/UsersManager';
 
 export default async function UsersPage() {
   const cookieStore = await cookies();
@@ -16,18 +15,19 @@ export default async function UsersPage() {
     redirect('/login');
   }
 
-  let currentUser = null;
+  let currentUser: UserType | null = null;
   if (userInfoStr) {
     try {
-      currentUser = JSON.parse(userInfoStr);
-    } catch { }
+      currentUser = JSON.parse(userInfoStr) as UserType;
+    } catch { /* ignore parse errors */ }
   }
 
   let initialUsers: UserType[] = [];
   try {
-    const fetchedUsers = await api.get<UserResponseDto[]>('/api/v1/users');
+    const fetchedUsers = await api.get<UserListItemDto[]>('/api/v1/users');
     if (fetchedUsers && Array.isArray(fetchedUsers)) {
-      initialUsers = fetchedUsers as unknown as UserType[];
+      // UserListItemDto already matches UserType shape (id, firstName, lastName, email, role, isActive, sectionName)
+      initialUsers = fetchedUsers;
     }
   } catch {
     console.error("Failed to fetch users");

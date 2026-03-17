@@ -3,28 +3,26 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, ChevronRight, XCircle, AlertTriangle } from 'lucide-react';
+import type { MachineResponseDto } from '@/lib/types/api';
+
+export type MachineWithQcStatus = MachineResponseDto & {
+  qcStatus: 'pass' | 'warning' | 'error';
+  violationCount: number;
+  lastQC?: { date: string };
+};
 
 type DashboardInteractiveProps = {
-  machinesWithStatus: {
-    id: string;
-    category: string;
-    name: string;
-    model: string;
-    status: string;
-    qcStatus: string;
-    violationCount: number;
-    lastQC?: { date: string };
-  }[];
+  machinesWithStatus: MachineWithQcStatus[];
   categories: { id: string; name: string }[];
 };
 
 export function DashboardInteractive({ machinesWithStatus, categories }: DashboardInteractiveProps) {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const router = useRouter();
 
   const filteredMachines = selectedCategory === 'all'
     ? machinesWithStatus
-    : machinesWithStatus.filter(m => m.category === selectedCategory);
+    : machinesWithStatus.filter(m => m.sectionId?.toString() === selectedCategory);
 
   return (
     <>
@@ -56,7 +54,7 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
       {/* Machine Grid - Magdi Yacoub Branded Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredMachines.map(machine => {
-          const categoryInfo = categories.find(c => c.id === machine.category);
+          const categoryInfo = categories.find(c => c.id === machine.sectionId.toString());
 
           return (
             <div
@@ -72,14 +70,14 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
                   <h3 className="text-gray-900 dark:text-white mb-1.5 truncate group-hover:text-[#c41e3a] dark:group-hover:text-[#e84855] transition-colors font-semibold text-lg">
                     {machine.name}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.model}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospCode}</p>
                 </div>
                 <div className="relative flex-shrink-0 ml-2">
-                  <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${machine.status === 'operational' ? 'bg-[#10b981]' :
-                      machine.status === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                  <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' :
+                      machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                     }`} />
-                  <div className={`absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-75 ${machine.status === 'operational' ? 'bg-[#10b981]' :
-                      machine.status === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                  <div className={`absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-75 ${machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' :
+                      machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                     }`} />
                 </div>
               </div>

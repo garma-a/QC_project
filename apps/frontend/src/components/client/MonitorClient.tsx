@@ -6,32 +6,16 @@ import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, Che
 import { MachineCharts } from '@/components/MachineCharts';
 import { LogoCompact } from '@/components/Logo';
 
-type MachineType = {
-  id: string;
-  category: string;
-  name: string;
-  model: string;
-  status: string;
-  lastMaintenance?: string | null;
-  location?: string;
-  testsToday?: number;
-  lastQC?: { date: string; status: string };
-  tests?: { name: string; category: string; code: string; unit: string; lowRange: number; highRange: number }[];
-};
+import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 type MonitorClientProps = {
-  machines: MachineType[];
+  machines: (MachineResponseDto & {
+    testsToday?: number;
+    lastQC?: { date: string; status: string };
+    tests?: { name: string; category: string; code: string; unit: string; lowRange: number; highRange: number }[];
+  })[];
   categories: { id: string; name: string }[];
-  qcHistory: {
-    id: string;
-    machineId: string;
-    status: string;
-    testName: string;
-    date: string;
-    performedBy: string;
-    result: string;
-    expectedRange: string;
-  }[];
+  qcHistory: QcResultResponseDto[];
 };
 
 export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
@@ -46,7 +30,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       return;
     }
 
-    const machineExists = machines.some((machine) => machine.id === machineIdFromUrl);
+    const machineExists = machines.some((m) => m.id.toString() === machineIdFromUrl);
     if (machineExists) {
       const frameId = window.requestAnimationFrame(() => {
         setSelectedMachineId(machineIdFromUrl);
@@ -56,8 +40,10 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
     }
   }, [searchParams, machines]);
 
-  const machine = machines.find(m => m.id === selectedMachineId);
-  const history = qcHistory.filter(qc => qc.machineId === selectedMachineId);
+  const machine = machines.find(m => m.id.toString() === selectedMachineId);
+  // Temporary: since qcHistory doesn't have machineId, we just show all results passed in for now
+  // In a real app we'd fetch qc results specifically for this machine's lots
+  const history = qcHistory;
 
   // Show machine selection if no machine is selected
   if (!selectedMachineId || !machine) {
@@ -76,7 +62,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         {/* Machines grouped by category */}
         <div className="space-y-6">
           {categories.map(category => {
-            const categoryMachines = machines.filter(m => m.category === category.id);
+            const categoryMachines = machines.filter(m => m.sectionId?.toString() === category.id);
             
             return (
               <div key={category.id}>
@@ -89,7 +75,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
                     <div
                       key={machine.id}
                       className="group bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 hover:shadow-2xl hover:shadow-[#c41e3a]/20 dark:hover:shadow-[#e84855]/30 transition-all cursor-pointer hover:border-[#c41e3a] dark:hover:border-[#e84855] hover:-translate-y-1 myc-pattern relative"
-                      onClick={() => setSelectedMachineId(machine.id)}
+                      onClick={() => setSelectedMachineId(machine.id.toString())}
                     >
                       {/* Corner accent */}
                       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
@@ -97,16 +83,16 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
                       <div className="flex items-start justify-between mb-4 relative z-10">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-gray-900 dark:text-white mb-1 truncate group-hover:text-[#c41e3a] dark:group-hover:text-[#e84855] transition-colors font-semibold">{machine.name}</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.model}</p>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospCode}</p>
                         </div>
                         <div className="relative flex-shrink-0 ml-2">
                           <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${
-                            machine.status === 'operational' ? 'bg-[#10b981]' : 
-                            machine.status === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                            machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' : 
+                            machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                           }`} />
                           <div className={`absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-75 ${
-                            machine.status === 'operational' ? 'bg-[#10b981]' : 
-                            machine.status === 'warning' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                            machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' : 
+                            machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                           }`} />
                         </div>
                       </div>
@@ -187,62 +173,39 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3 relative z-10">
             <div className="flex-1 min-w-0">
               <h1 className="text-gray-900 dark:text-white mb-2 break-words font-bold">{machine.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400">{machine.model}</p>
+              <p className="text-gray-600 dark:text-gray-400">{machine.hospCode}</p>
             </div>
             <div className={`px-4 py-2 rounded-xl font-semibold whitespace-nowrap self-start border-2 ${
-              machine.status === 'operational' ? 'bg-[#10b981]/10 dark:bg-[#10b981]/20 text-[#10b981] border-[#10b981]/30' :
-              machine.status === 'warning' ? 'bg-[#f59e0b]/10 dark:bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30' :
+              machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]/10 dark:bg-[#10b981]/20 text-[#10b981] border-[#10b981]/30' :
+              machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]/10 dark:bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30' :
               'bg-[#c41e3a]/10 dark:bg-[#e84855]/20 text-[#c41e3a] dark:text-[#e84855] border-[#c41e3a]/30 dark:border-[#e84855]/30'
             }`}>
-              {machine.status.charAt(0).toUpperCase() + machine.status.slice(1)}
+              {machine.currentStatus.charAt(0).toUpperCase() + machine.currentStatus.slice(1).toLowerCase()}
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 relative z-10">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Category</p>
-              <p className="text-gray-900 dark:text-white font-medium capitalize">{machine.category}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Section ID</p>
+              <p className="text-gray-900 dark:text-white font-medium capitalize">{machine.sectionId}</p>
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Location</p>
-              <p className="text-gray-900 dark:text-white font-medium">{machine.location}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Created At</p>
+              <p className="text-gray-900 dark:text-white font-medium">{machine.createdAt ? new Date(machine.createdAt).toLocaleDateString() : 'N/A'}</p>
             </div>
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Last Maintenance</p>
-              <p className="text-gray-900 dark:text-white font-medium">{machine.lastMaintenance}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Updated At</p>
+              <p className="text-gray-900 dark:text-white font-medium">{machine.updatedAt ? new Date(machine.updatedAt).toLocaleDateString() : 'N/A'}</p>
             </div>
           </div>
         </div>
 
-        {/* Available Tests */}
+        {/* Available Tests (Placeholder until Control Lots are wired) */}
         {machine.tests && machine.tests.length > 0 && (
           <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg">
             <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Available Tests ({machine.tests.length})</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {machine.tests.map((test: NonNullable<MachineType['tests']>[number], index: number) => (
-                <div key={index} className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 hover:border-[#c41e3a] dark:hover:border-[#e84855] transition-all group">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 dark:text-white text-sm font-semibold mb-1 truncate group-hover:text-[#c41e3a] dark:group-hover:text-[#e84855] transition-colors">
-                        {test.name}
-                      </p>
-                      <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">{test.category}</p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="px-2 py-1 rounded bg-[#c41e3a]/10 dark:bg-[#e84855]/20 text-[#c41e3a] dark:text-[#e84855] border border-[#c41e3a]/30 dark:border-[#e84855]/30 font-medium">
-                          Code: {test.code}
-                        </span>
-                        <span className="text-gray-600 dark:text-gray-400">{test.unit}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-[#c41e3a]/10 dark:border-[#e84855]/20 flex items-center justify-between text-xs">
-                    <span className="text-gray-600 dark:text-gray-400">Reference Range:</span>
-                    <span className="text-[#b8860b] dark:text-[#ffd700] font-semibold">
-                      {test.lowRange} - {test.highRange} {test.unit}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 text-gray-600 dark:text-gray-400 text-sm">
+               Test details will be loaded from real control lots.
             </div>
           </div>
         )}
@@ -297,24 +260,23 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         {/* QC History */}
         <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg">
           <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Quality Control History</h2>
-          
-          <div className="space-y-3">
-            {history.map(qc => (
-              <div key={qc.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl gap-3 hover:bg-[#fef3e2] dark:hover:bg-[#333333] transition-colors border border-[#c41e3a]/10 dark:border-[#e84855]/20">
-                <div className="flex items-start gap-4">
-                  {qc.status === 'pass' ? (
-                    <CheckCircle className="text-[#10b981] flex-shrink-0 mt-1" size={20} />
-                  ) : (
-                    <AlertCircle className="text-[#c41e3a] dark:text-[#e84855] flex-shrink-0 mt-1" size={20} />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-gray-900 dark:text-white font-medium break-words">{qc.testName}</p>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm break-words">{qc.date} - {qc.performedBy}</p>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            {history.map((qc) => (
+              <div key={qc.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#2a2a2a] border border-[#c41e3a]/10 dark:border-[#e84855]/20 group hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/40 transition-colors">
+                <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                  qc.status === 'PASS' ? 'bg-[#10b981]' :
+                  qc.status === 'WARNING' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-gray-900 dark:text-white truncate text-sm">Test Result</p>
+                    <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{new Date(qc.testDate).toLocaleDateString()}</span>
                   </div>
-                </div>
-                <div className="text-left sm:text-right pl-9 sm:pl-0">
-                  <p className="text-gray-900 dark:text-white font-medium">Result: {qc.result}</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Expected: {qc.expectedRange}</p>
+                  <div className="flex items-center gap-3 text-xs sm:text-sm">
+                    <span className="text-gray-600 dark:text-gray-400 truncate">By User {qc.performedBy}</span>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Val: {qc.measuredValue}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -322,7 +284,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         </div>
         </div>
       ) : (
-        <MachineCharts machineId={selectedMachineId ?? undefined} />
+        <MachineCharts machineId={selectedMachineId ? Number(selectedMachineId) : undefined} />
       )}
     </div>
   );

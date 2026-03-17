@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { loginAccount } from '@/lib/actions';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { UserResponseDto } from '@/lib/types/api';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -11,6 +13,7 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +30,14 @@ export function LoginForm() {
     formData.append("password", password);
 
     const result = await loginAccount(formData);
-    
+
     setIsPending(false);
-    
+
     if (result?.error) {
       setError(result.error);
-    } else if (result?.success) {
+    } else if (result?.success && result.token && result.user) {
+      // Hydrate the client-side auth store
+      setAuth(result.user as UserResponseDto, result.token);
       router.replace('/dashboard');
     }
   };

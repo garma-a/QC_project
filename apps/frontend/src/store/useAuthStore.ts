@@ -3,9 +3,9 @@ import { persist } from 'zustand/middleware';
 import type { UserResponseDto, Role } from '@/lib/types/api';
 
 interface AuthState {
-  /** The currently authenticated user (decoded from JWT or fetched after login) */
+  /** The currently authenticated user */
   currentUser: UserResponseDto | null;
-  /** JWT access token stored client-side for hooks (SSR uses cookie) */
+  /** JWT access token stored client-side for hooks */
   accessToken: string | null;
   /** Convenience getters */
   role: Role | null;
@@ -15,6 +15,14 @@ interface AuthState {
   setAuth: (user: UserResponseDto, token: string) => void;
   clearAuth: () => void;
   setUser: (user: UserResponseDto) => void;
+  /** Hydrate from cookies on app load */
+  hydrateFromCookies: () => void;
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -51,6 +59,26 @@ export const useAuthStore = create<AuthState>()(
           sectionId: user.sectionId ?? null,
           isAdmin: user.role === 'ADMIN',
         }),
+
+      hydrateFromCookies: () => {
+        const userInfoStr = getCookie('user_info');
+        const token = getCookie('auth_token');
+
+        if (userInfoStr) {
+          try {
+            const user = JSON.parse(userInfoStr) as UserResponseDto;
+            set({
+              currentUser: user,
+              accessToken: token,
+              role: user.role,
+              sectionId: user.sectionId ?? null,
+              isAdmin: user.role === 'ADMIN',
+            });
+          } catch {
+            // Invalid cookie data
+          }
+        }
+      },
     }),
     {
       name: 'qc-auth-storage',

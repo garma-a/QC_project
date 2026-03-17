@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Sidebar } from "@/components/Sidebar";
 import { PageBackground } from "@/components/PageBackground";
 
@@ -15,7 +15,12 @@ const PROTECTED_ROUTES = ["/dashboard", "/monitor", "/qc", "/errors", "/users"];
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const hydrate = useAuthStore((s) => s.hydrateFromCookies);
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   const isLoginPage = pathname === "/login";
   const isProtectedRoute = PROTECTED_ROUTES.some(

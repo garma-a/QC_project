@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { api } from "./api/serverFetch";
-import {
+import { decodeJwt } from "./utils/jwt";
+import type {
   LoginDto,
   LoginResponseDto,
   AdminCreateUserDto,
@@ -37,19 +38,58 @@ export async function loginAccount(formData: FormData) {
     const payload: LoginDto = { email, password };
     const response = await api.post<LoginResponseDto>("/api/v1/auth/login", payload);
 
-    if (response && response.access_token) {
-      const cookieStore = await cookies();
-      cookieStore.set("auth_token", response.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-      });
-
-      return { success: true };
-    } else {
+    if (!response?.access_token) {
       return { error: "Invalid credentials." };
     }
+
+    const token = response.access_token;
+    const cookieStore = await cookies();
+
+    // Store the JWT token (httpOnly for server components)
+    cookieStore.set("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    // Decode the JWT to get userId and role
+    const jwtPayload = decodeJwt(token);
+    if (!jwtPayload) {
+      return { error: "Failed to decode authentication token." };
+    }
+
+    // Fetch full user info from the API
+    let user: UserResponseDto | null = null;
+    try {
+      user = await api.get<UserResponseDto>(`/api/v1/users/${jwtPayload.userId}`);
+    } catch {
+      // If user fetch fails, we still have userId and role from JWT
+    }
+
+    // Store user info in a readable cookie for SSR hydration
+    const userInfo = user ?? {
+      id: jwtPayload.userId,
+      firstName: '',
+      lastName: '',
+      email,
+      role: jwtPayload.role,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    cookieStore.set("user_info", JSON.stringify(userInfo), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    // Return token + user to the client so it can hydrate the Zustand store
+    return {
+      success: true,
+      token,
+      user: userInfo as UserResponseDto,
+    };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : "Failed to login. Please try again." };
   }
@@ -58,6 +98,7 @@ export async function loginAccount(formData: FormData) {
 export async function logoutAccount() {
   const cookieStore = await cookies();
   cookieStore.delete("auth_token");
+  cookieStore.delete("user_info");
   redirect("/login");
 }
 

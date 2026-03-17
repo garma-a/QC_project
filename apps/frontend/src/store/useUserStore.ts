@@ -4,7 +4,7 @@ import type { UserType } from '@/components/client/UsersManager';
 
 interface UserStoreState {
   usersList: UserType[];
-  deleteUser: (id: string) => void;
+  deleteUser: (id: number) => void;
   updateUser: (updatedUser: UserType) => void;
   addUser: (newUser: UserType) => void;
 }

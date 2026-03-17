@@ -1,64 +1,48 @@
 import { api } from '@/lib/api/serverFetch';
-import { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto } from '@/lib/types/api';
 import { MonitorClient } from '@/components/client/MonitorClient';
 
-type MachineType = {
-  id: string;
-  category: string;
-  name: string;
-  model: string;
-  status: string;
-  lastMaintenance?: string | null;
-  location?: string;
-  testsToday?: number;
-  lastQC?: { date: string; status: string };
-  tests?: { name: string; category: string; code: string; unit: string; lowRange: number; highRange: number }[];
-};
-
 export default async function MonitorPage(props: { searchParams: Promise<{ machineId?: string }> }) {
-
   // SearchParams not explicitly needed yet but kept for next.js interface
   await props.searchParams;
 
-  let machines: MachineType[] = [];
-  const categories: { id: string; name: string }[] = [];
-  let qcHistory: {
-    id: string;
-    machineId: string;
-    status: string;
-    testName: string;
-    date: string;
-    performedBy: string;
-    result: string;
-    expectedRange: string;
-  }[] = [];
+  let machines: (MachineResponseDto & {
+    testsToday?: number;
+    lastQC?: { date: string; status: string };
+    tests?: { name: string; category: string; code: string; unit: string; lowRange: number; highRange: number }[];
+  })[] = [];
 
-  // We attempt to Server fetch from backend replacing client useEffects
+  let categories: { id: string; name: string }[] = [];
+
   try {
     const fetchedMachines = await api.get<MachineResponseDto[]>('/api/v1/machines');
     if (fetchedMachines && fetchedMachines.length > 0) {
-      // map to internal representation with fallbacks
-      machines = fetchedMachines.map((m: MachineResponseDto) => ({
+      machines = fetchedMachines.map((m) => ({
         ...m,
-        id: m.id.toString(),
-        lastQC: (m as unknown as Record<string, unknown>).lastQC || { date: 'N/A', status: 'pass' },
-        tests: (m as unknown as Record<string, unknown>).tests || []
-      })) as unknown as MachineType[];
-    }
+        testsToday: 0,
+        lastQC: { date: 'N/A', status: 'pass' },
+        tests: [],
+      }));
 
-    const fetchedHistory = await api.get<QcResultResponseDto[]>('/api/v1/qc-results');
-    if (fetchedHistory && fetchedHistory.length > 0) {
-      qcHistory = fetchedHistory as unknown as typeof qcHistory;
+      // Derive categories from unique sectionIds
+      const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
+      categories = sectionIds.map((sid) => ({
+        id: sid.toString(),
+        name: `Section ${sid}`,
+      }));
     }
   } catch {
-    console.error("Failed to fetch machines/qc-results via Server Component");
+    console.error("Failed to fetch machines via Server Component");
   }
 
+  // Note: QC results require a lotId query parameter, so we can't fetch them generically here.
+  // They will be fetched on-demand when a specific machine/lot is selected.
+
   return (
-    <MonitorClient 
-      machines={machines} 
-      categories={categories} 
-      qcHistory={qcHistory}
+    <MonitorClient
+      machines={machines}
+      categories={categories}
+      qcHistory={[]}
     />
   );
 }

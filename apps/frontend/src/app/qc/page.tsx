@@ -1,6 +1,7 @@
 import { api } from '@/lib/api/serverFetch';
-import { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto } from '@/lib/types/api';
 import { QCHistoryInteractive } from '@/components/client/QCHistoryInteractive';
+
 type MachineType = { id: string; name: string; category: string; model: string };
 type CategoryType = { id: string; name: string };
 type QcHistoryType = {
@@ -17,29 +18,35 @@ type QcHistoryType = {
 };
 
 export default async function QCPage() {
-
   let machines: MachineType[] = [];
-  const categories: CategoryType[] = [];
-  let qcHistory: QcHistoryType[] = [];
+  let categories: CategoryType[] = [];
+  const qcHistory: QcHistoryType[] = [];
 
-  // We attempt to Server fetch from backend replacing client useEffects
   try {
     const fetchedMachines = await api.get<MachineResponseDto[]>('/api/v1/machines');
     if (fetchedMachines && fetchedMachines.length > 0) {
-      // map to internal representation with fallbacks
-      machines = fetchedMachines.map((m: MachineResponseDto) => ({
-        ...m,
+      // Map MachineResponseDto to the shape expected by QCHistory/CreateQCTest components
+      machines = fetchedMachines.map((m) => ({
         id: m.id.toString(),
-      })) as unknown as MachineType[];
-    }
+        name: m.name,
+        category: m.sectionId.toString(),
+        model: m.hospCode ?? '',
+      }));
 
-    const fetchedHistory = await api.get<QcTestResponseDto[]>('/api/v1/qc-tests');
-    if (fetchedHistory && fetchedHistory.length > 0) {
-      qcHistory = fetchedHistory as unknown as QcHistoryType[];
+      // Derive categories from unique sectionIds
+      const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
+      categories = sectionIds.map((sid) => ({
+        id: sid.toString(),
+        name: `Section ${sid}`,
+      }));
     }
   } catch {
-    console.error("Failed to fetch machines/qc-tests via Server Component");
+    console.error("Failed to fetch machines via Server Component");
   }
+
+  // Note: There is no GET /api/v1/qc-tests (list all) endpoint.
+  // QC tests can only be fetched per machine via GET /api/v1/qc-tests/machine/{machineId}.
+  // QC history will be loaded on-demand when a machine is selected.
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
