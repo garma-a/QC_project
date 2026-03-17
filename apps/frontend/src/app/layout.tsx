@@ -1,5 +1,4 @@
 import { ThemeProvider } from "../contexts/ThemeContext";
-import { AuthProvider } from "../contexts/AuthContext";
 import { AppShell } from "../components/AppShell";
 import "./globals.css"; // Make sure this matches your global CSS file name
 
@@ -17,9 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ThemeProvider>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-          </AuthProvider>
+          <AppShell>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

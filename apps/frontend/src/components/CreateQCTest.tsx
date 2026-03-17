@@ -1,14 +1,19 @@
 "use client";
 
+import { useState } from 'react';
 import { X, Heart } from 'lucide-react';
-import { machines, categories } from '../data/mockData';
 import { useQCStore } from '../store/useQCStore';
+import { createQcTest } from '@/lib/actions';
+import { CreateQcTestDto } from '@/lib/types/api';
 
 interface CreateQCTestProps {
   onClose: () => void;
+  machines: { id: string; name: string; category: string; model: string }[];
+  categories: { id: string; name: string }[];
 }
 
-export function CreateQCTest({ onClose }: CreateQCTestProps) {
+export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProps) {
+  const [isPending, setIsPending] = useState(false);
   const selectedCategory = useQCStore((state) => state.selectedCategory);
   const selectedMachine = useQCStore((state) => state.selectedMachine);
   const testName = useQCStore((state) => state.testName);
@@ -27,13 +32,25 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
     ? machines.filter(m => m.category === selectedCategory)
     : [];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real application, this would submit to a backend
-    alert(`QC Test Created!\n\nMachine: ${machines.find(m => m.id === selectedMachine)?.name}\nTest: ${testName}\nResult: ${result}`);
-    resetForm();
-    onClose();
+
+    setIsPending(true);
+    const numericMachineId = parseInt(selectedMachine, 10);
+    const payload: CreateQcTestDto = {
+      machineId: isNaN(numericMachineId) ? 0 : numericMachineId,
+      testName: testName,
+      testType: selectedCategory || '',
+    };
+    const res = await createQcTest(payload);
+    setIsPending(false);
+
+    if (res.error) {
+      alert("Failed: " + res.error);
+    } else {
+      resetForm();
+      onClose();
+    }
   };
 
   const handleClose = () => {
@@ -49,8 +66,8 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
             <Heart size={24} className="text-[#c41e3a] dark:text-[#e84855]" fill="currentColor" />
             <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">Create New QC Test</h2>
           </div>
-          <button 
-            onClick={handleClose} 
+          <button
+            onClick={handleClose}
             className="text-gray-400 dark:text-gray-500 hover:text-[#c41e3a] dark:hover:text-[#e84855] p-2 rounded-lg hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-all"
           >
             <X size={24} />
@@ -160,9 +177,10 @@ export function CreateQCTest({ onClose }: CreateQCTestProps) {
             </button>
             <button
               type="submit"
+              disabled={isPending}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
             >
-              Create QC Test
+              {isPending ? 'Creating...' : 'Create QC Test'}
             </button>
           </div>
         </form>

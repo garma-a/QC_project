@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { PageBackground } from "@/components/PageBackground";
 
@@ -10,33 +9,33 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const PROTECTED_ROUTES = ["/dashboard", "/monitor", "/qc", "/errors", "/users"];
-
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { currentUser } = useAuth();
-
-  const isLoginPage = pathname === "/login";
-  const isProtectedRoute = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (isProtectedRoute && !currentUser) {
-      router.replace("/login");
-    }
-  }, [isProtectedRoute, currentUser, router]);
+    setMounted(true);
+  }, []);
 
-  if (isProtectedRoute && !currentUser) {
-    return null;
+  const isLoginPage = pathname === "/login";
+
+  // On login page, render children directly without the shell layout.
+  // This avoids the Sidebar + shell appearing on the login page.
+  if (isLoginPage) {
+    return <>{children}</>;
   }
 
+  // For all other (protected) routes, render the full shell.
+  // Middleware ensures unauthenticated users never reach here.
+  // We defer Sidebar rendering until after mount to avoid hydration
+  // mismatches from Zustand store rehydrating user data from localStorage.
   return (
     <div className="flex h-screen bg-gradient-to-br from-[#faf8f5] via-[#fff8f0] to-[#fef3e2] dark:from-[#121212] dark:via-[#1a1a1a] dark:to-[#1e1e1e] transition-colors myc-pattern relative overflow-hidden">
       <PageBackground />
-      {!isLoginPage && <Sidebar />}
-      <main className="flex-1 overflow-auto relative z-10">{children}</main>
+      {mounted && <Sidebar />}
+      <main className="flex-1 overflow-auto relative z-10">
+        {children}
+      </main>
     </div>
   );
 }
