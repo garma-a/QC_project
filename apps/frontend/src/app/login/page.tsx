@@ -1,18 +1,11 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { LoginForm } from '@/components/client/LoginForm';
 import { ThemeToggle } from '@/components/client/ThemeToggle';
 
-export default async function LoginPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
+// Auth redirects are handled by middleware.ts — no need for cookies() here.
 
-  if (token) {
-    redirect('/dashboard');
-  }
-
+export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#faf8f5] via-[#fff8f0] to-[#fef3e2] dark:from-[#121212] dark:via-[#1a1a1a] dark:to-[#1e1e1e] flex items-center justify-center p-4 transition-colors duration-300 myc-pattern relative overflow-hidden">
       {/* Decorative background elements - Magdi Yacoub colors */}

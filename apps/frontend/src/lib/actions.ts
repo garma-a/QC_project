@@ -19,7 +19,6 @@ import type {
   ControlLotResponseDto,
 } from "./types/api";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 // ===================================================================
@@ -99,7 +98,7 @@ export async function logoutAccount() {
   const cookieStore = await cookies();
   cookieStore.delete("auth_token");
   cookieStore.delete("user_info");
-  redirect("/login");
+  return { success: true };
 }
 
 // ===================================================================
@@ -108,9 +107,8 @@ export async function logoutAccount() {
 
 export async function createUser(payload: AdminCreateUserDto) {
   try {
-    await api.post<UserResponseDto>("/api/v1/users", payload);
-    revalidatePath("/users");
-    return { success: true };
+    const user = await api.post<UserResponseDto>("/api/v1/users", payload);
+    return { success: true, data: user };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : "Failed to create user." };
   }
@@ -119,7 +117,6 @@ export async function createUser(payload: AdminCreateUserDto) {
 export async function deleteUser(userId: number) {
   try {
     await api.delete(`/api/v1/users/${userId}`);
-    revalidatePath("/users");
     return { success: true };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : "Failed to delete user." };
@@ -128,9 +125,8 @@ export async function deleteUser(userId: number) {
 
 export async function updateUser(userId: number, payload: AdminUpdateUserDto) {
   try {
-    await api.patch(`/api/v1/users/${userId}`, payload);
-    revalidatePath("/users");
-    return { success: true };
+    const user = await api.patch<UserResponseDto>(`/api/v1/users/${userId}`, payload);
+    return { success: true, data: user };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : "Failed to update user." };
   }

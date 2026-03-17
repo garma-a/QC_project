@@ -2,10 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Shield, Wrench } from 'lucide-react';
 import { loginAccount } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { UserResponseDto } from '@/lib/types/api';
+
+const QUICK_LOGIN_ACCOUNTS = [
+  { label: 'Admin', email: 'admin@lab.local', password: 'Password123!', icon: Shield, color: 'from-[#b8860b] to-[#d4af37] dark:from-[#ffd700] dark:to-[#f4c430]' },
+  { label: 'Technician', email: 'john.doe@lab.local', password: 'Password123!', icon: Wrench, color: 'from-[#003366] to-[#1a5276] dark:from-[#4a90e2] dark:to-[#6bb3f0]' },
+];
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -14,6 +19,12 @@ export function LoginForm() {
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
+
+  const fillCredentials = (account: typeof QUICK_LOGIN_ACCOUNTS[number]) => {
+    setEmail(account.email);
+    setPassword(account.password);
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +47,6 @@ export function LoginForm() {
     if (result?.error) {
       setError(result.error);
     } else if (result?.success && result.token && result.user) {
-      // Hydrate the client-side auth store
       setAuth(result.user as UserResponseDto, result.token);
       router.replace('/dashboard');
     }
@@ -44,6 +54,33 @@ export function LoginForm() {
 
   return (
     <>
+      {/* Quick Login Buttons */}
+      <div className="mb-6 relative z-10">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-medium text-center uppercase tracking-wider">Quick Login</p>
+        <div className="grid grid-cols-2 gap-3">
+          {QUICK_LOGIN_ACCOUNTS.map((account) => {
+            const Icon = account.icon;
+            return (
+              <button
+                key={account.email}
+                type="button"
+                onClick={() => fillCredentials(account)}
+                disabled={isPending}
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r ${account.color} text-white text-sm font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70`}
+              >
+                <Icon size={16} />
+                {account.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="relative mb-6">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
+        <div className="relative flex justify-center"><span className="bg-white dark:bg-[#1e1e1e] px-3 text-xs text-gray-400 dark:text-gray-500">or enter manually</span></div>
+      </div>
+
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20 border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40 flex items-start gap-3 relative z-10">

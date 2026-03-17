@@ -22,12 +22,24 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * Try to read the auth_token cookie. Returns null if cookies() is not
+ * available (e.g. when called outside a Server Component context in vinext).
+ */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get('auth_token')?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function serverFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
+  const token = await getAuthToken();
 
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');

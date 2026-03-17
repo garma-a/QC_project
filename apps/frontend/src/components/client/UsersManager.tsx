@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserPlus, Users, Mail, User, Lock, CheckCircle, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { LogoCompact } from '@/components/Logo';
 import { createUser, deleteUser, updateUser } from '@/lib/actions';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { AdminUpdateUserDto, Role } from '@/lib/types/api';
 
 export type UserType = {
@@ -99,8 +100,19 @@ function EditTechnicianModal({ user, onCancel, onSave }: EditTechnicianModalProp
   );
 }
 
-export function UsersManager({ initialUsers, currentUser }: { initialUsers: UserType[], currentUser: UserType | null }) {
+export function UsersManager({ initialUsers, currentUser: serverCurrentUser }: { initialUsers: UserType[], currentUser: UserType | null }) {
+  // Fall back to Zustand store if server couldn't provide currentUser (vinext cookies() limitation)
+  const storeUser = useAuthStore((s) => s.currentUser);
+  const currentUser = serverCurrentUser ?? (storeUser ? {
+    id: storeUser.id,
+    firstName: storeUser.firstName,
+    lastName: storeUser.lastName,
+    email: storeUser.email,
+    role: storeUser.role,
+    isActive: storeUser.isActive,
+  } as UserType : null);
   const isAdmin = currentUser?.role === 'ADMIN';
+  const [users, setUsers] = useState<UserType[]>(initialUsers);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isPending, setIsPending] = useState(false);
@@ -119,21 +131,38 @@ export function UsersManager({ initialUsers, currentUser }: { initialUsers: User
   const handleDeleteUser = async (id: number) => {
     if (window.confirm('Are you sure you want to deactivate this technician?')) {
       setIsPending(true);
-      const res = await deleteUser(id);
-      setIsPending(false);
-      if (res.error) {
-        alert(res.error);
+      try {
+        const res = await deleteUser(id);
+        if (res.error) {
+          setMessage({ type: 'error', text: res.error });
+        } else {
+          // Mark user as inactive locally
+          setUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u));
+          setMessage({ type: 'success', text: 'Technician deactivated successfully' });
+        }
+      } catch (err) {
+        setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete user' });
       }
+      setIsPending(false);
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
   const handleSaveEdit = async (updatedFields: AdminUpdateUserDto) => {
     if (!editingUser) return;
-    const res = await updateUser(editingUser.id, updatedFields);
-    if (!res.error) {
-      setEditingUser(null);
-    } else {
-      alert(res.error);
+    try {
+      const res = await updateUser(editingUser.id, updatedFields);
+      if (!res.error) {
+        // Update user in local state
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...updatedFields } : u));
+        setEditingUser(null);
+        setMessage({ type: 'success', text: 'Technician updated successfully' });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: 'error', text: res.error });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update user' });
     }
   };
 
@@ -160,33 +189,48 @@ export function UsersManager({ initialUsers, currentUser }: { initialUsers: User
       return;
     }
 
-    if (formData.password.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+    if (formData.password.length < 8) {
+      setMessage({ type: 'error', text: 'Password must be at least 8 characters' });
       return;
     }
 
     setIsPending(true);
-    const res = await createUser({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      password: formData.password,
-      email: formData.email,
-      role: 'TECHNICIAN',
-    });
-    setIsPending(false);
-    
-    if (res.success) {
-      setMessage({ type: 'success', text: `Technician account created successfully for ${formData.firstName} ${formData.lastName}` });
-      setFormData({ firstName: '', lastName: '', password: '', email: '' });
-      setShowAddForm(false);
+    try {
+      const res = await createUser({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        password: formData.password,
+        email: formData.email,
+        role: 'TECHNICIAN',
+      });
       
-      setTimeout(() => setMessage(null), 3000);
-    } else {
-      setMessage({ type: 'error', text: res.error || 'Failed to create technician' });
+      if (res.success) {
+        setMessage({ type: 'success', text: `Technician account created successfully for ${formData.firstName} ${formData.lastName}` });
+        // Add new user to local state
+        if (res.data) {
+          setUsers(prev => [...prev, {
+            id: res.data.id,
+            firstName: res.data.firstName,
+            lastName: res.data.lastName,
+            email: res.data.email,
+            role: res.data.role,
+            isActive: res.data.isActive,
+            createdAt: res.data.createdAt,
+          }]);
+        }
+        setFormData({ firstName: '', lastName: '', password: '', email: '' });
+        setShowAddForm(false);
+      } else {
+        setMessage({ type: 'error', text: res.error || 'Failed to create technician' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to create technician' });
     }
+    setIsPending(false);
+    setTimeout(() => setMessage(null), 3000);
   };
 
-  const technicians = initialUsers.filter((u) => u.role === 'TECHNICIAN');
+  const technicians = users.filter((u) => u.role === 'TECHNICIAN');
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -290,7 +334,7 @@ export function UsersManager({ initialUsers, currentUser }: { initialUsers: User
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                  placeholder="Minimum 6 characters"
+                   placeholder="Minimum 8 characters"
                   disabled={isPending}
                 />
               </div>

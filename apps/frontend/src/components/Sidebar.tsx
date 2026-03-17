@@ -13,7 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "../contexts/ThemeContext";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Logo, LogoCompact } from "./Logo";
@@ -23,12 +23,13 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
+export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const currentUser = useAuthStore((s) => s.currentUser);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const pathname = usePathname();
+  const router = useRouter();
 
   const menuItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -53,10 +54,12 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     clearAuth();
-    // Use the server action to logout so cookies are cleared
-    import('@/lib/actions').then(({ logoutAccount }) => logoutAccount());
+    // Clear cookies via server action, then navigate to login
+    const { logoutAccount } = await import('@/lib/actions');
+    await logoutAccount();
+    router.push('/login');
   };
 
   return (
