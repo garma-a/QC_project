@@ -9,8 +9,10 @@ import {
   Filter,
   ChevronDown,
 } from "lucide-react";
-import { allErrors, MachineError } from "@/data/mockData";
 import { ErrorDetailPanel } from "@/components/ErrorDetailPanel";
+
+// Temporary empty array until a real API fetches errors
+const allErrors: any[] = [];
 
 type FilterPeriod = "24h" | "48h" | "1week" | "all";
 type SeverityFilter = "all" | "critical" | "warning" | "info";
@@ -49,7 +51,7 @@ const isStatusFilter = (value: string): value is StatusFilter => {
 
 export default function ErrorsPage() {
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("24h");
-  const [selectedError, setSelectedError] = useState<MachineError | null>(null);
+  const [selectedError, setSelectedError] = useState<any | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [severityFilter, setSeverityFilter] =
     useState<SeverityFilter>("all");

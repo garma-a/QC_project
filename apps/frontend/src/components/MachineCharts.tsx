@@ -20,7 +20,7 @@ import { applyWestgardRules, getPointColor, formatWestgardStats } from '../utils
 import { getAvailableMachines, getAvailableTests, getQCData } from '../utils/dataProcessor';
 
 interface MachineChartsProps {
-  machineId?: string; // Optional now as we have internal selection
+  machineId?: number; // Passed down from MonitorClient
 }
 
 interface ChartDataPoint {
@@ -99,8 +99,8 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
   // Get available options
   const machines = useMemo(() => getAvailableMachines(), []);
   const initialMachine =
-    initialMachineId && machines.includes(initialMachineId)
-      ? initialMachineId
+    initialMachineId && machines.includes(initialMachineId.toString())
+      ? initialMachineId.toString()
       : (machines[0] ?? '');
 
   const [selectedMachine, setSelectedMachine] = useState<string>(initialMachine);

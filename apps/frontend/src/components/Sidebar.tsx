@@ -12,11 +12,10 @@ import {
   Heart,
   AlertCircle,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "../contexts/ThemeContext";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuthStore } from "@/store/useAuthStore";
 import { Logo, LogoCompact } from "./Logo";
 
 interface SidebarProps {
@@ -24,9 +23,11 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
+export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
-  const { currentUser, logout, isAdmin } = useAuth();
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -53,8 +54,11 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    clearAuth();
+    // Clear cookies via server action, then navigate to login
+    const { logoutAccount } = await import('@/lib/actions');
+    await logoutAccount();
     router.push('/login');
   };
 
@@ -133,28 +137,14 @@ export function Sidebar({ isOpen = true, onClose = () => {} }: SidebarProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 space-y-2 bg-gradient-to-t from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1a1a1a]">
           {/* User Info */}
           <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
-            <div className="flex items-center gap-3">
-              {currentUser?.profileImage ? (
-                <Image
-                  src={currentUser.profileImage}
-                  alt={`${currentUser.fullName} profile`}
-                  width={40}
-                  height={40}
-                  unoptimized
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]"
-                />
-              ) : (
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
-                  {currentUser?.fullName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
+                  {currentUser?.firstName?.[0] || ''}
+                  {currentUser?.lastName?.[0] || ''}
                 </div>
-              )}
               <div className="min-w-0 flex-1">
                 <p className="text-gray-900 dark:text-white text-sm font-medium truncate">
-                  {currentUser?.fullName}
+                  {currentUser?.firstName} {currentUser?.lastName}
                 </p>
                 <p className="text-[#b8860b] dark:text-[#ffd700] text-xs truncate font-semibold">
                   {isAdmin ? "Administrator" : "Technician"}

@@ -1,58 +1,60 @@
-"use client";
+import { api } from '@/lib/api/serverFetch';
+import type { MachineResponseDto } from '@/lib/types/api';
+import { QCHistoryInteractive } from '@/components/client/QCHistoryInteractive';
 
-import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { CreateQCTest } from '@/components/CreateQCTest';
-import { QCHistory } from '@/components/QCHistory';
-import { LogoCompact } from '@/components/Logo';
+type MachineType = { id: string; name: string; category: string; model: string };
+type CategoryType = { id: string; name: string };
+type QcHistoryType = {
+  id: string;
+  machineId: string;
+  testName: string;
+  date: string;
+  performedBy: string;
+  numericResult?: number;
+  result: string;
+  expectedRange: string;
+  status: string;
+  notes?: string | null;
+};
 
-export default function QCPage() {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+export default async function QCPage() {
+  let machines: MachineType[] = [];
+  let categories: CategoryType[] = [];
+  const qcHistory: QcHistoryType[] = [];
+
+  try {
+    const fetchedMachines = await api.get<MachineResponseDto[]>('/api/v1/machines');
+    if (fetchedMachines && fetchedMachines.length > 0) {
+      // Map MachineResponseDto to the shape expected by QCHistory/CreateQCTest components
+      machines = fetchedMachines.map((m) => ({
+        id: m.id.toString(),
+        name: m.name,
+        category: m.sectionId.toString(),
+        model: m.hospCode ?? '',
+      }));
+
+      // Derive categories from unique sectionIds
+      const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
+      categories = sectionIds.map((sid) => ({
+        id: sid.toString(),
+        name: `Section ${sid}`,
+      }));
+    }
+  } catch {
+    console.error("Failed to fetch machines via Server Component");
+  }
+
+  // Note: There is no GET /api/v1/qc-tests (list all) endpoint.
+  // QC tests can only be fetched per machine via GET /api/v1/qc-tests/machine/{machineId}.
+  // QC history will be loaded on-demand when a machine is selected.
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
-        <div className="flex items-center gap-3 flex-1 justify-between">
-          <div />
-          <div className="lg:hidden">
-            <LogoCompact />
-          </div>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
-        >
-          <Plus size={20} />
-          <span className="hidden sm:inline">Create New QC Test</span>
-          <span className="sm:hidden">New Test</span>
-        </button>
-      </div>
-
-      {/* Decorative line */}
-      <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full mb-6" />
-
-      {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60" size={20} />
-          <input
-            type="text"
-            placeholder="Search by machine, test name, or date..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-          />
-        </div>
-      </div>
-
-      {/* QC History */}
-      <QCHistory searchTerm={searchTerm} />
-
-      {/* Create QC Test Modal */}
-      {showCreateForm && (
-        <CreateQCTest onClose={() => setShowCreateForm(false)} />
-      )}
+      <QCHistoryInteractive 
+        qcHistory={qcHistory} 
+        machines={machines} 
+        categories={categories} 
+      />
     </div>
   );
 }

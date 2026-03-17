@@ -12,14 +12,19 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') {
-      return 'light';
-    }
+  // Always start with 'light' on both server and client to avoid hydration mismatch.
+  // The real saved theme is applied in the useEffect below after hydration.
+  const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
-    const savedTheme = window.localStorage?.getItem('theme');
-    return savedTheme === 'dark' ? 'dark' : 'light';
-  });
+  // After hydration, read the saved theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      setTheme('dark');
+    }
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -28,10 +33,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove('dark');
     }
-    if (typeof window !== 'undefined') {
-      window.localStorage?.setItem('theme', theme);
+    // Only persist after initial mount to avoid overwriting saved theme with the default
+    if (mounted) {
+      localStorage.setItem('theme', theme);
     }
-  }, [theme]);
+  }, [theme, mounted]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
