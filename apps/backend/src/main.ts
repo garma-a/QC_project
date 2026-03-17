@@ -32,7 +32,7 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  writeFileSync('./swagger.json', JSON.stringify(document, null, 2));
+  //writeFileSync('./swagger.json', JSON.stringify(document, null, 2));
   SwaggerModule.setup('api/v1/docs', app, document);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
   await app.listen(process.env.PORT ?? 3000);
