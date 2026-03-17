@@ -1,0 +1,286 @@
+// ===================================================================
+// Enums — match backend Drizzle pgEnum definitions exactly
+// ===================================================================
+
+export type Role = 'TECHNICIAN' | 'ADMIN';
+export type Specialization = 'HEMATOLOGY' | 'CHEMISTRY' | 'MICROBIOLOGY' | 'IMMUNOLOGY' | 'OTHER';
+export type QcResultStatus = 'PASS' | 'FAIL' | 'WARNING';
+export type MachineStatus = 'IDLE' | 'RUNNING' | 'MAINTENANCE' | 'OFFLINE' | 'ERROR';
+export type AlertPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+// ===================================================================
+// Auth DTOs
+// ===================================================================
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponseDto {
+  access_token: string;
+}
+
+// ===================================================================
+// User DTOs
+// ===================================================================
+
+export interface UserResponseDto {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  role: Role;
+  isActive: boolean;
+  sectionId?: number | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface UserListItemDto {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  sectionName?: string | null;
+}
+
+export interface AdminCreateUserDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role?: Role;
+  isActive?: boolean;
+  sectionId?: number;
+}
+
+export interface AdminUpdateUserDto {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: Role;
+  isActive?: boolean;
+  sectionId?: number;
+}
+
+export interface DeactivateUserResponseDto {
+  message: string;
+}
+
+// ===================================================================
+// Section DTOs (schema exists, no API endpoint yet)
+// ===================================================================
+
+export interface SectionResponseDto {
+  id: number;
+  name: string;
+  location?: string | null;
+  specialization?: Specialization | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+// ===================================================================
+// Machine DTOs
+// ===================================================================
+
+export interface MachineResponseDto {
+  id: number;
+  name: string;
+  hospCode?: string | null;
+  sectionId: number;
+  currentStatus: MachineStatus;
+  lastRunAt?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+  specialization?: Specialization | null;
+}
+
+export interface CreateMachineDto {
+  name: string;
+  sectionId: number;
+  hospCode?: string;
+}
+
+export interface UpdateMachineDto {
+  name?: string;
+  hospCode?: string;
+  sectionId?: number;
+}
+
+// ===================================================================
+// QC Test DTOs
+// ===================================================================
+
+export interface QcTestResponseDto {
+  id: number;
+  testName: string;
+  testType?: string | null;
+  machineId: number;
+  updatedAt?: string | null;
+}
+
+export interface CreateQcTestDto {
+  testName: string;
+  testType?: string;
+  machineId: number;
+}
+
+// ===================================================================
+// Control Lot DTOs
+// ===================================================================
+
+export interface ControlLotResponseDto {
+  id: number;
+  testId: number;
+  lotNumber: string;
+  expirationDate: string;
+  targetValue?: number | null;
+  mean?: number | null;
+  standardDevi?: number | null;
+  upperControlLimit?: number | null;
+  lowerControlLimit?: number | null;
+  upperWarningLimit?: number | null;
+  lowerWarningLimit?: number | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateControlLotDto {
+  testId: number;
+  lotNumber: string;
+  expirationDate: string;
+  targetValue?: number;
+  mean?: number;
+  standardDevi?: number;
+  upperControlLimit?: number;
+  lowerControlLimit?: number;
+  upperWarningLimit?: number;
+  lowerWarningLimit?: number;
+}
+
+export interface UpdateControlLotDto {
+  expirationDate?: string;
+  targetValue?: number;
+  mean?: number;
+  standardDevi?: number;
+  upperControlLimit?: number;
+  lowerControlLimit?: number;
+  upperWarningLimit?: number;
+  lowerWarningLimit?: number;
+  isActive?: boolean;
+}
+
+export interface ControlLotDeactivateResponseDto {
+  message: string;
+  lot: ControlLotResponseDto;
+}
+
+export interface ControlLotInResultDto {
+  id: number;
+  testId: number;
+  lotNumber: string;
+  expirationDate: string;
+  targetValue?: number | null;
+  mean?: number | null;
+  standardDevi?: number | null;
+  upperControlLimit?: number | null;
+  lowerControlLimit?: number | null;
+  upperWarningLimit?: number | null;
+  lowerWarningLimit?: number | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ===================================================================
+// QC Result DTOs
+// ===================================================================
+
+export interface QcResultResponseDto {
+  id: number;
+  measuredValue: number;
+  testDate: string;
+  status: QcResultStatus;
+  comments?: string | null;
+  lotId: number;
+  performedBy: number;
+}
+
+export interface CreateQcResultDto {
+  measuredValue: number;
+  lotId: number;
+  comments?: string;
+}
+
+export interface UpdateQcResultDto {
+  comments?: string;
+}
+
+export interface QcResultDetailResponseDto {
+  id: number;
+  measuredValue: number;
+  testDate: string;
+  status: QcResultStatus;
+  comments?: string | null;
+  lotId: number;
+  performedBy: number;
+  controlLot: ControlLotInResultDto;
+  zScore: number;
+}
+
+export interface LotSummaryDto {
+  id: number;
+  lotNumber: string;
+  mean?: number | null;
+  standardDevi?: number | null;
+  upperControlLimit?: number | null;
+  lowerControlLimit?: number | null;
+  upperWarningLimit?: number | null;
+  lowerWarningLimit?: number | null;
+  testName: string;
+  machineName: string;
+}
+
+export interface QcResultsWithLotResponseDto {
+  lot: LotSummaryDto;
+  results: QcResultResponseDto[];
+}
+
+// ===================================================================
+// Alert DTOs (schema exists, endpoint TBD)
+// ===================================================================
+
+export interface AlertResponseDto {
+  id: number;
+  type?: string | null;
+  priority: AlertPriority;
+  message?: string | null;
+  ruleViolated?: string | null;
+  suggestedSolution?: string | null;
+  resultId: number;
+  createdAt: string;
+}
+
+export interface UserToAlertDto {
+  userId: number;
+  alertId: number;
+  isAcknowledged: boolean;
+  acknowledgedAt?: string | null;
+  actionTaken?: string | null;
+}
+
+// ===================================================================
+// Error DTOs
+// ===================================================================
+
+export interface ApiErrorResponse {
+  statusCode: number;
+  timestamp: string;
+  path: string;
+  message: string | string[];
+  error?: string;
+}

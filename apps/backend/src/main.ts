@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './http-exception.filter.js';
 
 import { ValidationPipe } from '@nestjs/common';
+import { writeFileSync } from 'fs';
 
 
 async function bootstrap() {
@@ -23,14 +24,16 @@ async function bootstrap() {
     }),
   );
 
-  /*const config = new DocumentBuilder()
+  const config = new DocumentBuilder()
     .setTitle('QC-Project API')
     .setDescription('The Full documnetation to the QC-Project API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/v1/docs', app, document);*/
+
+  //writeFileSync('./swagger.json', JSON.stringify(document, null, 2));
+  SwaggerModule.setup('api/v1/docs', app, document);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
   await app.listen(process.env.PORT ?? 3000);
 }

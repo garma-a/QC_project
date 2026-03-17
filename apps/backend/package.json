@@ -19,7 +19,8 @@
         "test": "bun test",
         "test:watch": "bun test --watch",
         "test:cov": "bun test --coverage",
-        "test:e2e": "bun test ./test"
+        "test:e2e": "bun test ./test",
+"seed": "ts-node -r tsconfig-paths/register src/database/seed.ts"
     },
     "dependencies": {
         "@neondatabase/serverless": "^1.0.2",

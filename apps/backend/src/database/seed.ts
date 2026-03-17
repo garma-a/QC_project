@@ -1,113 +1,212 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { sections, users, machines, qcTests, controlLots } from '@/drizzle/schema';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '@/app.module';
+import { DatabaseService } from '@/database/database.service';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import * as argon2 from 'argon2';
-import * as dotenv from 'dotenv';
+import {
+  sections,
+  users,
+  machines,
+  qcTests,
+  controlLots,
+  qcResults,
+  alerts,
+  usersToAlerts
+} from '@/drizzle/schema';
 
-dotenv.config();
-
-const databaseUrl = process.env.DATABASE_URL!;
-const queryClient = postgres(databaseUrl);
-const db = drizzle(queryClient);
-
-async function seedWithSection() {
-  console.log('⏳ Starting professional laboratory seed...');
-
-  // 1. Create the Section with specialization
-  const [hematologySection] = await db.insert(sections).values({
-    name: 'Hematology Department',
-    location: 'Main Floor - Block B',
-    specialization: 'HEMATOLOGY'
-  }).returning();
-
-  console.log('✓ Section created: Hematology (ID: ' + hematologySection.id + ')');
-
-  // 2. Create the Admin User
-  await db.insert(users).values({
-    firstName: 'System',
-    lastName: 'Admin',
-    email: process.env.ADMIN_EMAIL || 'admin@hospital.com',
-    passwordHash: await argon2.hash(process.env.ADMIN_PASSWORD || 'Admin123!'),
-    role: 'ADMIN',
-    sectionId: hematologySection.id 
-  });
-
-  console.log('✓ Admin user created');
-
-  // 3. Create a Technician User
-  await db.insert(users).values({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'tech@hospital.com',
-    passwordHash: await argon2.hash('Tech123!'),
-    role: 'TECHNICIAN',
-    sectionId: hematologySection.id
-  });
-
-  console.log('✓ Technician user created');
-
-  // 4. Create a Machine linked to the specialized section
-  const [machine] = await db.insert(machines).values({
-    name: 'Sysmex XN-1000',
-    hospCode: 'HEM-MAC-001',
-    sectionId: hematologySection.id,
-    currentStatus: 'IDLE',
-    specialization: 'HEMATOLOGY'
-  }).returning();
-
-  console.log('✓ Machine created and linked to Hematology (ID: ' + machine.id + ')');
-
-  // 5. Create QC Tests linked to the machine
-  const [hgbTest] = await db.insert(qcTests).values({
-    testName: 'Hemoglobin (HGB)',
-    testType: 'HEMATOLOGY',
-    machineId: machine.id,
-  }).returning();
-
-  const [wbcTest] = await db.insert(qcTests).values({
-    testName: 'White Blood Cell (WBC)',
-    testType: 'HEMATOLOGY',
-    machineId: machine.id,
-  }).returning();
-
-  console.log('✓ QC Tests created: HGB (ID: ' + hgbTest.id + '), WBC (ID: ' + wbcTest.id + ')');
-
-  // 6. Create Control Lots with realistic manufacturer values
-  await db.insert(controlLots).values({
-    testId: hgbTest.id,
-    lotNumber: 'LOT-HGB-2026-A',
-    expirationDate: new Date('2026-12-31'),
-    targetValue: 14.0,
-    mean: 14.0,
-    standardDevi: 0.5,
-    upperControlLimit: 15.5,  // mean + 3SD
-    lowerControlLimit: 12.5,  // mean - 3SD
-    upperWarningLimit: 15.0,  // mean + 2SD
-    lowerWarningLimit: 13.0,  // mean - 2SD
-  });
-
-  await db.insert(controlLots).values({
-    testId: wbcTest.id,
-    lotNumber: 'LOT-WBC-2026-A',
-    expirationDate: new Date('2026-12-31'),
-    targetValue: 7.5,
-    mean: 7.5,
-    standardDevi: 0.8,
-    upperControlLimit: 9.9,   // mean + 3SD
-    lowerControlLimit: 5.1,   // mean - 3SD
-    upperWarningLimit: 9.1,   // mean + 2SD
-    lowerWarningLimit: 5.9,   // mean - 2SD
-  });
-
-  console.log('✓ Control Lots created for HGB and WBC tests');
+// Helper to wipe the database cleanly
+async function clearDatabase(db: any) {
+  console.log('🗑️  Wiping existing database records to start fresh...');
+  // Must delete in reverse order of dependencies to avoid foreign key errors
+  await db.delete(usersToAlerts);
+  await db.delete(alerts);
+  await db.delete(qcResults);
+  await db.delete(controlLots);
+  await db.delete(qcTests);
+  await db.delete(machines);
+  await db.delete(users);
+  await db.delete(sections);
+  console.log('✨ Database wiped successfully!');
 }
 
-seedWithSection()
-  .then(() => {
-    console.log('✅ DATABASE SEEDING COMPLETE');
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('❌ SEEDING FAILED:', err);
-    process.exit(1);
-  });
+function deriveQcStatus(
+  measuredValue: number,
+): (typeof qcResults.$inferInsert)['status'] {
+  const r = Math.random();
+  if (r < 0.8) {
+    return 'PASS' as (typeof qcResults.$inferInsert)['status'];
+  }
+  if (r < 0.9) {
+    return 'FAIL' as (typeof qcResults.$inferInsert)['status'];
+  }
+  return 'WARNING' as (typeof qcResults.$inferInsert)['status'];
+}
+
+async function bootstrap() {
+  // Create a headless NestJS app context (no HTTP server)
+  const app = await NestFactory.createApplicationContext(AppModule);
+
+  // Grab your existing database service from the DI container
+  const databaseService = app.get(DatabaseService);
+  const db = databaseService.db;
+
+  try {
+    // 1. Wipe old data first
+    await clearDatabase(db);
+
+    console.log('📥 Loading JSON data from local file...');
+    const filePath = path.join(__dirname, 'big_data.json');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const jsonData = JSON.parse(fileContent);
+
+    console.log('🏗️  Creating default Section and Users...');
+
+    // 2. Create a default Section to satisfy foreign keys
+    const [section] = await db.insert(sections).values({
+      name: 'Main Seeded Laboratory',
+      location: 'Autogenerated',
+      specialization: "OTHER",
+    }).returning();
+
+    // 3. Set up known credentials for local testing
+    // We store the plain text password here so you know what to type,
+    // but hash it for the database so your auth module works.
+    const plainTextPassword = 'Password123!';
+    const hashedPassword = await argon2.hash(plainTextPassword);
+
+    // Create the Admin User
+    const [adminUser] = await db.insert(users).values({
+      firstName: 'Admin',
+      lastName: 'Seeder',
+      email: 'admin@lab.local',
+      passwordHash: hashedPassword,
+      role: 'ADMIN',
+      sectionId: section.id,
+    }).returning();
+
+    // Create Multiple Technician Users
+    const techniciansToInsert = [
+      {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@lab.local',
+        passwordHash: hashedPassword,
+        role: 'TECHNICIAN' as const,
+        sectionId: section.id,
+      },
+      {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane.smith@lab.local',
+        passwordHash: hashedPassword,
+        role: 'TECHNICIAN' as const,
+        sectionId: section.id,
+      },
+      {
+        firstName: 'Ahmed',
+        lastName: 'Tarek',
+        email: 'ahmed.t@lab.local',
+        passwordHash: hashedPassword,
+        role: 'TECHNICIAN' as const,
+        sectionId: section.id,
+      }
+    ];
+
+    const insertedTechs = await db.insert(users).values(techniciansToInsert).returning();
+
+    // Combine all users so we can randomly assign who performed a QC Test
+    const allUsers = [adminUser, ...insertedTechs];
+
+    console.log('🔄 Processing JSON data...');
+
+    // 4. Iterate through Equipment (Machines)
+    for (const eqpCode of Object.keys(jsonData)) {
+      console.log(`Setting up Machine ID/Code: ${eqpCode}...`);
+
+      const [machine] = await db.insert(machines).values({
+        name: `Machine ${eqpCode}`,
+        hospCode: '2', // Based on the sample data
+        sectionId: section.id,
+        currentStatus: 'IDLE',
+      }).returning();
+
+      const tests = jsonData[eqpCode];
+
+      // 5. Iterate through Tests for this Machine
+      for (const testCode of Object.keys(tests)) {
+
+        const [qcTest] = await db.insert(qcTests).values({
+          testName: testCode,
+          testType: 'Autogenerated',
+          machineId: machine.id,
+        }).returning();
+
+        // 6. Create a default Control Lot
+        const expirationDate = new Date();
+        expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+        const [controlLot] = await db.insert(controlLots).values({
+          testId: qcTest.id,
+          lotNumber: `LOT-${eqpCode}-${testCode}`,
+          expirationDate: expirationDate,
+          targetValue: 0,
+          mean: 0,
+          standardDevi: 0,
+          isActive: true,
+        }).returning();
+
+        const records = tests[testCode];
+        const resultsToInsert: (typeof qcResults.$inferInsert)[] = [];
+
+        // 7. Map the records to QC Results
+        for (const record of records) {
+          // Parse float to protect against strings like "pg/ml" in the JSON
+          const measuredValue = parseFloat(record.TESTRESULT);
+
+          if (isNaN(measuredValue)) {
+            console.warn(`⚠️  Skipping invalid numeric result for Test ${testCode}: "${record.TESTRESULT}"`);
+            continue;
+          }
+
+          // Pick a random user from our allUsers array to assign to this test
+          const randomUser = allUsers[Math.floor(Math.random() * allUsers.length)];
+
+          resultsToInsert.push({
+            measuredValue: measuredValue,
+            testDate: new Date(record.TESTDATE),
+            status: deriveQcStatus(measuredValue),
+            lotId: controlLot.id,
+            performedBy: randomUser.id, // ✅ Assigned to a random tech or admin
+          });
+        }
+
+        // 8. Bulk insert in chunks to avoid Postgres parameter limits
+        if (resultsToInsert.length > 0) {
+          const chunkSize = 1000;
+          for (let i = 0; i < resultsToInsert.length; i += chunkSize) {
+            const chunk = resultsToInsert.slice(i, i + chunkSize);
+            await db.insert(qcResults).values(chunk);
+          }
+          console.log(`✅ Inserted ${resultsToInsert.length} results for Test ${testCode}`);
+        }
+      }
+    }
+
+    console.log('\n🎉 Database seeding completed successfully!');
+    console.log('--------------------------------------------------');
+    console.log('🔑 USER CREDENTIALS FOR LOGIN:');
+    console.log(`All users share the same password:  ${plainTextPassword}`);
+    console.log('\nEmails available to log in with:');
+    allUsers.forEach(u => console.log(` - ${u.email} (${u.role})`));
+    console.log('--------------------------------------------------\n');
+
+  } catch (error) {
+    console.error('❌ Seeding failed:', error);
+  } finally {
+    // Ensure the NestJS application context closes properly so the script exits
+    await app.close();
+  }
+}
+
+bootstrap();

@@ -2,14 +2,49 @@
 
 import { useState } from 'react';
 import { CheckCircle, AlertCircle, Calendar, User, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, XCircle } from 'lucide-react';
-import { qcHistory, machines, categories } from '../data/mockData';
 import { applyWestgardRules } from '../utils/westgardRules';
+
+type MachineType = { id: string; name: string; category: string; model?: string };
+type CategoryType = { id: string; name: string };
+type QcHistoryType = {
+  id: string;
+  machineId: string;
+  testName: string;
+  date: string;
+  performedBy: string;
+  numericResult?: number;
+  result: string;
+  expectedRange: string;
+  status: string;
+  notes?: string | null;
+};
+
+type TestGroupAnalysis = {
+  key: string;
+  machineId: string;
+  testName: string;
+  tests: QcHistoryType[];
+  analysis: {
+    violations: { severity: string; rule: string; description: string; message: string }[];
+    stats: {
+      mean: number; stdDev: number;
+      plus3s: number; plus2s: number; minus2s: number; minus3s: number;
+    };
+    pointsWithStatus: {
+      status: string; date: string; value: number; zScore: number; violations: string[];
+    }[];
+  };
+  last7Days: QcHistoryType[];
+};
 
 interface QCHistoryProps {
   searchTerm: string;
+  qcHistory: QcHistoryType[];
+  machines: MachineType[];
+  categories: CategoryType[];
 }
 
-export function QCHistory({ searchTerm }: QCHistoryProps) {
+export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHistoryProps) {
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
   
   const filteredHistory = qcHistory.filter(qc => {
@@ -39,14 +74,14 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
   }, {} as Record<string, { machineId: string; testName: string; tests: typeof qcHistory }>);
 
   // Apply Westgard analysis to each test group
-  const testGroupsWithAnalysis = Object.entries(testGroups).map(([key, group]) => {
+  const testGroupsWithAnalysis = Object.entries(testGroups).map(([key, group]: [string, { machineId: string; testName: string; tests: QcHistoryType[] }]) => {
     // Get last 7 days of data for this test
     const sortedTests = group.tests
-      .filter(t => t.numericResult !== undefined)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .filter((t: QcHistoryType) => t.numericResult !== undefined)
+      .sort((a: QcHistoryType, b: QcHistoryType) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 7);
     
-    const dataPoints = sortedTests.map(t => ({
+    const dataPoints = sortedTests.map((t: QcHistoryType) => ({
       date: t.date,
       value: t.numericResult || 0,
       testName: t.testName,
@@ -56,7 +91,9 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
 
     return {
       key,
-      ...group,
+      machineId: group.machineId,
+      testName: group.testName,
+      tests: group.tests,
       analysis,
       last7Days: sortedTests,
     };
@@ -92,8 +129,8 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
           </div>
 
           <div className="space-y-3">
-            {testGroupsWithAnalysis.map(group => {
-              const machine = machines.find(m => m.id === group.machineId);
+            {testGroupsWithAnalysis.map((group: TestGroupAnalysis) => {
+              const machine = machines.find((m: MachineType) => m.id === group.machineId);
               const hasRejects = group.analysis.violations.some(v => v.severity === 'reject');
               const hasWarnings = group.analysis.violations.some(v => v.severity === 'warning');
               const isExpanded = expandedTest === group.key;
@@ -191,7 +228,7 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
                       {group.analysis.violations.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-semibold text-gray-900 dark:text-white text-sm">Rule Violations:</h5>
-                          {group.analysis.violations.map((violation, idx) => (
+                          {group.analysis.violations.map((violation, idx: number) => (
                             <div 
                               key={idx}
                               className="p-3 bg-white dark:bg-[#1e1e1e] rounded-lg"
@@ -211,7 +248,7 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
                       <div>
                         <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">Last 7 Days:</h5>
                         <div className="space-y-1">
-                          {group.analysis.pointsWithStatus.map((point, idx) => (
+                          {group.analysis.pointsWithStatus.map((point, idx: number) => (
                             <div 
                               key={idx}
                               className="flex items-center justify-between p-2 bg-white dark:bg-[#1e1e1e] rounded"
@@ -261,7 +298,7 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
       )}
 
       {/* Historical QC Tests by Date */}
-      {Object.entries(groupedByDate).map(([date, tests]) => (
+      {Object.entries(groupedByDate).map(([date, tests]: [string, QcHistoryType[]]) => (
         <div key={date} className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg">
           <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-[#c41e3a]/10 dark:border-[#e84855]/20">
             <Calendar size={20} className="text-[#c41e3a] dark:text-[#e84855] flex-shrink-0" />
@@ -272,9 +309,9 @@ export function QCHistory({ searchTerm }: QCHistoryProps) {
           </div>
 
           <div className="space-y-3">
-            {tests.map(qc => {
-              const machine = machines.find(m => m.id === qc.machineId);
-              const category = categories.find(c => c.id === machine?.category);
+            {tests.map((qc: QcHistoryType) => {
+              const machine = machines.find((m: MachineType) => m.id === qc.machineId);
+              const category = categories.find((c: CategoryType) => c.id === machine?.category);
               
               return (
                 <div key={qc.id} className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl hover:bg-[#fef3e2] dark:hover:bg-[#333333] transition-colors border border-[#c41e3a]/10 dark:border-[#e84855]/20">

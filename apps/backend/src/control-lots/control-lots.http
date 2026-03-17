@@ -1,0 +1,304 @@
+### ===================================================
+### Control Lots Controller - /api/v1/control-lots
+### All endpoints require JWT authentication
+### POST, PATCH, DELETE require ADMIN role
+### ===================================================
+
+@baseUrl = http://localhost:3000/api/v1
+
+# After logging in, paste the JWT tokens below
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@techToken = YOUR_TECHNICIAN_JWT_TOKEN_HERE
+
+### ---------------------------------------------------
+### Get all control lots
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get all control lots - As technician
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Get control lot by ID
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots/1
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get control lot by ID - As technician
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots/1
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Get control lot by ID - Non-existent (should return 404)
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots/99999
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Get control lot by ID - Invalid ID format (should fail)
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots/abc
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Create control lot - Full payload with all optional fields
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-2026-001",
+  "expirationDate": "2027-12-31T00:00:00.000Z",
+  "targetValue": 5.5,
+  "mean": 5.4,
+  "standardDevi": 0.3,
+  "upperControlLimit": 6.3,
+  "lowerControlLimit": 4.5,
+  "upperWarningLimit": 6.0,
+  "lowerWarningLimit": 4.8
+}
+
+### ---------------------------------------------------
+### Create control lot - Minimal payload (only required fields)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-2026-002",
+  "expirationDate": "2027-06-30T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Create control lot - With partial optional fields
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-2026-003",
+  "expirationDate": "2027-09-15T00:00:00.000Z",
+  "targetValue": 10.0,
+  "mean": 10.1,
+  "standardDevi": 0.5
+}
+
+### ---------------------------------------------------
+### Create control lot - Missing testId (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "lotNumber": "LOT-MISSING-TEST",
+  "expirationDate": "2027-12-31T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Create control lot - Missing lotNumber (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "expirationDate": "2027-12-31T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Create control lot - Missing expirationDate (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-NO-EXPIRY"
+}
+
+### ---------------------------------------------------
+### Create control lot - Invalid date format (should fail)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-BAD-DATE",
+  "expirationDate": "not-a-date"
+}
+
+### ---------------------------------------------------
+### Create control lot - Empty body (should fail validation)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### ---------------------------------------------------
+### Create control lot - Non-existent testId (should fail FK)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 99999,
+  "lotNumber": "LOT-NO-TEST",
+  "expirationDate": "2027-12-31T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Create control lot - Extra fields (should be stripped/rejected)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-EXTRA",
+  "expirationDate": "2027-12-31T00:00:00.000Z",
+  "unknownField": "should be rejected"
+}
+
+### ---------------------------------------------------
+### Create control lot - As technician (should fail, ADMIN only)
+### ---------------------------------------------------
+POST {{baseUrl}}/control-lots
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "testId": 1,
+  "lotNumber": "LOT-TECH-ATTEMPT",
+  "expirationDate": "2027-12-31T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Update control lot - Change expiration date
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "expirationDate": "2028-06-30T00:00:00.000Z"
+}
+
+### ---------------------------------------------------
+### Update control lot - Change statistical values
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "targetValue": 6.0,
+  "mean": 5.9,
+  "standardDevi": 0.25,
+  "upperControlLimit": 6.65,
+  "lowerControlLimit": 5.15,
+  "upperWarningLimit": 6.4,
+  "lowerWarningLimit": 5.4
+}
+
+### ---------------------------------------------------
+### Update control lot - Deactivate
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "isActive": false
+}
+
+### ---------------------------------------------------
+### Update control lot - Reactivate
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "isActive": true
+}
+
+### ---------------------------------------------------
+### Update control lot - Empty body (no changes)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### ---------------------------------------------------
+### Update control lot - Non-existent (should return 404)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/99999
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "targetValue": 7.0
+}
+
+### ---------------------------------------------------
+### Update control lot - As technician (should fail, ADMIN only)
+### ---------------------------------------------------
+PATCH {{baseUrl}}/control-lots/1
+Content-Type: application/json
+Authorization: Bearer {{techToken}}
+
+{
+  "targetValue": 7.0
+}
+
+### ---------------------------------------------------
+### Delete control lot (soft-delete, sets isActive=false)
+### ---------------------------------------------------
+DELETE {{baseUrl}}/control-lots/2
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Delete control lot - Non-existent (should return 404)
+### ---------------------------------------------------
+DELETE {{baseUrl}}/control-lots/99999
+Authorization: Bearer {{adminToken}}
+
+### ---------------------------------------------------
+### Delete control lot - As technician (should fail, ADMIN only)
+### ---------------------------------------------------
+DELETE {{baseUrl}}/control-lots/1
+Authorization: Bearer {{techToken}}
+
+### ---------------------------------------------------
+### Access without token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots
+
+### ---------------------------------------------------
+### Access with invalid token (should return 401)
+### ---------------------------------------------------
+GET {{baseUrl}}/control-lots
+Authorization: Bearer invalid-token-here
