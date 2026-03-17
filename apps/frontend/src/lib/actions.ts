@@ -67,7 +67,7 @@ export async function loginAccount(formData: FormData) {
       // If user fetch fails, we still have userId and role from JWT
     }
 
-    // Store user info in a readable cookie for SSR hydration
+    // Store user info in a cookie for SSR/server-side usage
     const userInfo = user ?? {
       id: jwtPayload.userId,
       firstName: '',
@@ -78,7 +78,7 @@ export async function loginAccount(formData: FormData) {
       createdAt: new Date().toISOString(),
     };
     cookieStore.set("user_info", JSON.stringify(userInfo), {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
