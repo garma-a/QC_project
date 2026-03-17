@@ -37,13 +37,12 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
 
     setIsPending(true);
     const numericMachineId = parseInt(selectedMachine, 10);
-    const res = await createQcTest({
+    const payload: CreateQcTestDto = {
       machineId: isNaN(numericMachineId) ? 0 : numericMachineId,
       testName: testName,
-      result: result,
-      expectedRange: expectedRange,
-      notes: notes,
-    } as unknown as CreateQcTestDto);
+      testType: selectedCategory || '',
+    };
+    const res = await createQcTest(payload);
     setIsPending(false);
 
     if (res.error) {
