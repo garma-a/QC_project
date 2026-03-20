@@ -1,7 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '@/database/database.service';
-import { qcTests, machines } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
 import { CreateQcTestDto } from './dto/create-qc-test.dto';
 import { QcTestsRepository } from './qc-tests.repository';
 

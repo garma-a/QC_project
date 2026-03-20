@@ -1,9 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
-import { users, sections } from '@/drizzle/schema';
 import * as argon2 from 'argon2';
-import { DatabaseService } from '@/database/database.service';
-import { eq, and, ne } from 'drizzle-orm';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
 import { Role } from '@/auth/auth.types';
 import { UsersRepository } from './users.repository';
