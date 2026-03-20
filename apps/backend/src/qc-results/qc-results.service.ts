@@ -1,9 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
-import { controlLots, qcResults } from '@/drizzle/schema';
-import { eq, desc } from 'drizzle-orm';
-import { DatabaseService } from '@/database/database.service';
 import { QcResultsRepository } from './qc-results.repository';
 import { QC_STATUS } from './qc-results.types';
 
@@ -22,9 +19,9 @@ export class QcResultsService {
     }
 
     const zScore = (createQcResultDto.measuredValue - lot.mean) / lot.standardDevi;
-    let status: QC_STATUS = "PASS";
-    if (Math.abs(zScore) > 3) status = "FAIL";
-    else if (Math.abs(zScore) > 2) status = "WARNING";
+    let status = QC_STATUS.PASS;
+    if (Math.abs(zScore) > 3) status = QC_STATUS.FAIL;
+    else if (Math.abs(zScore) > 2) status = QC_STATUS.WARNING;
 
     const [result] = await this.qcResultsRepository.createQcResult(createQcResultDto, status, userId);
 

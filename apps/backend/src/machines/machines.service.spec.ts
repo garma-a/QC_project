@@ -3,183 +3,173 @@ import {
   ConflictException,
   InternalServerErrorException,
   NotFoundException,
-} from "@nestjs/common";
-import { Test, TestingModule } from "@nestjs/testing";
-import { DatabaseService } from "src/database/database.service";
-import { CreateMachineDto } from "@/machines/dto/create-machine.dto";
-import { UpdateMachineDto } from "@/machines/dto/update-machine.dto";
-import { MachinesService } from "@/machines/machines.service";
+} from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MachinesService } from './machines.service';
+import { MachinesRepository } from './machines.repository';
 
-describe("MachinesService", () => {
-  let machineService: MachinesService;
-  const dbMock = {
-    insert: jest.fn().mockReturnThis(),
-    values: jest.fn().mockReturnThis(),
-    returning: jest.fn(),
-
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn(),
-
-    update: jest.fn().mockReturnThis(),
-    set: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-  };
-  const databaseServiceMock = { db: dbMock };
-  const createDto: CreateMachineDto = {
-    name: "Cobas 6000",
-    hospCode: "LAB-EQ-001",
-    sectionId: 1,
-  };
-  const updateDto: UpdateMachineDto = {
-    name: "Cobas 6000 Updated",
-  };
-  const machine = {
-    id: 1,
-    name: "Cobas 6000",
-    hospCode: "LAB-EQ-001",
-    sectionId: 1,
-  };
-  const machineList = [
-    machine,
-    {
-      id: 2,
-      name: "Sysmex XN",
-      hospCode: "LAB-EQ-002",
-      sectionId: 2,
-    },
-  ];
+describe('MachinesService', () => {
+  let service: MachinesService;
+  let mockRepository: Record<string, jest.Mock>;
 
   beforeEach(async () => {
+    mockRepository = {
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MachinesService,
-        { provide: DatabaseService, useValue: databaseServiceMock },
+        { provide: MachinesRepository, useValue: mockRepository },
       ],
     }).compile();
-    machineService = module.get<MachinesService>(MachinesService);
-    jest.clearAllMocks();
+
+    service = module.get<MachinesService>(MachinesService);
   });
 
-  it("should be defined", () => {
-    expect(machineService).toBeDefined();
-  });
+  describe('create', () => {
+    const newMachineData = {
+      name: 'Cobas 6000',
+      hospCode: 'LAB-EQ-001',
+      sectionId: 1,
+    };
 
-  describe("create", () => {
-    it("returns the created machine on success", async () => {
-      dbMock.returning.mockResolvedValue([machine]);
+    it('should return the created machine', async () => {
+      const createdMachine = { id: 1, ...newMachineData };
+      mockRepository.create.mockResolvedValue(createdMachine);
 
-      await expect(machineService.create(createDto)).resolves.toEqual(machine);
-      expect(dbMock.insert).toHaveBeenCalledTimes(1);
-      expect(dbMock.values).toHaveBeenCalledTimes(1);
-      expect(dbMock.returning).toHaveBeenCalledTimes(1);
+      const result = await service.create(newMachineData);
+
+      expect(result).toEqual(createdMachine);
     });
 
-    it("throws BadRequestException for invalid section id", async () => {
-      dbMock.returning.mockRejectedValue({ code: "23503" });
+    it('should throw BadRequestException when section does not exist', async () => {
+      mockRepository.create.mockRejectedValue({ code: '23503' });
 
-      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
+      await expect(service.create(newMachineData)).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it("throws ConflictException for duplicate machine", async () => {
-      dbMock.returning.mockRejectedValue({ code: "23505" });
+    it('should throw ConflictException when machine already exists', async () => {
+      mockRepository.create.mockRejectedValue({ code: '23505' });
 
-      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
+      await expect(service.create(newMachineData)).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it("throws InternalServerErrorException for unknown db error", async () => {
-      dbMock.returning.mockRejectedValue({ code: "99999" });
+    it('should throw InternalServerErrorException for unexpected database errors', async () => {
+      mockRepository.create.mockRejectedValue({ code: 'UNKNOWN' });
 
-      await expect(machineService.create(createDto)).rejects.toBeInstanceOf(
+      await expect(service.create(newMachineData)).rejects.toThrow(
         InternalServerErrorException,
       );
     });
   });
 
-  describe("findAll", () => {
-    it("returns all machines", async () => {
-      dbMock.from.mockResolvedValue(machineList);
+  describe('findAll', () => {
+    it('should return all machines', async () => {
+      const machines = [
+        { id: 1, name: 'Cobas 6000', hospCode: 'LAB-EQ-001', sectionId: 1 },
+        { id: 2, name: 'Sysmex XN', hospCode: 'LAB-EQ-002', sectionId: 2 },
+      ];
+      mockRepository.findAll.mockResolvedValue(machines);
 
-      await expect(machineService.findAll()).resolves.toEqual(machineList);
-      expect(dbMock.select).toHaveBeenCalledTimes(1);
-      expect(dbMock.from).toHaveBeenCalledTimes(1);
+      const result = await service.findAll();
+
+      expect(result).toEqual(machines);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no machines exist', async () => {
+      mockRepository.findAll.mockResolvedValue([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
     });
   });
 
-  describe("findOne", () => {
-    it("returns a machine when found", async () => {
-      dbMock.from.mockReturnThis();
-      dbMock.where.mockResolvedValue([machine]);
+  describe('findOne', () => {
+    it('should return the machine when found', async () => {
+      const machine = {
+        id: 1,
+        name: 'Cobas 6000',
+        hospCode: 'LAB-EQ-001',
+        sectionId: 1,
+      };
+      mockRepository.findById.mockResolvedValue(machine);
 
-      await expect(machineService.findOne(1)).resolves.toEqual(machine);
-      expect(dbMock.select).toHaveBeenCalledTimes(1);
-      expect(dbMock.from).toHaveBeenCalledTimes(1);
-      expect(dbMock.where).toHaveBeenCalledTimes(1);
+      const result = await service.findOne(1);
+
+      expect(result).toEqual(machine);
     });
 
-    it("throws NotFoundException when machine does not exist", async () => {
-      dbMock.from.mockReturnThis();
-      dbMock.where.mockResolvedValue([]);
+    it('should throw NotFoundException when machine does not exist', async () => {
+      mockRepository.findById.mockResolvedValue(undefined);
 
-      await expect(machineService.findOne(999)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe("update", () => {
-    it("returns the updated machine on success", async () => {
-      dbMock.where.mockReturnThis();
-      dbMock.returning.mockResolvedValue([machine]);
+  describe('update', () => {
+    const updateData = { name: 'Cobas 8000' };
 
-      await expect(machineService.update(1, updateDto)).resolves.toEqual(machine);
-      expect(dbMock.update).toHaveBeenCalledTimes(1);
-      expect(dbMock.set).toHaveBeenCalledTimes(1);
-      expect(dbMock.where).toHaveBeenCalledTimes(1);
-      expect(dbMock.returning).toHaveBeenCalledTimes(1);
+    it('should return the updated machine', async () => {
+      const updatedMachine = {
+        id: 1,
+        name: 'Cobas 8000',
+        hospCode: 'LAB-EQ-001',
+        sectionId: 1,
+      };
+      mockRepository.update.mockResolvedValue(updatedMachine);
+
+      const result = await service.update(1, updateData);
+
+      expect(result).toEqual(updatedMachine);
     });
 
-    it("throws NotFoundException when machine does not exist", async () => {
-      dbMock.where.mockReturnThis();
-      dbMock.returning.mockResolvedValue([]);
+    it('should throw NotFoundException when machine does not exist', async () => {
+      mockRepository.update.mockResolvedValue(undefined);
 
-      await expect(machineService.update(999, updateDto)).rejects.toBeInstanceOf(
+      await expect(service.update(999, updateData)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it("throws BadRequestException for invalid section id", async () => {
-      dbMock.where.mockReturnThis();
-      dbMock.returning.mockRejectedValue({ code: "23503" });
+    it('should throw BadRequestException when updating to invalid section', async () => {
+      mockRepository.update.mockRejectedValue({ code: '23503' });
 
-      await expect(machineService.update(1, updateDto)).rejects.toBeInstanceOf(
+      await expect(service.update(1, { sectionId: 999 })).rejects.toThrow(
         BadRequestException,
       );
     });
   });
 
-  describe("remove", () => {
-    it("returns the deleted machine on success", async () => {
-      dbMock.where.mockReturnThis();
-      dbMock.returning.mockResolvedValue([machine]);
+  describe('remove', () => {
+    it('should return the deleted machine', async () => {
+      const machine = {
+        id: 1,
+        name: 'Cobas 6000',
+        hospCode: 'LAB-EQ-001',
+        sectionId: 1,
+      };
+      mockRepository.delete.mockResolvedValue(machine);
 
-      await expect(machineService.remove(1)).resolves.toEqual(machine);
-      expect(dbMock.delete).toHaveBeenCalledTimes(1);
-      expect(dbMock.where).toHaveBeenCalledTimes(1);
-      expect(dbMock.returning).toHaveBeenCalledTimes(1);
+      const result = await service.remove(1);
+
+      expect(result).toEqual(machine);
     });
 
-    it("throws NotFoundException when machine does not exist", async () => {
-      dbMock.where.mockReturnThis();
-      dbMock.returning.mockResolvedValue([]);
+    it('should throw NotFoundException when machine does not exist', async () => {
+      mockRepository.delete.mockResolvedValue(undefined);
 
-      await expect(machineService.remove(999)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
     });
   });
 });
