@@ -34,7 +34,7 @@ describe('ControlLotsService', () => {
       lotNumber: 'LOT-HGB-2026-A',
       expirationDate: '2026-12-31',
       mean: 14.0,
-      standardDevi: 0.5,
+      standardDeviation: 0.5,
       upperControlLimit: 15.5,
       lowerControlLimit: 12.5,
       upperWarningLimit: 15.0,

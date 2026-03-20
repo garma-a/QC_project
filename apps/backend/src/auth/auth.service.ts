@@ -28,6 +28,6 @@ export class AuthService {
     }
 
     const payload = { userId: user.id, role: user.role };
-    return { access_token: this.jwtService.sign(payload) };
+    return { accessToken: this.jwtService.sign(payload) };
   }
 }

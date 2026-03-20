@@ -1,2 +1,5 @@
-export enum QC_STATUS { PASS = "PASS", FAIL = "FAIL", WARNING = "WARNING" };
-
+export enum QcStatus {
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  WARNING = 'WARNING',
+}

@@ -15,7 +15,7 @@ import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
-import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
+import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
 import { CurrentUser } from '@/users/user.decorator';
 import { Role } from '@/auth/auth.types';
 import {

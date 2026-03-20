@@ -54,7 +54,7 @@ describe('AuthService', () => {
 
       const result = await service.login(validCredentials);
 
-      expect(result).toEqual({ access_token: 'jwt.token.here' });
+      expect(result).toEqual({ accessToken: 'jwt.token.here' });
     });
 
     it('should reject login when user does not exist', async () => {

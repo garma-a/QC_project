@@ -6,5 +6,5 @@ export class LoginResponseDto {
     description:
       'JWT access token used to authenticate subsequent requests. Include in the Authorization header as: Bearer <token>',
   })
-  access_token: string;
+  accessToken: string;
 }

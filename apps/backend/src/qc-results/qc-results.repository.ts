@@ -3,27 +3,29 @@ import { controlLots, machines, qcResults, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
-import { QC_STATUS } from './qc-results.types';
-import { machine } from 'os';
+import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
 @Injectable()
 export class QcResultsRepository {
-
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService) {}
 
   async getLotById(lotId: number) {
     const [lot] = await this.databaseService.db
       .select()
       .from(controlLots)
-      .where(eq(controlLots.id, lotId)).limit(1);
+      .where(eq(controlLots.id, lotId))
+      .limit(1);
     return lot;
-
   }
 
-  async createQcResult(createQcResultDto: CreateQcResultDto, status: QC_STATUS, userId: number) {
-
-    const res = this.databaseService.db.insert(qcResults)
+  async createQcResult(
+    createQcResultDto: CreateQcResultDto,
+    status: QcStatus,
+    userId: number,
+  ) {
+    const res = this.databaseService.db
+      .insert(qcResults)
       .values({
         measuredValue: createQcResultDto.measuredValue,
         status: status,
@@ -34,11 +36,9 @@ export class QcResultsRepository {
       .returning();
 
     return res;
-
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
-
     const [updated] = await this.databaseService.db
       .update(qcResults)
       .set({ comments: updateQcResultDto.comments })
@@ -46,11 +46,9 @@ export class QcResultsRepository {
       .returning();
 
     return updated;
-
   }
 
   async getAllLotsTestsMachinesByLotId(lotId: number) {
-
     const [lot] = await this.databaseService.db
       .select()
       .from(controlLots)
@@ -61,8 +59,7 @@ export class QcResultsRepository {
     return lot;
   }
 
-  async getResutsByLotId(lotId: number) {
-
+  async getResultsByLotId(lotId: number) {
     const results = await this.databaseService.db
       .select()
       .from(qcResults)
@@ -72,15 +69,12 @@ export class QcResultsRepository {
   }
 
   async getResultAndLotByResultId(resultId: number) {
-
     const [result] = await this.databaseService.db
       .select()
       .from(qcResults)
       .where(eq(qcResults.id, resultId))
       .leftJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .limit(1)
+      .limit(1);
     return result;
-
   }
-
 }

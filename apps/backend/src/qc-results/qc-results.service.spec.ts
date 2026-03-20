@@ -13,7 +13,7 @@ describe('QcResultsService', () => {
       createQcResult: jest.fn(),
       updateQcResult: jest.fn(),
       getAllLotsTestsMachinesByLotId: jest.fn(),
-      getResutsByLotId: jest.fn(),
+      getResultsByLotId: jest.fn(),
       getResultAndLotByResultId: jest.fn(),
     };
 
@@ -29,7 +29,7 @@ describe('QcResultsService', () => {
 
   describe('create', () => {
     const userId = 5;
-    const lotWithStats = { id: 1, mean: 14.0, standardDevi: 0.5 };
+    const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5 };
 
     it('should create QC result with PASS status when z-score is within 2 SD', async () => {
       // z-score = (14.5 - 14.0) / 0.5 = 1.0 (PASS)
@@ -91,7 +91,7 @@ describe('QcResultsService', () => {
       mockRepository.getLotById.mockResolvedValue({
         id: 1,
         mean: null,
-        standardDevi: 0.5,
+        standardDeviation: 0.5,
       });
 
       await expect(service.create(dto, userId)).rejects.toThrow(
@@ -109,7 +109,7 @@ describe('QcResultsService', () => {
         id: 1,
         lotNumber: 'LOT-HGB-2026',
         mean: 14.0,
-        standardDevi: 0.5,
+        standardDeviation: 0.5,
         upperControlLimit: 15.5,
         lowerControlLimit: 12.5,
         upperWarningLimit: 15.0,
@@ -141,7 +141,7 @@ describe('QcResultsService', () => {
       // z-score = (15.0 - 14.0) / 0.5 = 2.0
       mockRepository.getResultAndLotByResultId.mockResolvedValue({
         qc_results: { id: 1, measuredValue: 15.0, status: 'WARNING' },
-        control_lots: { mean: 14.0, standardDevi: 0.5 },
+        control_lots: { mean: 14.0, standardDeviation: 0.5 },
       });
 
       const result = await service.findOne(1);
@@ -159,7 +159,7 @@ describe('QcResultsService', () => {
     it('should throw BadRequestException when associated lot is missing stats', async () => {
       mockRepository.getResultAndLotByResultId.mockResolvedValue({
         qc_results: { id: 1, measuredValue: 15.0 },
-        control_lots: { mean: null, standardDevi: null },
+        control_lots: { mean: null, standardDeviation: null },
       });
 
       await expect(service.findOne(1)).rejects.toThrow(BadRequestException);
@@ -179,7 +179,7 @@ describe('QcResultsService', () => {
           measuredValue: 14.5,
           comments: 'Recalibration performed',
         },
-        control_lots: { mean: 14.0, standardDevi: 0.5 },
+        control_lots: { mean: 14.0, standardDeviation: 0.5 },
         zScore: 1,
       } as any);
 
