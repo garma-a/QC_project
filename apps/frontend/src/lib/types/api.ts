@@ -18,7 +18,7 @@ export interface LoginDto {
 }
 
 export interface LoginResponseDto {
-  access_token: string;
+  accessToken: string;
 }
 
 // ===================================================================
@@ -141,7 +141,7 @@ export interface ControlLotResponseDto {
   expirationDate: string;
   targetValue?: number | null;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;
@@ -156,7 +156,7 @@ export interface CreateControlLotDto {
   expirationDate: string;
   targetValue?: number;
   mean?: number;
-  standardDevi?: number;
+  standardDeviation?: number;
   upperControlLimit?: number;
   lowerControlLimit?: number;
   upperWarningLimit?: number;
@@ -167,7 +167,7 @@ export interface UpdateControlLotDto {
   expirationDate?: string;
   targetValue?: number;
   mean?: number;
-  standardDevi?: number;
+  standardDeviation?: number;
   upperControlLimit?: number;
   lowerControlLimit?: number;
   upperWarningLimit?: number;
@@ -187,7 +187,7 @@ export interface ControlLotInResultDto {
   expirationDate: string;
   targetValue?: number | null;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;
@@ -236,7 +236,7 @@ export interface LotSummaryDto {
   id: number;
   lotNumber: string;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;

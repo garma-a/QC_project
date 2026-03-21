@@ -37,11 +37,11 @@ export async function loginAccount(formData: FormData) {
     const payload: LoginDto = { email, password };
     const response = await api.post<LoginResponseDto>("/api/v1/auth/login", payload);
 
-    if (!response?.access_token) {
+    if (!response?.accessToken) {
       return { error: "Invalid credentials." };
     }
 
-    const token = response.access_token;
+    const token = response.accessToken;
     const cookieStore = await cookies();
 
     // Store the JWT token (httpOnly for server components)
