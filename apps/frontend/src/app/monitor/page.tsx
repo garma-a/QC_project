@@ -1,6 +1,6 @@
 import { api } from '@/lib/api/serverFetch';
 import type { MachineResponseDto } from '@/lib/types/api';
-import { MonitorClient } from '@/components/client/MonitorClient';
+import { MonitorClient } from '@/features/machines/components/MonitorClient';
 
 export default async function MonitorPage(props: { searchParams: Promise<{ machineId?: string }> }) {
   // SearchParams not explicitly needed yet but kept for next.js interface

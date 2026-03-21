@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { UserPlus, Users, Mail, User, Lock, CheckCircle, AlertCircle, Pencil, Trash2 } from 'lucide-react';
-import { LogoCompact } from '@/components/Logo';
+import { LogoCompact } from '@/components/layout/Logo';
 import { createUser, deleteUser, updateUser } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { AdminUpdateUserDto, Role } from '@/lib/types/api';

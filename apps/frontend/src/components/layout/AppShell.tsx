@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Sidebar } from "@/components/Sidebar";
-import { PageBackground } from "@/components/PageBackground";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { PageBackground } from "@/components/layout/PageBackground";
 
 interface AppShellProps {
   children: ReactNode;

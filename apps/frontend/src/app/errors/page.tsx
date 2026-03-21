@@ -9,7 +9,7 @@ import {
   Filter,
   ChevronDown,
 } from "lucide-react";
-import { ErrorDetailPanel } from "@/components/ErrorDetailPanel";
+import { ErrorDetailPanel } from "@/components/ui/ErrorDetailPanel";
 
 // Temporary empty array until a real API fetches errors
 const allErrors: any[] = [];
