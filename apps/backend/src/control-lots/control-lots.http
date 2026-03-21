@@ -59,7 +59,7 @@ Authorization: Bearer {{adminToken}}
   "expirationDate": "2027-12-31T00:00:00.000Z",
   "targetValue": 5.5,
   "mean": 5.4,
-  "standardDevi": 0.3,
+  "standardDeviation": 0.3,
   "upperControlLimit": 6.3,
   "lowerControlLimit": 4.5,
   "upperWarningLimit": 6.0,
@@ -92,7 +92,7 @@ Authorization: Bearer {{adminToken}}
   "expirationDate": "2027-09-15T00:00:00.000Z",
   "targetValue": 10.0,
   "mean": 10.1,
-  "standardDevi": 0.5
+  "standardDeviation": 0.5
 }
 
 ### ---------------------------------------------------
@@ -214,7 +214,7 @@ Authorization: Bearer {{adminToken}}
 {
   "targetValue": 6.0,
   "mean": 5.9,
-  "standardDevi": 0.25,
+  "standardDeviation": 0.25,
   "upperControlLimit": 6.65,
   "lowerControlLimit": 5.15,
   "upperWarningLimit": 6.4,

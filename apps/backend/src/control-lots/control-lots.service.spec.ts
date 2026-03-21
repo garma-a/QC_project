@@ -1,234 +1,189 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ControlLotsService } from './control-lots.service';
-import { DatabaseService } from '@/database/database.service';
-import { CreateControlLotDto } from './dto/create-control-lot.dto';
-import { UpdateControlLotDto } from './dto/update-control-lot.dto';
 import { NotFoundException } from '@nestjs/common';
+import { ControlLotsService } from './control-lots.service';
+import { ControlLotsRepository } from './control-lots.repository';
 
 describe('ControlLotsService', () => {
   let service: ControlLotsService;
-  let dbMock: any;
+  let mockRepository: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    dbMock = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      values: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      set: jest.fn().mockReturnThis(),
-      returning: jest.fn(),
+    mockRepository = {
+      findTestById: jest.fn(),
+      create: jest.fn(),
+      findAll: jest.fn(),
+      findById: jest.fn(),
+      findByTestId: jest.fn(),
+      update: jest.fn(),
+      deactivate: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ControlLotsService,
-        {
-          provide: DatabaseService,
-          useValue: { db: dbMock },
-        },
+        { provide: ControlLotsRepository, useValue: mockRepository },
       ],
     }).compile();
 
     service = module.get<ControlLotsService>(ControlLotsService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('create', () => {
-    const dto: CreateControlLotDto = {
+    const newLotData = {
       testId: 1,
       lotNumber: 'LOT-HGB-2026-A',
       expirationDate: '2026-12-31',
       mean: 14.0,
-      standardDevi: 0.5,
+      standardDeviation: 0.5,
       upperControlLimit: 15.5,
       lowerControlLimit: 12.5,
       upperWarningLimit: 15.0,
       lowerWarningLimit: 13.0,
     };
 
-    it('should create a control lot if QC test exists', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([{ id: 1, testName: 'Hemoglobin' }]);
-      dbMock.returning.mockResolvedValueOnce([{
+    it('should return the created control lot when test exists', async () => {
+      mockRepository.findTestById.mockResolvedValue({
         id: 1,
-        ...dto,
+        testName: 'Hemoglobin',
+      });
+      mockRepository.create.mockResolvedValue({
+        id: 1,
+        ...newLotData,
         expirationDate: new Date('2026-12-31'),
         isActive: true,
-      }]);
+      });
 
-      // Act
-      const result = await service.create(dto);
+      const result = await service.create(newLotData);
 
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.insert).toHaveBeenCalled();
-      expect(dbMock.returning).toHaveBeenCalled();
       expect(result.id).toBe(1);
       expect(result.lotNumber).toBe('LOT-HGB-2026-A');
       expect(result.isActive).toBe(true);
     });
 
-    it('should throw NotFoundException if QC test does not exist', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]);
+    it('should throw NotFoundException when QC test does not exist', async () => {
+      mockRepository.findTestById.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.create(dto)).rejects.toThrow(NotFoundException);
-      expect(dbMock.insert).not.toHaveBeenCalled();
+      await expect(service.create(newLotData)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.create(newLotData)).rejects.toThrow(
+        `QC Test with ID ${newLotData.testId} not found`,
+      );
     });
   });
 
   describe('findAll', () => {
     it('should return all control lots', async () => {
-      // Arrange
-      const mockLots = [
+      const lots = [
         { id: 1, lotNumber: 'LOT-HGB-2026-A' },
         { id: 2, lotNumber: 'LOT-WBC-2026-A' },
       ];
-      dbMock.from.mockResolvedValueOnce(mockLots);
+      mockRepository.findAll.mockResolvedValue(lots);
 
-      // Act
       const result = await service.findAll();
 
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.from).toHaveBeenCalled();
-      expect(result).toEqual(mockLots);
+      expect(result).toEqual(lots);
       expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no lots exist', async () => {
+      mockRepository.findAll.mockResolvedValue([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
     });
   });
 
   describe('findOne', () => {
-    it('should return a control lot by ID', async () => {
-      // Arrange
-      const mockLot = { id: 1, lotNumber: 'LOT-HGB-2026-A', mean: 14.0 };
-      dbMock.where.mockResolvedValueOnce([mockLot]);
+    it('should return the control lot when found', async () => {
+      const lot = { id: 1, lotNumber: 'LOT-HGB-2026-A', mean: 14.0 };
+      mockRepository.findById.mockResolvedValue(lot);
 
-      // Act
       const result = await service.findOne(1);
 
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.where).toHaveBeenCalled();
-      expect(result.id).toBe(1);
-      expect(result.lotNumber).toBe('LOT-HGB-2026-A');
+      expect(result).toEqual(lot);
     });
 
-    it('should throw NotFoundException if control lot not found', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]);
+    it('should throw NotFoundException when control lot does not exist', async () => {
+      mockRepository.findById.mockResolvedValue(undefined);
 
-      // Act & Assert
       await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(99)).rejects.toThrow(
+        'Control lot with ID 99 not found',
+      );
     });
   });
 
   describe('findByTestId', () => {
-    it('should return all lots for a given test ID', async () => {
-      // Arrange
-      const mockLots = [
+    it('should return all lots for a specific test', async () => {
+      const lots = [
         { id: 1, testId: 1, lotNumber: 'LOT-HGB-2026-A' },
         { id: 3, testId: 1, lotNumber: 'LOT-HGB-2026-B' },
       ];
-      dbMock.where.mockResolvedValueOnce(mockLots);
+      mockRepository.findByTestId.mockResolvedValue(lots);
 
-      // Act
       const result = await service.findByTestId(1);
 
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.where).toHaveBeenCalled();
       expect(result).toHaveLength(2);
-      expect(result[0].testId).toBe(1);
-      expect(result[1].testId).toBe(1);
+      expect(result.every((lot) => lot.testId === 1)).toBe(true);
     });
 
-    it('should return empty array if no lots exist for the test', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]);
+    it('should return empty array when test has no lots', async () => {
+      mockRepository.findByTestId.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByTestId(999);
 
-      // Assert
       expect(result).toEqual([]);
-      expect(result).toHaveLength(0);
     });
   });
 
   describe('update', () => {
-    const updateDto: UpdateControlLotDto = { mean: 14.5 };
+    it('should return the updated control lot', async () => {
+      mockRepository.findById.mockResolvedValue({ id: 1, mean: 14.0 });
+      mockRepository.update.mockResolvedValue({ id: 1, mean: 14.5 });
 
-    it('should update a control lot if it exists', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, mean: 14.5 }]);
+      const result = await service.update(1, { mean: 14.5 });
 
-      // Act
-      const result = await service.update(1, updateDto);
-
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.update).toHaveBeenCalled();
-      expect(dbMock.set).toHaveBeenCalled();
-      expect(dbMock.returning).toHaveBeenCalled();
-      expect(result.id).toBe(1);
       expect(result.mean).toBe(14.5);
     });
 
-    it('should handle expirationDate conversion on update', async () => {
-      // Arrange
-      const dtoWithDate: UpdateControlLotDto = { expirationDate: '2027-06-30' };
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, expirationDate: new Date('2027-06-30') }]);
+    it('should convert expiration date string to Date object', async () => {
+      mockRepository.findById.mockResolvedValue({ id: 1 });
+      mockRepository.update.mockResolvedValue({
+        id: 1,
+        expirationDate: new Date('2027-06-30'),
+      });
 
-      // Act
-      const result = await service.update(1, dtoWithDate);
+      const result = await service.update(1, { expirationDate: '2027-06-30' });
 
-      // Assert
-      expect(dbMock.set).toHaveBeenCalled();
       expect(result.expirationDate).toEqual(new Date('2027-06-30'));
     });
 
-    it('should throw NotFoundException if control lot to update does not exist', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]);
+    it('should throw NotFoundException when control lot does not exist', async () => {
+      mockRepository.findById.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.update(99, updateDto)).rejects.toThrow(NotFoundException);
-      expect(dbMock.update).not.toHaveBeenCalled();
+      await expect(service.update(99, { mean: 14.5 })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('remove', () => {
-    it('should soft-delete a control lot by setting isActive to false', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([{ id: 1, isActive: true }]);
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, isActive: false }]);
+    it('should deactivate and return success message with the lot', async () => {
+      mockRepository.findById.mockResolvedValue({ id: 1, isActive: true });
+      mockRepository.deactivate.mockResolvedValue({ id: 1, isActive: false });
 
-      // Act
       const result = await service.remove(1);
 
-      // Assert
-      expect(dbMock.update).toHaveBeenCalled();
-      expect(dbMock.set).toHaveBeenCalled();
-      expect(dbMock.returning).toHaveBeenCalled();
-      expect(result.message).toContain('deactivated');
+      expect(result.message).toBe('Control lot deactivated successfully');
       expect(result.lot.isActive).toBe(false);
     });
 
-    it('should throw NotFoundException if control lot to remove does not exist', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]);
+    it('should throw NotFoundException when control lot does not exist', async () => {
+      mockRepository.findById.mockResolvedValue(undefined);
 
-      // Act & Assert
       await expect(service.remove(99)).rejects.toThrow(NotFoundException);
-      expect(dbMock.update).not.toHaveBeenCalled();
     });
   });
 });

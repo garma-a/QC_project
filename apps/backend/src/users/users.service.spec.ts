@@ -1,195 +1,308 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from '@/users/users.service';
-import { DatabaseService } from '@/database/database.service';
-import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
-import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
-import * as argon2 from 'argon2';
-import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { UsersService } from './users.service';
+import { UsersRepository } from './users.repository';
 import { Role } from '@/auth/auth.types';
-
-jest.mock('argon2', () => ({
-  hash: jest.fn(),
-  verify: jest.fn(),
-}));
 
 describe('UsersService', () => {
   let service: UsersService;
-  let dbMock: any;
+
+  const mockUsersRepository = {
+    findSectionById: jest.fn(),
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    findEmailCollision: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    deactivate: jest.fn(),
+    findAllWithSections: jest.fn(),
+  };
 
   beforeEach(async () => {
-    dbMock = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      leftJoin: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      values: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      set: jest.fn().mockReturnThis(),
-      returning: jest.fn(),
-
-      then: jest.fn(function(resolve) {
-
-        return Promise.resolve(this.where()).then(resolve);
-      }),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        {
-          provide: DatabaseService,
-          useValue: { db: dbMock },
-        },
+        { provide: UsersRepository, useValue: mockUsersRepository },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('createUser', () => {
-    const dto: AdminCreateUserDto = {
+  describe('createUser()', () => {
+    const createUserDto = {
       firstName: 'John',
       lastName: 'Doe',
-      email: 'john@hospital.com',
+      email: 'john@example.com',
       password: 'password123',
       role: Role.TECHNICIAN,
       sectionId: 1,
     };
 
-    it('should create a user if section exists and email is free', async () => {
-      // Mock section check (exists)
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      // Mock email check (free)
-      dbMock.where.mockResolvedValueOnce([]);
-      // Mock hash
-      (argon2.hash as jest.Mock).mockResolvedValue('hashed_pw');
-      // Mock insert
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, ...dto, passwordHash: 'hashed_pw' }]);
+    it('throws BadRequestException when section does not exist', async () => {
+      mockUsersRepository.findSectionById.mockResolvedValueOnce(undefined);
 
-      const result = await service.createUser(dto);
+      await expect(service.createUser(createUserDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.createUser(createUserDto)).rejects.toThrow(
+        `Laboratory section with ID ${createUserDto.sectionId} does not exist.`,
+      );
+    });
 
+    it('throws ConflictException when email already exists', async () => {
+      mockUsersRepository.findSectionById.mockResolvedValue({ id: 1 });
+      mockUsersRepository.findByEmail.mockResolvedValue({
+        id: 5,
+        email: createUserDto.email,
+      });
+
+      await expect(service.createUser(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.createUser(createUserDto)).rejects.toThrow(
+        'Email already exists',
+      );
+    });
+
+    it('returns user without password hash when creation is successful', async () => {
+      mockUsersRepository.findSectionById.mockResolvedValueOnce({ id: 1 });
+      mockUsersRepository.findByEmail.mockResolvedValueOnce(undefined);
+      mockUsersRepository.create.mockResolvedValueOnce({
+        id: 10,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        passwordHash: 'hashed_password',
+        role: Role.TECHNICIAN,
+        isActive: true,
+        sectionId: 1,
+      });
+
+      const result = await service.createUser(createUserDto);
+
+      expect(result).toEqual({
+        id: 10,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        role: Role.TECHNICIAN,
+        isActive: true,
+        sectionId: 1,
+      });
       expect(result).not.toHaveProperty('passwordHash');
-      expect(result.id).toBe(1);
     });
 
-    it('should throw BadRequestException if section does not exist', async () => {
-      dbMock.where.mockResolvedValueOnce([]); // Section not found
-      await expect(service.createUser(dto)).rejects.toThrow(BadRequestException);
-    });
+    it('creates user without section when sectionId is not provided', async () => {
+      const dtoWithoutSection = {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane@example.com',
+        password: 'password123',
+      };
 
-    it('should throw ConflictException if email is taken', async () => {
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]); // Section exists
-      dbMock.where.mockResolvedValueOnce([{ id: 2 }]); // Email taken
-      await expect(service.createUser(dto)).rejects.toThrow(ConflictException);
+      mockUsersRepository.findByEmail.mockResolvedValueOnce(undefined);
+      mockUsersRepository.create.mockResolvedValueOnce({
+        id: 11,
+        firstName: 'Jane',
+        lastName: 'Smith',
+        email: 'jane@example.com',
+        passwordHash: 'hashed_password',
+        role: 'TECHNICIAN',
+        isActive: true,
+        sectionId: null,
+      });
+
+      const result = await service.createUser(dtoWithoutSection);
+
+      expect(result.email).toBe('jane@example.com');
+      expect(result).not.toHaveProperty('passwordHash');
     });
   });
 
-  describe('getUsers', () => {
-    it('should return all users with their section names', async () => {
-      const mockUsers = [{ id: 1, firstName: 'John', sectionName: 'Hematology' }];
-      // When awaiting the query builder directly (await query)
-      dbMock.where.mockResolvedValueOnce(mockUsers);
+  describe('deactivateUser()', () => {
+    it('throws BadRequestException when admin tries to deactivate themselves', async () => {
+      await expect(service.deactivateUser(1, 1)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.deactivateUser(1, 1)).rejects.toThrow(
+        'You cannot deactivate your own administrator account.',
+      );
+    });
+
+    it('throws NotFoundException when user does not exist', async () => {
+      mockUsersRepository.deactivate.mockResolvedValueOnce(undefined);
+
+      await expect(service.deactivateUser(99, 1)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.deactivateUser(99, 1)).rejects.toThrow(
+        'User not found',
+      );
+    });
+
+    it('returns success message when user is deactivated', async () => {
+      mockUsersRepository.deactivate.mockResolvedValueOnce({
+        id: 5,
+        isActive: false,
+      });
+
+      const result = await service.deactivateUser(5, 1);
+
+      expect(result).toEqual({ message: 'User deactivated successfully' });
+    });
+  });
+
+  describe('updateUser()', () => {
+    const updateDto = {
+      firstName: 'Updated',
+      email: 'updated@example.com',
+      sectionId: 2,
+    };
+
+    it('throws NotFoundException when user does not exist', async () => {
+      mockUsersRepository.findById.mockResolvedValueOnce(undefined);
+
+      await expect(service.updateUser(99, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.updateUser(99, updateDto)).rejects.toThrow(
+        'User not found',
+      );
+    });
+
+    it('throws ConflictException when email is already in use by another user', async () => {
+      mockUsersRepository.findById.mockResolvedValue({ id: 5 });
+      mockUsersRepository.findEmailCollision.mockResolvedValue({
+        id: 10,
+        email: updateDto.email,
+      });
+
+      await expect(service.updateUser(5, updateDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.updateUser(5, updateDto)).rejects.toThrow(
+        `Email ${updateDto.email} is already in use by another staff member.`,
+      );
+    });
+
+    it('throws BadRequestException when section does not exist', async () => {
+      mockUsersRepository.findById.mockResolvedValue({ id: 5 });
+      mockUsersRepository.findEmailCollision.mockResolvedValue(undefined);
+      mockUsersRepository.findSectionById.mockResolvedValue(undefined);
+
+      await expect(service.updateUser(5, updateDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.updateUser(5, updateDto)).rejects.toThrow(
+        `Cannot move user. Laboratory section with ID ${updateDto.sectionId} does not exist.`,
+      );
+    });
+
+    it('returns updated user without password hash when update is successful', async () => {
+      mockUsersRepository.findById.mockResolvedValueOnce({ id: 5 });
+      mockUsersRepository.findEmailCollision.mockResolvedValueOnce(undefined);
+      mockUsersRepository.findSectionById.mockResolvedValueOnce({ id: 2 });
+      mockUsersRepository.update.mockResolvedValueOnce({
+        id: 5,
+        firstName: 'Updated',
+        lastName: 'Doe',
+        email: 'updated@example.com',
+        passwordHash: 'hashed_password',
+        role: Role.TECHNICIAN,
+        isActive: true,
+        sectionId: 2,
+      });
+
+      const result = await service.updateUser(5, updateDto);
+
+      expect(result).toEqual({
+        id: 5,
+        firstName: 'Updated',
+        lastName: 'Doe',
+        email: 'updated@example.com',
+        role: Role.TECHNICIAN,
+        isActive: true,
+        sectionId: 2,
+      });
+      expect(result).not.toHaveProperty('passwordHash');
+    });
+  });
+
+  describe('getUsers()', () => {
+    it('throws BadRequestException when invalid role filter is provided', async () => {
+      await expect(service.getUsers('INVALID_ROLE' as Role)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.getUsers('INVALID_ROLE' as Role)).rejects.toThrow(
+        '"INVALID_ROLE" is not a valid user role.',
+      );
+    });
+
+    it('returns all users when no role filter is provided', async () => {
+      const mockUsers = [
+        { id: 1, firstName: 'John', role: Role.TECHNICIAN },
+        { id: 2, firstName: 'Jane', role: Role.ADMIN },
+      ];
+      mockUsersRepository.findAllWithSections.mockResolvedValueOnce(mockUsers);
 
       const result = await service.getUsers();
+
+      expect(result).toEqual(mockUsers);
+      expect(result).toHaveLength(2);
+    });
+
+    it('returns filtered users when role filter is provided', async () => {
+      const mockUsers = [{ id: 1, firstName: 'John', role: Role.TECHNICIAN }];
+      mockUsersRepository.findAllWithSections.mockResolvedValueOnce(mockUsers);
+
+      const result = await service.getUsers(Role.TECHNICIAN);
+
       expect(result).toEqual(mockUsers);
     });
-
-    it('should throw BadRequestException for invalid role filter', async () => {
-      await expect(service.getUsers('SUPERMAN' as any)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should return users filtered by a valid role', async () => {
-      const mockAdmins = [{ id: 1, role: Role.ADMIN, firstName: 'Admin' }];
-      // Mock the final where clause execution
-      dbMock.where.mockResolvedValueOnce(mockAdmins);
-
-      const result = await service.getUsers(Role.ADMIN);
-      expect(result).toEqual(mockAdmins);
-    });
   });
 
-  describe('getUserById', () => {
-    it('should return a user without passwordHash', async () => {
-      dbMock.where.mockResolvedValueOnce([{ id: 1, firstName: 'John', passwordHash: 'secret' }]);
+  describe('getUserById()', () => {
+    it('throws NotFoundException when user does not exist', async () => {
+      mockUsersRepository.findById.mockResolvedValue(undefined);
 
-      const result = await service.getUserById(1);
-      expect(result).not.toHaveProperty('passwordHash');
-      expect(result.id).toBe(1);
-    });
-
-    it('should throw NotFoundException if user missing', async () => {
-      dbMock.where.mockResolvedValueOnce([]);
       await expect(service.getUserById(99)).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('updateUser', () => {
-    const updateDto: AdminUpdateUserDto = { email: 'new@hospital.com' };
-
-    it('should update user if email is not a collision', async () => {
-      // 1. Initial user check
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      // 2. Email collision check (found nothing)
-      dbMock.where.mockResolvedValueOnce([]);
-      // 3. Update return
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, email: 'new@hospital.com' }]);
-
-      const result = await service.updateUser(1, updateDto);
-      expect(result.email).toBe('new@hospital.com');
+      await expect(service.getUserById(99)).rejects.toThrow(
+        'User with ID 99 not found',
+      );
     });
 
-    it('should throw ConflictException if updating to an existing email', async () => {
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]); // User exists
-      dbMock.where.mockResolvedValueOnce([{ id: 2 }]); // Email collision with User 2
+    it('returns user without password hash when user exists', async () => {
+      mockUsersRepository.findById.mockResolvedValueOnce({
+        id: 5,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        passwordHash: 'hashed_password',
+        role: Role.TECHNICIAN,
+        isActive: true,
+      });
 
-      await expect(service.updateUser(1, updateDto)).rejects.toThrow(ConflictException);
-    });
+      const result = await service.getUserById(5);
 
-    it('should throw NotFoundException if user to update does not exist', async () => {
-      // Mock the initial user lookup returning nothing
-      dbMock.where.mockResolvedValueOnce([]);
-
-      await expect(service.updateUser(1, updateDto)).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw BadRequestException if updating to a non-existent section', async () => {
-      const updateSectionDto: AdminUpdateUserDto = { sectionId: 99 };
-
-      // 1. Mock user exists
-      dbMock.where.mockResolvedValueOnce([{ id: 1 }]);
-      // 2. Mock section does not exist
-      dbMock.where.mockResolvedValueOnce([]);
-
-      await expect(service.updateUser(1, updateSectionDto)).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  // users.service.spec.ts
-
-  describe('deactivateUser', () => {
-    it('should return success message', async () => {
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, isActive: false }]);
-
-      // Pass a different ID for the second argument so it doesn't trigger the check
-      const result = await service.deactivateUser(1, 999);
-      expect(result.message).toContain('success');
-    });
-
-    it('should throw BadRequestException if self-deactivating', async () => {
-      // Test the new logic: IDs match
-      await expect(service.deactivateUser(1, 1)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw NotFoundException if user to deactivate is not found', async () => {
-      // Mock the database update returning an empty array
-      dbMock.returning.mockResolvedValueOnce([]);
-
-      await expect(service.deactivateUser(1, 999)).rejects.toThrow(NotFoundException);
+      expect(result).toEqual({
+        id: 5,
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        role: Role.TECHNICIAN,
+        isActive: true,
+      });
+      expect(result).not.toHaveProperty('passwordHash');
     });
   });
 });

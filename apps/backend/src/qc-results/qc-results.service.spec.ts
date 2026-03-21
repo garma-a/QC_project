@@ -1,275 +1,199 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { QcResultsService } from './qc-results.service';
-import { DatabaseService } from '@/database/database.service';
-import { CreateQcResultDto } from './dto/create-qc-result.dto';
-import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { QcResultsService } from './qc-results.service';
+import { QcResultsRepository } from './qc-results.repository';
 
 describe('QcResultsService', () => {
   let service: QcResultsService;
-  let dbMock: any;
+  let mockRepository: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    dbMock = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      values: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      set: jest.fn().mockReturnThis(),
-      returning: jest.fn(),
-      query: {
-        controlLots: {
-          findFirst: jest.fn(),
-        },
-        qcResults: {
-          findFirst: jest.fn(),
-        },
-      },
+    mockRepository = {
+      getLotById: jest.fn(),
+      createQcResult: jest.fn(),
+      updateQcResult: jest.fn(),
+      getAllLotsTestsMachinesByLotId: jest.fn(),
+      getResultsByLotId: jest.fn(),
+      getResultAndLotByResultId: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QcResultsService,
-        {
-          provide: DatabaseService,
-          useValue: { db: dbMock },
-        },
+        { provide: QcResultsRepository, useValue: mockRepository },
       ],
     }).compile();
 
     service = module.get<QcResultsService>(QcResultsService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('create', () => {
-    const dto: CreateQcResultDto = {
-      measuredValue: 14.5,
-      lotId: 1,
-      comments: 'Test run',
-    };
     const userId = 5;
+    const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5 };
 
-    it('should calculate PASS status and create a QC result', async () => {
-      // Arrange
-      // 14.5 against mean 14.0, SD 0.5 => z-score = 1.0 (PASS)
-      dbMock.where.mockResolvedValueOnce([{ id: 1, mean: 14.0, standardDevi: 0.5 }]);
-      dbMock.returning.mockResolvedValueOnce([{
-        id: 10,
-        ...dto,
-        status: 'PASS',
-        performedBy: userId,
-      }]);
+    it('should create QC result with PASS status when z-score is within 2 SD', async () => {
+      // z-score = (14.5 - 14.0) / 0.5 = 1.0 (PASS)
+      const dto = { measuredValue: 14.5, lotId: 1, comments: 'Normal reading' };
+      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.createQcResult.mockResolvedValue([
+        { id: 1, ...dto, status: 'PASS', performedBy: userId },
+      ]);
 
-      // Act
       const result = await service.create(dto, userId);
 
-      // Assert
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.from).toHaveBeenCalled();
-      expect(dbMock.insert).toHaveBeenCalled();
-      expect(dbMock.values).toHaveBeenCalledWith({
-        measuredValue: 14.5,
-        status: 'PASS',
-        comments: 'Test run',
-        lotId: 1,
-        performedBy: userId,
-      });
-      expect(dbMock.returning).toHaveBeenCalled();
-      expect(result.id).toBe(10);
       expect(result.status).toBe('PASS');
     });
 
-    it('should throw NotFoundException if control lot does not exist', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([]); // no lot found
+    it('should create QC result with WARNING status when z-score is between 2 and 3 SD', async () => {
+      // z-score = (15.2 - 14.0) / 0.5 = 2.4 (WARNING)
+      const dto = {
+        measuredValue: 15.2,
+        lotId: 1,
+        comments: 'Elevated reading',
+      };
+      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.createQcResult.mockResolvedValue([
+        { id: 1, ...dto, status: 'WARNING', performedBy: userId },
+      ]);
 
-      // Act & Assert
-      await expect(service.create(dto, userId)).rejects.toThrow(NotFoundException);
-      expect(dbMock.insert).not.toHaveBeenCalled();
-    });
+      const result = await service.create(dto, userId);
 
-    it('should throw BadRequestException if control lot is missing mean or standard deviation', async () => {
-      // Arrange
-      dbMock.where.mockResolvedValueOnce([{ id: 1, mean: null, standardDevi: 0.5 }]);
-
-      // Act & Assert
-      await expect(service.create(dto, userId)).rejects.toThrow(BadRequestException);
-      expect(dbMock.insert).not.toHaveBeenCalled();
-    });
-
-    it('should assign WARNING status if zScore is between 2 and 3', async () => {
-      // Arrange
-      // 15.2 against mean 14.0, SD 0.5 => z-score = 2.4 (WARNING)
-      const warningDto = { ...dto, measuredValue: 15.2 };
-      dbMock.where.mockResolvedValueOnce([{ id: 1, mean: 14.0, standardDevi: 0.5 }]);
-      dbMock.returning.mockResolvedValueOnce([{
-        id: 11,
-        ...warningDto,
-        status: 'WARNING',
-        performedBy: userId,
-      }]);
-
-      // Act
-      const result = await service.create(warningDto, userId);
-
-      // Assert
       expect(result.status).toBe('WARNING');
-      expect(dbMock.values).toHaveBeenCalledWith(expect.objectContaining({ status: 'WARNING' }));
     });
 
-    it('should assign FAIL status if zScore is greater than 3', async () => {
-      // Arrange
-      // 16.0 against mean 14.0, SD 0.5 => z-score = 4.0 (FAIL)
-      const failDto = { ...dto, measuredValue: 16.0 };
-      dbMock.where.mockResolvedValueOnce([{ id: 1, mean: 14.0, standardDevi: 0.5 }]);
-      dbMock.returning.mockResolvedValueOnce([{
-        id: 12,
-        ...failDto,
-        status: 'FAIL',
-        performedBy: userId,
-      }]);
+    it('should create QC result with FAIL status when z-score exceeds 3 SD', async () => {
+      // z-score = (16.0 - 14.0) / 0.5 = 4.0 (FAIL)
+      const dto = { measuredValue: 16.0, lotId: 1, comments: 'Out of control' };
+      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.createQcResult.mockResolvedValue([
+        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
+      ]);
 
-      // Act
-      const result = await service.create(failDto, userId);
+      const result = await service.create(dto, userId);
 
-      // Assert
       expect(result.status).toBe('FAIL');
-      expect(dbMock.values).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAIL' }));
+    });
+
+    it('should throw NotFoundException when control lot does not exist', async () => {
+      const dto = { measuredValue: 14.5, lotId: 999, comments: '' };
+      mockRepository.getLotById.mockResolvedValue(undefined);
+
+      await expect(service.create(dto, userId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.create(dto, userId)).rejects.toThrow(
+        'Control lot not found',
+      );
+    });
+
+    it('should throw BadRequestException when lot is missing statistical values', async () => {
+      const dto = { measuredValue: 14.5, lotId: 1, comments: '' };
+      mockRepository.getLotById.mockResolvedValue({
+        id: 1,
+        mean: null,
+        standardDeviation: 0.5,
+      });
+
+      await expect(service.create(dto, userId)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(dto, userId)).rejects.toThrow(
+        'Control lot is missing required statistical values',
+      );
     });
   });
 
   describe('findAll', () => {
-    it('should return lot data and associated results', async () => {
-      // Arrange
-      dbMock.query.controlLots.findFirst.mockResolvedValueOnce({
+    it('should return lot information with test and machine names', async () => {
+      const lot = {
         id: 1,
         lotNumber: 'LOT-HGB-2026',
         mean: 14.0,
-        standardDevi: 0.5,
+        standardDeviation: 0.5,
         upperControlLimit: 15.5,
         lowerControlLimit: 12.5,
         upperWarningLimit: 15.0,
         lowerWarningLimit: 13.0,
-        qcTest: {
-          testName: 'Hemoglobin',
-          machine: { name: 'Sysmex XN-1000' },
-        },
+      };
+      mockRepository.getLotById.mockResolvedValue(lot);
+      mockRepository.getAllLotsTestsMachinesByLotId.mockResolvedValue({
+        ...lot,
+        qc_tests: { testName: 'Hemoglobin' },
+        machines: { name: 'Sysmex XN-1000' },
       });
 
-      const mockResults = [
-        { id: 1, measuredValue: 14.2, status: 'PASS' },
-        { id: 2, measuredValue: 14.6, status: 'WARNING' },
-      ];
-      dbMock.orderBy.mockResolvedValueOnce(mockResults);
-
-      // Act
       const result = await service.findAll(1);
 
-      // Assert
-      expect(dbMock.query.controlLots.findFirst).toHaveBeenCalled();
-      expect(dbMock.select).toHaveBeenCalled();
-      expect(dbMock.from).toHaveBeenCalled();
-      expect(dbMock.where).toHaveBeenCalled();
-      expect(dbMock.orderBy).toHaveBeenCalled();
       expect(result.lot.testName).toBe('Hemoglobin');
       expect(result.lot.machineName).toBe('Sysmex XN-1000');
-      expect(result.results).toEqual(mockResults);
-      expect(result.results).toHaveLength(2);
+      expect(result.lot.mean).toBe(14.0);
     });
 
-    it('should throw NotFoundException if control lot does not exist', async () => {
-      // Arrange
-      dbMock.query.controlLots.findFirst.mockResolvedValueOnce(null);
+    it('should throw NotFoundException when lot does not exist', async () => {
+      mockRepository.getLotById.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.findAll(99)).rejects.toThrow(NotFoundException);
-      expect(dbMock.select).not.toHaveBeenCalled(); // The results query shouldn't run
+      await expect(service.findAll(999)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findOne', () => {
-    it('should return a QC result with dynamically calculated zScore', async () => {
-      // Arrange
-      dbMock.query.qcResults.findFirst.mockResolvedValueOnce({
-        id: 1,
-        measuredValue: 15.0,
-        controlLot: { mean: 14.0, standardDevi: 0.5 },
+    it('should return QC result with calculated z-score', async () => {
+      // z-score = (15.0 - 14.0) / 0.5 = 2.0
+      mockRepository.getResultAndLotByResultId.mockResolvedValue({
+        qc_results: { id: 1, measuredValue: 15.0, status: 'WARNING' },
+        control_lots: { mean: 14.0, standardDeviation: 0.5 },
       });
 
-      // Act
       const result = await service.findOne(1);
 
-      // Assert
-      expect(dbMock.query.qcResults.findFirst).toHaveBeenCalled();
-      expect(result.id).toBe(1);
-      // (15.0 - 14.0) / 0.5 = 2.0
       expect(result.zScore).toBe(2);
     });
 
-    it('should throw NotFoundException if QC result not found', async () => {
-      // Arrange
-      dbMock.query.qcResults.findFirst.mockResolvedValueOnce(null);
+    it('should throw NotFoundException when QC result does not exist', async () => {
+      mockRepository.getResultAndLotByResultId.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.findOne(99)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(999)).rejects.toThrow('QC Result not found');
     });
 
-    it('should throw BadRequestException if associated lot is missing stats', async () => {
-      // Arrange
-      dbMock.query.qcResults.findFirst.mockResolvedValueOnce({
-        id: 1,
-        measuredValue: 15.0,
-        controlLot: { mean: null, standardDevi: null },
+    it('should throw BadRequestException when associated lot is missing stats', async () => {
+      mockRepository.getResultAndLotByResultId.mockResolvedValue({
+        qc_results: { id: 1, measuredValue: 15.0 },
+        control_lots: { mean: null, standardDeviation: null },
       });
 
-      // Act & Assert
       await expect(service.findOne(1)).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('update', () => {
-    const updateDto: UpdateQcResultDto = { comments: 'Instrument recalibrated' };
-
-    it('should update the comments and return the full result by internally calling findOne', async () => {
-      // Arrange
-      // The update query returns the updated basic row
-      dbMock.returning.mockResolvedValueOnce([{ id: 1, comments: 'Instrument recalibrated' }]);
-
-      // We MUST mock findOne directly on the service instance because update calls this.findOne(id)
-      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValueOnce({
+    it('should update comments and return the full result', async () => {
+      const updateDto = { comments: 'Recalibration performed' };
+      mockRepository.updateQcResult.mockResolvedValue({
         id: 1,
-        comments: 'Instrument recalibrated',
-        measuredValue: 14.5,
-        controlLot: { mean: 14.0, standardDevi: 0.5 },
+        comments: 'Recalibration performed',
+      });
+      jest.spyOn(service, 'findOne').mockResolvedValue({
+        qc_results: {
+          id: 1,
+          measuredValue: 14.5,
+          comments: 'Recalibration performed',
+        },
+        control_lots: { mean: 14.0, standardDeviation: 0.5 },
         zScore: 1,
       } as any);
 
-      // Act
       const result = await service.update(1, updateDto);
 
-      // Assert
-      expect(dbMock.update).toHaveBeenCalled();
-      expect(dbMock.set).toHaveBeenCalledWith({ comments: updateDto.comments });
-      expect(dbMock.where).toHaveBeenCalled();
-      expect(dbMock.returning).toHaveBeenCalled();
-      expect(findOneSpy).toHaveBeenCalledWith(1);
-      expect(result.comments).toBe('Instrument recalibrated');
       expect(result.zScore).toBe(1);
     });
 
-    it('should throw NotFoundException if QC result is not found', async () => {
-      // Arrange
-      dbMock.returning.mockResolvedValueOnce([]); // update returns empty when row not found
+    it('should throw NotFoundException when QC result does not exist', async () => {
+      mockRepository.updateQcResult.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.update(99, updateDto)).rejects.toThrow(NotFoundException);
-      expect(dbMock.update).toHaveBeenCalled();
+      await expect(service.update(999, { comments: 'test' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

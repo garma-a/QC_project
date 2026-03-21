@@ -1,12 +1,34 @@
 import { relations } from 'drizzle-orm';
-import { primaryKey, pgEnum, pgTable, serial, text, varchar, timestamp, integer, boolean, doublePrecision } from 'drizzle-orm/pg-core';
+import {
+  primaryKey,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  varchar,
+  timestamp,
+  integer,
+  boolean,
+  doublePrecision,
+} from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
-export const specializationEnum = pgEnum('specialization_enum', ['HEMATOLOGY', 'CHEMISTRY', 'MICROBIOLOGY', 'IMMUNOLOGY', 'OTHER']);
+export const specializationEnum = pgEnum('specialization_enum', [
+  'HEMATOLOGY',
+  'CHEMISTRY',
+  'MICROBIOLOGY',
+  'IMMUNOLOGY',
+  'OTHER',
+]);
 export const statusEnum = pgEnum('status_enum', ['PASS', 'FAIL', 'WARNING']);
 export const priorityEnum = pgEnum('priority_enum', ['LOW', 'MEDIUM', 'HIGH']);
-export const machineStatusEnum = pgEnum('machine_status_enum', ['IDLE', 'RUNNING', 'MAINTENANCE', 'OFFLINE', 'ERROR']);
-
+export const machineStatusEnum = pgEnum('machine_status_enum', [
+  'IDLE',
+  'RUNNING',
+  'MAINTENANCE',
+  'OFFLINE',
+  'ERROR',
+]);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -28,14 +50,16 @@ export const sections = pgTable('sections', {
   location: text('location'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
-  specialization: specializationEnum('specialization').default("OTHER"),
+  specialization: specializationEnum('specialization').default('OTHER'),
 });
 
 export const machines = pgTable('machines', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   hospCode: text('hosp_code'),
-  sectionId: integer('section_id').references(() => sections.id).notNull(),
+  sectionId: integer('section_id')
+    .references(() => sections.id)
+    .notNull(),
   currentStatus: machineStatusEnum('current_status').default('IDLE'),
   lastRunAt: timestamp('last_run_at'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -47,19 +71,23 @@ export const qcTests = pgTable('qc_tests', {
   id: serial('id').primaryKey(),
   testName: text('test_name').notNull(),
   testType: text('test_type'),
-  machineId: integer('machine_id').references(() => machines.id).notNull(),
+  machineId: integer('machine_id')
+    .references(() => machines.id)
+    .notNull(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 });
 
 export const controlLots = pgTable('control_lots', {
   id: serial('id').primaryKey(),
-  testId: integer('test_id').references(() => qcTests.id).notNull(),
+  testId: integer('test_id')
+    .references(() => qcTests.id)
+    .notNull(),
   lotNumber: varchar('lot_number', { length: 100 }).notNull(),
   expirationDate: timestamp('expiration_date').notNull(),
 
   targetValue: doublePrecision('target_value'),
   mean: doublePrecision('mean'),
-  standardDevi: doublePrecision('standard_devi'),
+  standardDeviation: doublePrecision('standard_deviation'),
   upperControlLimit: doublePrecision('upper_control_limit'),
   lowerControlLimit: doublePrecision('lower_control_limit'),
   upperWarningLimit: doublePrecision('upper_warning_limit'),
@@ -75,8 +103,12 @@ export const qcResults = pgTable('qc_results', {
   testDate: timestamp('test_date').defaultNow(),
   status: statusEnum('status').notNull(),
   comments: text('comments'),
-  lotId: integer('lot_id').references(() => controlLots.id).notNull(),
-  performedBy: integer('performed_by').references(() => users.id).notNull(),
+  lotId: integer('lot_id')
+    .references(() => controlLots.id)
+    .notNull(),
+  performedBy: integer('performed_by')
+    .references(() => users.id)
+    .notNull(),
 });
 
 export const alerts = pgTable('alerts', {
@@ -86,20 +118,29 @@ export const alerts = pgTable('alerts', {
   message: text('message'),
   ruleViolated: varchar('rule_violated', { length: 50 }),
   suggestedSolution: text('suggested_solution'),
-  resultId: integer('result_id').references(() => qcResults.id).notNull(),
+  resultId: integer('result_id')
+    .references(() => qcResults.id)
+    .notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const usersToAlerts = pgTable('users_to_alerts', {
-  userId: integer('user_id').references(() => users.id).notNull(),
-  alertId: integer('alert_id').references(() => alerts.id).notNull(),
-  isAcknowledged: boolean('is_acknowledged').default(false),
-  acknowledgedAt: timestamp('acknowledged_at'),
-  actionTaken: text('action_taken'),
-}, (t) => ({
-  pk: primaryKey({ columns: [t.userId, t.alertId] }),
-}));
-
+export const usersToAlerts = pgTable(
+  'users_to_alerts',
+  {
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    alertId: integer('alert_id')
+      .references(() => alerts.id)
+      .notNull(),
+    isAcknowledged: boolean('is_acknowledged').default(false),
+    acknowledgedAt: timestamp('acknowledged_at'),
+    actionTaken: text('action_taken'),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.alertId] }),
+  }),
+);
 
 export const sectionsRelations = relations(sections, ({ many }) => ({
   machines: many(machines),
