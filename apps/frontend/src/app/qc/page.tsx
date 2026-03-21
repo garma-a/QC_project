@@ -1,6 +1,6 @@
 import { api } from '@/lib/api/serverFetch';
 import type { MachineResponseDto } from '@/lib/types/api';
-import { QCHistoryInteractive } from '@/components/client/QCHistoryInteractive';
+import { QCHistoryInteractive } from '@/features/qc/components/QCHistoryInteractive';
 
 type MachineType = { id: string; name: string; category: string; model: string };
 type CategoryType = { id: string; name: string };

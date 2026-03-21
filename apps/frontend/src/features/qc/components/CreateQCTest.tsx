@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { X, Heart } from 'lucide-react';
-import { useQCStore } from '../store/useQCStore';
+import { useQCStore, QCFormState } from '@/store/useQCStore';
 import { createQcTest } from '@/lib/actions';
 import { CreateQcTestDto } from '@/lib/types/api';
 
@@ -14,19 +14,19 @@ interface CreateQCTestProps {
 
 export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProps) {
   const [isPending, setIsPending] = useState(false);
-  const selectedCategory = useQCStore((state) => state.selectedCategory);
-  const selectedMachine = useQCStore((state) => state.selectedMachine);
-  const testName = useQCStore((state) => state.testName);
-  const result = useQCStore((state) => state.result);
-  const expectedRange = useQCStore((state) => state.expectedRange);
-  const notes = useQCStore((state) => state.notes);
-  const setSelectedCategory = useQCStore((state) => state.setSelectedCategory);
-  const setSelectedMachine = useQCStore((state) => state.setSelectedMachine);
-  const setTestName = useQCStore((state) => state.setTestName);
-  const setResult = useQCStore((state) => state.setResult);
-  const setExpectedRange = useQCStore((state) => state.setExpectedRange);
-  const setNotes = useQCStore((state) => state.setNotes);
-  const resetForm = useQCStore((state) => state.resetForm);
+  const selectedCategory = useQCStore((state: QCFormState) => state.selectedCategory);
+  const selectedMachine = useQCStore((state: QCFormState) => state.selectedMachine);
+  const testName = useQCStore((state: QCFormState) => state.testName);
+  const result = useQCStore((state: QCFormState) => state.result);
+  const expectedRange = useQCStore((state: QCFormState) => state.expectedRange);
+  const notes = useQCStore((state: QCFormState) => state.notes);
+  const setSelectedCategory = useQCStore((state: QCFormState) => state.setSelectedCategory);
+  const setSelectedMachine = useQCStore((state: QCFormState) => state.setSelectedMachine);
+  const setTestName = useQCStore((state: QCFormState) => state.setTestName);
+  const setResult = useQCStore((state: QCFormState) => state.setResult);
+  const setExpectedRange = useQCStore((state: QCFormState) => state.setExpectedRange);
+  const setNotes = useQCStore((state: QCFormState) => state.setNotes);
+  const resetForm = useQCStore((state: QCFormState) => state.resetForm);
 
   const filteredMachines = selectedCategory
     ? machines.filter(m => m.category === selectedCategory)

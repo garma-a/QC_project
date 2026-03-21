@@ -1,7 +1,7 @@
 import { Heart } from 'lucide-react';
-import { Logo } from '@/components/Logo';
-import { LoginForm } from '@/components/client/LoginForm';
-import { ThemeToggle } from '@/components/client/ThemeToggle';
+import { Logo } from '@/components/layout/Logo';
+import { LoginForm } from '@/features/auth/components/LoginForm';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 // Auth redirects are handled by middleware.ts — no need for cookies() here.
 

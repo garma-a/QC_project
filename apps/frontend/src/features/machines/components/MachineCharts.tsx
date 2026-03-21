@@ -14,10 +14,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
-import { applyWestgardRules, getPointColor, formatWestgardStats } from '../utils/westgardRules';
-import { getAvailableMachines, getAvailableTests, getQCData } from '../utils/dataProcessor';
+import { applyWestgardRules, getPointColor, formatWestgardStats } from '@/utils/westgardRules';
+import { getAvailableMachines, getAvailableTests, getQCData } from '@/utils/dataProcessor';
 
 interface MachineChartsProps {
   machineId?: number; // Passed down from MonitorClient

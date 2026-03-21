@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "../contexts/ThemeContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Logo, LogoCompact } from "./Logo";
 

@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import { api } from '@/lib/api/serverFetch';
-import { UsersManager } from '@/components/client/UsersManager';
+import { UsersManager } from '@/features/users/components/UsersManager';
 import { decodeJwt } from '@/lib/utils/jwt';
 import type { UserListItemDto } from '@/lib/types/api';
-import type { UserType } from '@/components/client/UsersManager';
+import type { UserType } from '@/features/users/components/UsersManager';
 
 // Auth redirects are handled by middleware.ts — no need for redirect() here.
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircle, AlertCircle, Calendar, User, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, XCircle } from 'lucide-react';
-import { applyWestgardRules } from '../utils/westgardRules';
+import { applyWestgardRules } from '@/utils/westgardRules';
 
 type MachineType = { id: string; name: string; category: string; model?: string };
 type CategoryType = { id: string; name: string };

@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/serverFetch';
-import { DashboardInteractive, type MachineWithQcStatus } from '@/components/client/DashboardInteractive';
+import { DashboardInteractive, type MachineWithQcStatus } from '@/features/dashboard/components/DashboardInteractive';
 import type { MachineResponseDto } from '@/lib/types/api';
 
 export default async function DashboardPage() {

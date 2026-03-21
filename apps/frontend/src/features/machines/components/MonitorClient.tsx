@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
-import { MachineCharts } from '@/components/MachineCharts';
-import { LogoCompact } from '@/components/Logo';
+import { MachineCharts } from '@/features/machines/components/MachineCharts';
+import { LogoCompact } from '@/components/layout/Logo';
 
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
