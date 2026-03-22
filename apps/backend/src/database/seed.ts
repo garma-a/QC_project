@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { DatabaseService } from '@/database/database.service';
+import { QcResultsService } from '@/qc-results/qc-results.service';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as argon2 from 'argon2';
@@ -32,25 +33,13 @@ async function clearDatabase(db: any) {
   console.log('✨ Database wiped successfully!');
 }
 
-function deriveQcStatus(
-  measuredValue: number,
-): (typeof qcResults.$inferInsert)['status'] {
-  const r = Math.random();
-  if (r < 0.8) {
-    return 'PASS' as (typeof qcResults.$inferInsert)['status'];
-  }
-  if (r < 0.9) {
-    return 'FAIL' as (typeof qcResults.$inferInsert)['status'];
-  }
-  return 'WARNING' as (typeof qcResults.$inferInsert)['status'];
-}
-
 async function bootstrap() {
   // Create a headless NestJS app context (no HTTP server)
   const app = await NestFactory.createApplicationContext(AppModule);
 
   // Grab your existing database service from the DI container
   const databaseService = app.get(DatabaseService);
+  const qcResultsService = app.get(QcResultsService);
   const db = databaseService.db;
 
   try {
@@ -122,15 +111,13 @@ async function bootstrap() {
       .values(techniciansToInsert)
       .returning();
 
-    await db
-      .insert(usersToSections)
-      .values([
-        { userId: adminUser.id, sectionId: section.id },
-        ...insertedTechs.map((tech) => ({
-          userId: tech.id,
-          sectionId: section.id,
-        })),
-      ]);
+    await db.insert(usersToSections).values([
+      { userId: adminUser.id, sectionId: section.id },
+      ...insertedTechs.map((tech) => ({
+        userId: tech.id,
+        sectionId: section.id,
+      })),
+    ]);
 
     // Combine all users so we can randomly assign who performed a QC Test
     const allUsers = [adminUser, ...insertedTechs];
@@ -164,7 +151,31 @@ async function bootstrap() {
           })
           .returning();
 
-        // 6. Create a default Control Lot
+        // 6. Derive lot statistics from numeric records
+        const records = tests[testCode];
+        const numericValues = records
+          .map((record: any) => parseFloat(record.TESTRESULT))
+          .filter((v: number) => !isNaN(v));
+
+        if (numericValues.length === 0) {
+          console.warn(
+            `⚠️  Skipping test ${testCode} because no numeric results were found.`,
+          );
+          continue;
+        }
+
+        const mean =
+          numericValues.reduce((sum: number, val: number) => sum + val, 0) /
+          numericValues.length;
+        const variance =
+          numericValues.reduce(
+            (sum: number, val: number) => sum + Math.pow(val - mean, 2),
+            0,
+          ) / numericValues.length;
+        const std = Math.sqrt(variance);
+        const safeStd = std > 0 ? std : 1;
+
+        // 7. Create a control lot with calculated limits
         const expirationDate = new Date();
         expirationDate.setFullYear(expirationDate.getFullYear() + 1);
 
@@ -174,19 +185,21 @@ async function bootstrap() {
             testId: qcTest.id,
             lotNumber: `LOT-${eqpCode}-${testCode}`,
             expirationDate: expirationDate,
-            targetValue: 0,
-            mean: 0,
-            standardDeviation: 0,
+            targetValue: mean,
+            mean,
+            standardDeviation: safeStd,
+            upperControlLimit: mean + 3 * safeStd,
+            lowerControlLimit: mean - 3 * safeStd,
+            upperWarningLimit: mean + 2 * safeStd,
+            lowerWarningLimit: mean - 2 * safeStd,
             isActive: true,
           })
           .returning();
 
-        const records = tests[testCode];
-        const resultsToInsert: (typeof qcResults.$inferInsert)[] = [];
-
-        // 7. Map the records to QC Results
+        let insertedCount = 0;
+        // 8. Create QC results through service to trigger alert logic
         for (const record of records) {
-          // Parse float to protect against strings like "pg/ml" in the JSON
+          // Parse float to protect against strings like "pg/ml"
           const measuredValue = parseFloat(record.TESTRESULT);
 
           if (isNaN(measuredValue)) {
@@ -196,30 +209,24 @@ async function bootstrap() {
             continue;
           }
 
-          // Pick a random user from our allUsers array to assign to this test
+          // Pick a random user to assign performer
           const randomUser =
             allUsers[Math.floor(Math.random() * allUsers.length)];
 
-          resultsToInsert.push({
-            measuredValue: measuredValue,
-            testDate: new Date(record.TESTDATE),
-            status: deriveQcStatus(measuredValue),
-            lotId: controlLot.id,
-            performedBy: randomUser.id, // ✅ Assigned to a random tech or admin
-          });
+          await qcResultsService.create(
+            {
+              measuredValue,
+              lotId: controlLot.id,
+              comments: undefined,
+            },
+            randomUser.id,
+          );
+          insertedCount += 1;
         }
 
-        // 8. Bulk insert in chunks to avoid Postgres parameter limits
-        if (resultsToInsert.length > 0) {
-          const chunkSize = 1000;
-          for (let i = 0; i < resultsToInsert.length; i += chunkSize) {
-            const chunk = resultsToInsert.slice(i, i + chunkSize);
-            await db.insert(qcResults).values(chunk);
-          }
-          console.log(
-            `✅ Inserted ${resultsToInsert.length} results for Test ${testCode}`,
-          );
-        }
+        console.log(
+          `✅ Inserted ${insertedCount} results for Test ${testCode}`,
+        );
       }
     }
 

@@ -41,19 +41,17 @@ export class AlertsRepository {
     createAlertDto: typeof alerts.$inferInsert,
     userId: number,
   ) {
-    return await this.databaseService.db.transaction(async (tx) => {
-      const [alert] = await tx
-        .insert(alerts)
-        .values(createAlertDto)
-        .returning();
+    const [alert] = await this.databaseService.db
+      .insert(alerts)
+      .values(createAlertDto)
+      .returning();
 
-      await tx.insert(usersToAlerts).values({
-        userId,
-        alertId: alert.id,
-      });
-
-      return alert;
+    await this.databaseService.db.insert(usersToAlerts).values({
+      userId,
+      alertId: alert.id,
     });
+
+    return alert;
   }
 
   async createForUsers(
@@ -66,21 +64,19 @@ export class AlertsRepository {
       return await this.create(createAlertDto);
     }
 
-    return await this.databaseService.db.transaction(async (tx) => {
-      const [alert] = await tx
-        .insert(alerts)
-        .values(createAlertDto)
-        .returning();
+    const [alert] = await this.databaseService.db
+      .insert(alerts)
+      .values(createAlertDto)
+      .returning();
 
-      await tx.insert(usersToAlerts).values(
-        uniqueUserIds.map((id) => ({
-          userId: id,
-          alertId: alert.id,
-        })),
-      );
+    await this.databaseService.db.insert(usersToAlerts).values(
+      uniqueUserIds.map((id) => ({
+        userId: id,
+        alertId: alert.id,
+      })),
+    );
 
-      return alert;
-    });
+    return alert;
   }
 
   async markSeen(alertId: number, userId: number) {
