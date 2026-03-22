@@ -75,10 +75,19 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
 
   // Apply Westgard analysis to each test group
   const testGroupsWithAnalysis = Object.entries(testGroups).map(([key, group]: [string, { machineId: string; testName: string; tests: QcHistoryType[] }]) => {
-    // Get last 7 days of data for this test
+    // Get most recent points for this test
     const sortedTests = group.tests
       .filter((t: QcHistoryType) => t.numericResult !== undefined)
-      .sort((a: QcHistoryType, b: QcHistoryType) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a: QcHistoryType, b: QcHistoryType) => {
+        const aTime = Date.parse(a.date);
+        const bTime = Date.parse(b.date);
+
+        if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
+          return aTime - bTime;
+        }
+
+        return a.date.localeCompare(b.date);
+      })
       .slice(0, 7);
     
     const dataPoints = sortedTests.map((t: QcHistoryType) => ({
@@ -264,7 +273,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                                   }`}
                                 />
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                                  {point.date.split(' ')[0]}
+                                  {point.date}
                                 </span>
                               </div>
                               <div className="flex items-center gap-3">

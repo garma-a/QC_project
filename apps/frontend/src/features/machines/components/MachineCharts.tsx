@@ -17,11 +17,51 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
 import { applyWestgardRules, getPointColor, formatWestgardStats } from '@/utils/westgardRules';
-import { getAvailableMachines, getAvailableTests, getQCData } from '@/utils/dataProcessor';
+import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 interface MachineChartsProps {
-  machineId?: number; // Passed down from MonitorClient
+  machine?: MachineForCharts;
+  qcHistory: MonitorResultEntry[];
 }
+
+type MonitorResultEntry = QcResultResponseDto & {
+  machineId: number;
+  testName: string;
+  lotId: number;
+  lotNumber: string;
+};
+
+type MachineForCharts = MachineResponseDto & {
+  testsToday?: number;
+  lastQC?: { date: string; status: string };
+  tests?: {
+    id: string;
+    name: string;
+    category: string;
+    code: string;
+    unit: string;
+    lowRange: number;
+    highRange: number;
+    lotId: number;
+    lotNumber: string;
+    mean: number;
+    standardDeviation: number;
+  }[];
+};
+
+type TestOption = {
+  id: string;
+  name: string;
+  category: string;
+  code: string;
+  unit: string;
+  lowRange: number;
+  highRange: number;
+  lotId: number;
+  lotNumber: string;
+  mean: number;
+  standardDeviation: number;
+};
 
 interface ChartDataPoint {
   date: string;
@@ -93,46 +133,54 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
   );
 }
 
-export function MachineCharts({ machineId: initialMachineId }: MachineChartsProps) {
+export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   const { theme } = useTheme();
 
-  // Get available options
-  const machines = useMemo(() => getAvailableMachines(), []);
-  const initialMachine =
-    initialMachineId && machines.includes(initialMachineId.toString())
-      ? initialMachineId.toString()
-      : (machines[0] ?? '');
+  const availableTests = useMemo(() => {
+    if (!machine) return [];
 
-  const [selectedMachine, setSelectedMachine] = useState<string>(initialMachine);
-  const [selectedTest, setSelectedTest] = useState<string>(() => {
-    if (!initialMachine) {
-      return '';
+    if (machine.tests && machine.tests.length > 0) {
+      return machine.tests;
     }
 
-    const initialTests = getAvailableTests(initialMachine);
-    return initialTests[0] ?? '';
-  });
+    const uniqueByLot = new Map<number, TestOption>();
+    for (const result of qcHistory) {
+      if (!uniqueByLot.has(result.lotId)) {
+        uniqueByLot.set(result.lotId, {
+          id: result.lotId.toString(),
+          name: result.testName,
+          category: 'General',
+          code: result.lotId.toString(),
+          unit: 'unit',
+          lowRange: 0,
+          highRange: 0,
+          lotId: result.lotId,
+          lotNumber: result.lotNumber,
+          mean: 0,
+          standardDeviation: 0,
+        });
+      }
+    }
 
-  const tests = useMemo(
-    () => (selectedMachine ? getAvailableTests(selectedMachine) : []),
-    [selectedMachine]
-  );
-  const activeTest = tests.includes(selectedTest) ? selectedTest : (tests[0] ?? '');
+    return Array.from(uniqueByLot.values());
+  }, [machine, qcHistory]);
 
-  const handleMachineChange = (nextMachine: string) => {
-    const nextTests = getAvailableTests(nextMachine);
-    setSelectedMachine(nextMachine);
-    setSelectedTest((prev) =>
-      nextTests.includes(prev) ? prev : (nextTests[0] ?? '')
-    );
-  };
+  const [selectedTestId, setSelectedTestId] = useState<string>(availableTests[0]?.id ?? '');
+  const activeTest = availableTests.find((test) => test.id === selectedTestId) ?? availableTests[0];
 
-
-  // Get QC Data
   const qcData = useMemo(() => {
-    if (!selectedMachine || !activeTest) return [];
-    return getQCData(selectedMachine, activeTest);
-  }, [selectedMachine, activeTest]);
+    if (!activeTest) return [];
+
+    return qcHistory
+      .filter((entry) => entry.lotId === activeTest.lotId)
+      .slice()
+      .sort((a, b) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
+      .map((entry) => ({
+        date: new Date(entry.testDate).toLocaleString(),
+        value: entry.measuredValue,
+        testName: entry.testName,
+      }));
+  }, [activeTest, qcHistory]);
 
   // Apply Westgard Rules
   const westgardAnalysis = useMemo(() => {
@@ -177,29 +225,16 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
           <span>Filters:</span>
         </div>
 
-        <div className="w-48">
-          <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Machine ID</label>
+        <div className="w-64">
+          <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Control Lot / Test</label>
           <select
             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-            value={selectedMachine}
-            onChange={(e) => handleMachineChange(e.target.value)}
+            value={activeTest?.id ?? ''}
+            onChange={(e) => setSelectedTestId(e.target.value)}
+            disabled={availableTests.length === 0}
           >
-            {machines.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="w-48">
-          <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Test Code</label>
-          <select
-            className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-            value={activeTest}
-            onChange={(e) => setSelectedTest(e.target.value)}
-            disabled={!selectedMachine}
-          >
-            {tests.map(t => (
-              <option key={t} value={t}>{t}</option>
+            {availableTests.map((test) => (
+              <option key={test.id} value={test.id}>{test.name} ({test.lotNumber})</option>
             ))}
           </select>
         </div>
@@ -216,7 +251,9 @@ export function MachineCharts({ machineId: initialMachineId }: MachineChartsProp
               </div>
               <div>
                 <h3 className="text-gray-900 dark:text-white font-bold text-lg">Westgard QC Chart</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Machine: {selectedMachine} | Test: {activeTest}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.name ?? 'Unknown'}
+                </p>
               </div>
             </div>
 

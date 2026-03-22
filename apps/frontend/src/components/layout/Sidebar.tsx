@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuthStore } from "@/store/useAuthStore";
+import { logoutAccount } from "@/lib/actions";
 import { Logo, LogoCompact } from "./Logo";
 
 interface SidebarProps {
@@ -57,7 +58,6 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const handleLogout = async () => {
     clearAuth();
     // Clear cookies via server action, then navigate to login
-    const { logoutAccount } = await import('@/lib/actions');
     await logoutAccount();
     router.push('/login');
   };
