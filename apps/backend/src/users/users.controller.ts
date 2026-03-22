@@ -52,7 +52,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Create a new user (admin only)',
     description:
-      'Creates a new user account. Only administrators can create users. The password is hashed before storage. If no role is specified, defaults to TECHNICIAN.',
+      'Creates a new user account. Only administrators can create users. The password is hashed before storage. If no role is specified, defaults to TECHNICIAN. Users can be assigned to zero or more lab sections via `sectionIds`.',
   })
   @ApiBody({ type: AdminCreateUserDto })
   @ApiResponse({
@@ -137,7 +137,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Update a user by ID (admin only)',
     description:
-      'Updates one or more fields of an existing user. All fields are optional. Email uniqueness is enforced. Section existence is validated if provided.',
+      'Updates one or more fields of an existing user. All fields are optional. Email uniqueness is enforced. Section existence is validated when `sectionIds` is provided.',
   })
   @ApiParam({
     name: 'id',
@@ -190,7 +190,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Get all users (admin only)',
     description:
-      'Returns a list of all users with their section names. Optionally filter by role. The password hash is never included in the response.',
+      'Returns a list of all users with their assigned section IDs and names. Optionally filter by role. The password hash is never included in the response.',
   })
   @ApiQuery({
     name: 'role',

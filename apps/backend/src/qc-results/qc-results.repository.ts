@@ -19,6 +19,18 @@ export class QcResultsRepository {
     return lot;
   }
 
+  async getSectionIdByLotId(lotId: number) {
+    const [row] = await this.databaseService.db
+      .select({ sectionId: machines.sectionId })
+      .from(controlLots)
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .where(eq(controlLots.id, lotId))
+      .limit(1);
+
+    return row?.sectionId;
+  }
+
   async createQcResult(
     createQcResultDto: CreateQcResultDto,
     status: QcStatus,

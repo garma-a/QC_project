@@ -1,4 +1,13 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsInt, IsBoolean } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  MinLength,
+} from 'class-validator';
 import { Role } from '@/auth/auth.types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -53,11 +62,12 @@ export class AdminCreateUserDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Section ID associated with the user',
-    example: 42,
+    description: 'Section IDs associated with the user',
+    example: [1, 3],
+    type: [Number],
   })
   @IsOptional()
-  @IsInt()
-  sectionId?: number;
+  @IsArray()
+  @IsInt({ each: true })
+  sectionIds?: number[];
 }
-

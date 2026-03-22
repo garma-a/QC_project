@@ -13,6 +13,7 @@ import {
   qcResults,
   alerts,
   usersToAlerts,
+  usersToSections,
 } from '@/drizzle/schema';
 
 // Helper to wipe the database cleanly
@@ -20,6 +21,7 @@ async function clearDatabase(db: any) {
   console.log('🗑️  Wiping existing database records to start fresh...');
   // Must delete in reverse order of dependencies to avoid foreign key errors
   await db.delete(usersToAlerts);
+  await db.delete(usersToSections);
   await db.delete(alerts);
   await db.delete(qcResults);
   await db.delete(controlLots);
@@ -87,7 +89,6 @@ async function bootstrap() {
         email: 'admin@lab.local',
         passwordHash: hashedPassword,
         role: 'ADMIN',
-        sectionId: section.id,
       })
       .returning();
 
@@ -99,7 +100,6 @@ async function bootstrap() {
         email: 'john.doe@lab.local',
         passwordHash: hashedPassword,
         role: 'TECHNICIAN' as const,
-        sectionId: section.id,
       },
       {
         firstName: 'Jane',
@@ -107,7 +107,6 @@ async function bootstrap() {
         email: 'jane.smith@lab.local',
         passwordHash: hashedPassword,
         role: 'TECHNICIAN' as const,
-        sectionId: section.id,
       },
       {
         firstName: 'Ahmed',
@@ -115,7 +114,6 @@ async function bootstrap() {
         email: 'ahmed.t@lab.local',
         passwordHash: hashedPassword,
         role: 'TECHNICIAN' as const,
-        sectionId: section.id,
       },
     ];
 
@@ -123,6 +121,16 @@ async function bootstrap() {
       .insert(users)
       .values(techniciansToInsert)
       .returning();
+
+    await db
+      .insert(usersToSections)
+      .values([
+        { userId: adminUser.id, sectionId: section.id },
+        ...insertedTechs.map((tech) => ({
+          userId: tech.id,
+          sectionId: section.id,
+        })),
+      ]);
 
     // Combine all users so we can randomly assign who performed a QC Test
     const allUsers = [adminUser, ...insertedTechs];

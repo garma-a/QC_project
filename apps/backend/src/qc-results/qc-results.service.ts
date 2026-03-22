@@ -7,10 +7,17 @@ import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { QcResultsRepository } from './qc-results.repository';
 import { QcStatus } from './qc-results.types';
+import { AlertsService } from '@/alerts/alerts.service';
+import { AlertPriority } from '@/alerts/alerts.types';
+import { UsersRepository } from '@/users/users.repository';
 
 @Injectable()
 export class QcResultsService {
-  constructor(private readonly qcResultsRepository: QcResultsRepository) { }
+  constructor(
+    private readonly qcResultsRepository: QcResultsRepository,
+    private readonly alertsService: AlertsService,
+    private readonly usersRepository: UsersRepository,
+  ) {}
 
   async create(createQcResultDto: CreateQcResultDto, userId: number) {
     const lot = await this.qcResultsRepository.getLotById(
@@ -36,6 +43,37 @@ export class QcResultsService {
       status,
       userId,
     );
+
+    if (status === QcStatus.WARNING || status === QcStatus.FAIL) {
+      const absZScore = Number(Math.abs(zScore).toFixed(2));
+      const alertPriority =
+        status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
+      const ruleViolated =
+        status === QcStatus.FAIL ? '1_3s (Violation)' : '1_2s (Warning)';
+      const suggestedSolution =
+        status === QcStatus.FAIL
+          ? 'Stop patient testing. Rerun control. If failure persists, recalibrate and troubleshoot the analyzer before releasing patient results.'
+          : 'Repeat QC run and monitor trend. If warning repeats, inspect reagents, calibration status, and instrument maintenance logs.';
+
+      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(
+        createQcResultDto.lotId,
+      );
+      const sectionUserIds = sectionId
+        ? await this.usersRepository.getUserIdsBySectionId(sectionId)
+        : [];
+
+      await this.alertsService.createForUsers(
+        {
+          resultId: result.id,
+          type: 'QC_DEVIATION',
+          priority: alertPriority,
+          message: `QC result for lot ${lot.lotNumber} is ${status} (|Z|=${absZScore}).`,
+          ruleViolated,
+          suggestedSolution,
+        },
+        sectionUserIds,
+      );
+    }
 
     return result;
   }

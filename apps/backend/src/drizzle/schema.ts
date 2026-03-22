@@ -30,7 +30,11 @@ export const machineStatusEnum = pgEnum('machine_status_enum', [
   'ERROR',
 ]);
 
-export const userAlertStatusEnum = pgEnum('user_alert_status_enum', ['UNSEEN', 'SEEN', 'RESOLVED',]);
+export const userAlertStatusEnum = pgEnum('user_alert_status_enum', [
+  'UNSEEN',
+  'SEEN',
+  'RESOLVED',
+]);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -41,7 +45,6 @@ export const users = pgTable('users', {
   phone: text('phone'),
   role: roleEnum('role').notNull().default('TECHNICIAN'),
   isActive: boolean('is_active').default(true),
-  sectionId: integer('section_id').references(() => sections.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 });
@@ -145,8 +148,24 @@ export const usersToAlerts = pgTable(
   }),
 );
 
+export const usersToSections = pgTable(
+  'users_to_sections',
+  {
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    sectionId: integer('section_id')
+      .references(() => sections.id)
+      .notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.sectionId] }),
+  }),
+);
+
 export const sectionsRelations = relations(sections, ({ many }) => ({
   machines: many(machines),
+  userAssignments: many(usersToSections),
 }));
 
 export const machinesRelations = relations(machines, ({ one, many }) => ({
@@ -193,14 +212,25 @@ export const alertsRelations = relations(alerts, ({ one, many }) => ({
   recipients: many(usersToAlerts),
 }));
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  section: one(sections, {
-    fields: [users.sectionId],
-    references: [sections.id],
-  }),
+export const usersRelations = relations(users, ({ many }) => ({
+  sectionAssignments: many(usersToSections),
   performedResults: many(qcResults),
   alertNotifications: many(usersToAlerts),
 }));
+
+export const usersToSectionsRelations = relations(
+  usersToSections,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [usersToSections.userId],
+      references: [users.id],
+    }),
+    section: one(sections, {
+      fields: [usersToSections.sectionId],
+      references: [sections.id],
+    }),
+  }),
+);
 
 export const usersToAlertsRelations = relations(usersToAlerts, ({ one }) => ({
   user: one(users, {

@@ -9,7 +9,7 @@ interface AuthState {
   accessToken: string | null;
   /** Convenience getters */
   role: Role | null;
-  sectionId: number | null;
+  sectionIds: number[];
   isAdmin: boolean;
   /** Actions */
   setAuth: (user: UserResponseDto, token: string) => void;
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
       currentUser: null,
       accessToken: null,
       role: null,
-      sectionId: null,
+      sectionIds: [],
       isAdmin: false,
 
       setAuth: (user, token) =>
@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
           currentUser: user,
           accessToken: token,
           role: user.role,
-          sectionId: user.sectionId ?? null,
+          sectionIds: user.sectionIds ?? [],
           isAdmin: user.role === 'ADMIN',
         }),
 
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>()(
           currentUser: null,
           accessToken: null,
           role: null,
-          sectionId: null,
+          sectionIds: [],
           isAdmin: false,
         }),
 
@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           currentUser: user,
           role: user.role,
-          sectionId: user.sectionId ?? null,
+          sectionIds: user.sectionIds ?? [],
           isAdmin: user.role === 'ADMIN',
         }),
 
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
               currentUser: user,
               accessToken: token,
               role: user.role,
-              sectionId: user.sectionId ?? null,
+              sectionIds: user.sectionIds ?? [],
               isAdmin: user.role === 'ADMIN',
             });
           } catch {

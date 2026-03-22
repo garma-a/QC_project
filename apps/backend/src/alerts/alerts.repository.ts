@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAlertDto } from './dto/create-alert.dto';
 import { DatabaseService } from '@/database/database.service';
 import { alerts, usersToAlerts } from '@/drizzle/schema';
 import { and, desc, eq } from 'drizzle-orm';
@@ -36,6 +35,52 @@ export class AlertsRepository {
       .values(createAlertDto)
       .returning();
     return alert;
+  }
+
+  async createForUser(
+    createAlertDto: typeof alerts.$inferInsert,
+    userId: number,
+  ) {
+    return await this.databaseService.db.transaction(async (tx) => {
+      const [alert] = await tx
+        .insert(alerts)
+        .values(createAlertDto)
+        .returning();
+
+      await tx.insert(usersToAlerts).values({
+        userId,
+        alertId: alert.id,
+      });
+
+      return alert;
+    });
+  }
+
+  async createForUsers(
+    createAlertDto: typeof alerts.$inferInsert,
+    userIds: number[],
+  ) {
+    const uniqueUserIds = [...new Set(userIds)];
+
+    if (uniqueUserIds.length === 0) {
+      return await this.create(createAlertDto);
+    }
+
+    return await this.databaseService.db.transaction(async (tx) => {
+      const [alert] = await tx
+        .insert(alerts)
+        .values(createAlertDto)
+        .returning();
+
+      await tx.insert(usersToAlerts).values(
+        uniqueUserIds.map((id) => ({
+          userId: id,
+          alertId: alert.id,
+        })),
+      );
+
+      return alert;
+    });
   }
 
   async markSeen(alertId: number, userId: number) {

@@ -1,8 +1,8 @@
-"use server";
+'use server';
 
-import { cookies } from "next/headers";
-import { api } from "./api/serverFetch";
-import { decodeJwt } from "./utils/jwt";
+import { cookies } from 'next/headers';
+import { api } from './api/serverFetch';
+import { decodeJwt } from './utils/jwt';
 import type {
   LoginDto,
   LoginResponseDto,
@@ -17,51 +17,56 @@ import type {
   MachineResponseDto,
   CreateControlLotDto,
   ControlLotResponseDto,
-} from "./types/api";
+} from './types/api';
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from 'next/cache';
 
 // ===================================================================
 // Auth Actions
 // ===================================================================
 
 export async function loginAccount(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
 
   if (!email || !password) {
-    return { error: "Please enter both email and password" };
+    return { error: 'Please enter both email and password' };
   }
 
   try {
     const payload: LoginDto = { email, password };
-    const response = await api.post<LoginResponseDto>("/api/v1/auth/login", payload);
+    const response = await api.post<LoginResponseDto>(
+      '/api/v1/auth/login',
+      payload,
+    );
 
     if (!response?.accessToken) {
-      return { error: "Invalid credentials." };
+      return { error: 'Invalid credentials.' };
     }
 
     const token = response.accessToken;
     const cookieStore = await cookies();
 
     // Store the JWT token (httpOnly for server components)
-    cookieStore.set("auth_token", token, {
+    cookieStore.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
     });
 
     // Decode the JWT to get userId and role
     const jwtPayload = decodeJwt(token);
     if (!jwtPayload) {
-      return { error: "Failed to decode authentication token." };
+      return { error: 'Failed to decode authentication token.' };
     }
 
     // Fetch full user info from the API
     let user: UserResponseDto | null = null;
     try {
-      user = await api.get<UserResponseDto>(`/api/v1/users/${jwtPayload.userId}`);
+      user = await api.get<UserResponseDto>(
+        `/api/v1/users/${jwtPayload.userId}`,
+      );
     } catch {
       // If user fetch fails, we still have userId and role from JWT
     }
@@ -74,13 +79,15 @@ export async function loginAccount(formData: FormData) {
       email,
       role: jwtPayload.role,
       isActive: true,
+      sectionIds: [],
+      sectionNames: [],
       createdAt: new Date().toISOString(),
     };
-    cookieStore.set("user_info", JSON.stringify(userInfo), {
+    cookieStore.set('user_info', JSON.stringify(userInfo), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
     });
 
     // Return token + user to the client so it can hydrate the Zustand store
@@ -90,14 +97,19 @@ export async function loginAccount(formData: FormData) {
       user: userInfo as UserResponseDto,
     };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to login. Please try again." };
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to login. Please try again.',
+    };
   }
 }
 
 export async function logoutAccount() {
   const cookieStore = await cookies();
-  cookieStore.delete("auth_token");
-  cookieStore.delete("user_info");
+  cookieStore.delete('auth_token');
+  cookieStore.delete('user_info');
   return { success: true };
 }
 
@@ -107,10 +119,12 @@ export async function logoutAccount() {
 
 export async function createUser(payload: AdminCreateUserDto) {
   try {
-    const user = await api.post<UserResponseDto>("/api/v1/users", payload);
+    const user = await api.post<UserResponseDto>('/api/v1/users', payload);
     return { success: true, data: user };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to create user." };
+    return {
+      error: error instanceof Error ? error.message : 'Failed to create user.',
+    };
   }
 }
 
@@ -119,16 +133,23 @@ export async function deleteUser(userId: number) {
     await api.delete(`/api/v1/users/${userId}`);
     return { success: true };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to delete user." };
+    return {
+      error: error instanceof Error ? error.message : 'Failed to delete user.',
+    };
   }
 }
 
 export async function updateUser(userId: number, payload: AdminUpdateUserDto) {
   try {
-    const user = await api.patch<UserResponseDto>(`/api/v1/users/${userId}`, payload);
+    const user = await api.patch<UserResponseDto>(
+      `/api/v1/users/${userId}`,
+      payload,
+    );
     return { success: true, data: user };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to update user." };
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update user.',
+    };
   }
 }
 
@@ -138,12 +159,15 @@ export async function updateUser(userId: number, payload: AdminUpdateUserDto) {
 
 export async function createMachine(payload: CreateMachineDto) {
   try {
-    await api.post<MachineResponseDto>("/api/v1/machines", payload);
-    revalidatePath("/dashboard");
-    revalidatePath("/monitor");
+    await api.post<MachineResponseDto>('/api/v1/machines', payload);
+    revalidatePath('/dashboard');
+    revalidatePath('/monitor');
     return { success: true };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to create machine." };
+    return {
+      error:
+        error instanceof Error ? error.message : 'Failed to create machine.',
+    };
   }
 }
 
@@ -153,11 +177,14 @@ export async function createMachine(payload: CreateMachineDto) {
 
 export async function createQcTest(payload: CreateQcTestDto) {
   try {
-    await api.post<QcTestResponseDto>("/api/v1/qc-tests", payload);
-    revalidatePath("/qc");
+    await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to create QC test." };
+    return {
+      error:
+        error instanceof Error ? error.message : 'Failed to create QC test.',
+    };
   }
 }
 
@@ -167,12 +194,18 @@ export async function createQcTest(payload: CreateQcTestDto) {
 
 export async function submitQcResult(payload: CreateQcResultDto) {
   try {
-    const result = await api.post<QcResultResponseDto>("/api/v1/qc-results", payload);
-    revalidatePath("/qc");
-    revalidatePath("/monitor");
+    const result = await api.post<QcResultResponseDto>(
+      '/api/v1/qc-results',
+      payload,
+    );
+    revalidatePath('/qc');
+    revalidatePath('/monitor');
     return { success: true, data: result };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to submit QC result." };
+    return {
+      error:
+        error instanceof Error ? error.message : 'Failed to submit QC result.',
+    };
   }
 }
 
@@ -182,10 +215,18 @@ export async function submitQcResult(payload: CreateQcResultDto) {
 
 export async function createControlLot(payload: CreateControlLotDto) {
   try {
-    const lot = await api.post<ControlLotResponseDto>("/api/v1/control-lots", payload);
-    revalidatePath("/qc");
+    const lot = await api.post<ControlLotResponseDto>(
+      '/api/v1/control-lots',
+      payload,
+    );
+    revalidatePath('/qc');
     return { success: true, data: lot };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "Failed to create control lot." };
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to create control lot.',
+    };
   }
 }
