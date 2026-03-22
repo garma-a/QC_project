@@ -60,7 +60,7 @@ export class QcResultsRepository {
     return updated;
   }
 
-  async getAllLotsTestsMachinesByLotId(lotId: number) {
+  async getLotTestMachineByLotId(lotId: number) {
     const [lot] = await this.databaseService.db
       .select()
       .from(controlLots)
@@ -68,6 +68,7 @@ export class QcResultsRepository {
       .leftJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .leftJoin(machines, eq(qcTests.machineId, machines.id))
       .limit(1);
+
     return lot;
   }
 
@@ -75,7 +76,8 @@ export class QcResultsRepository {
     const results = await this.databaseService.db
       .select()
       .from(qcResults)
-      .where(eq(qcResults.lotId, lotId));
+      .where(eq(qcResults.lotId, lotId))
+      .orderBy(desc(qcResults.testDate));
 
     return results;
   }

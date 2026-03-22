@@ -17,7 +17,7 @@ describe('QcResultsService', () => {
       getSectionIdByLotId: jest.fn(),
       createQcResult: jest.fn(),
       updateQcResult: jest.fn(),
-      getAllLotsTestsMachinesByLotId: jest.fn(),
+      getLotTestMachineByLotId: jest.fn(),
       getResultsByLotId: jest.fn(),
       getResultAndLotByResultId: jest.fn(),
     };
@@ -138,11 +138,12 @@ describe('QcResultsService', () => {
         lowerWarningLimit: 13.0,
       };
       mockRepository.getLotById.mockResolvedValue(lot);
-      mockRepository.getAllLotsTestsMachinesByLotId.mockResolvedValue({
+      mockRepository.getLotTestMachineByLotId.mockResolvedValue({
         ...lot,
         qc_tests: { testName: 'Hemoglobin' },
         machines: { name: 'Sysmex XN-1000' },
       });
+      mockRepository.getResultsByLotId.mockResolvedValue([]);
 
       const result = await service.findAll(1);
 

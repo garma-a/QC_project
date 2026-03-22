@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const PROTECTED_ROUTES = ['/dashboard', '/monitor', '/qc', '/alerts', '/errors', '/users'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth_token')?.value;
 
@@ -14,17 +13,21 @@ export function middleware(request: NextRequest) {
 
   if (isProtected && !token) {
     const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+    return Response.redirect(loginUrl);
   }
 
   // If accessing login page with a valid token, redirect to dashboard
   if (pathname === '/login' && token) {
     const dashboardUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(dashboardUrl);
+    return Response.redirect(dashboardUrl);
   }
 
-  return NextResponse.next();
+  // Continue with the request
+  return undefined;
 }
+
+export { proxy as middleware };
+export default proxy;
 
 export const config = {
   matcher: [

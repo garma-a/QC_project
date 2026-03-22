@@ -82,8 +82,9 @@ export class QcResultsService {
     const lot = await this.qcResultsRepository.getLotById(lotId);
     if (!lot) throw new NotFoundException('Control lot not found');
 
-    const results =
-      await this.qcResultsRepository.getAllLotsTestsMachinesByLotId(lotId);
+    const lotContext =
+      await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
+    const results = await this.qcResultsRepository.getResultsByLotId(lotId);
 
     return {
       lot: {
@@ -95,8 +96,8 @@ export class QcResultsService {
         lowerControlLimit: lot.lowerControlLimit,
         upperWarningLimit: lot.upperWarningLimit,
         lowerWarningLimit: lot.lowerWarningLimit,
-        testName: results.qc_tests!.testName,
-        machineName: results.machines!.name,
+        testName: lotContext?.qc_tests?.testName ?? 'Unknown Test',
+        machineName: lotContext?.machines?.name ?? 'Unknown Machine',
       },
       results,
     };
