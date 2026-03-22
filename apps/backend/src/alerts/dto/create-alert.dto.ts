@@ -9,8 +9,6 @@ import {
 } from 'class-validator';
 import { AlertPriority } from '@/alerts/alerts.types';
 
-
-
 export class CreateAlertDto {
   @ApiProperty({
     description: 'The ID of the QC result associated with this alert',

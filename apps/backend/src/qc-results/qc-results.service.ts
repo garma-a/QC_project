@@ -10,7 +10,7 @@ import { QcStatus } from './qc-results.types';
 
 @Injectable()
 export class QcResultsService {
-  constructor(private readonly qcResultsRepository: QcResultsRepository) {}
+  constructor(private readonly qcResultsRepository: QcResultsRepository) { }
 
   async create(createQcResultDto: CreateQcResultDto, userId: number) {
     const lot = await this.qcResultsRepository.getLotById(
