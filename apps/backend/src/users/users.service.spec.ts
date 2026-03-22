@@ -12,11 +12,15 @@ describe('UsersService', () => {
   let service: UsersService;
 
   const mockUsersRepository = {
-    findSectionById: jest.fn(),
+    findSectionsByIds: jest.fn(),
     findByEmail: jest.fn(),
     findById: jest.fn(),
+    findByIdWithSections: jest.fn(),
     findEmailCollision: jest.fn(),
     create: jest.fn(),
+    assignSections: jest.fn(),
+    replaceUserSections: jest.fn(),
+    getSectionIdsForUser: jest.fn(),
     update: jest.fn(),
     deactivate: jest.fn(),
     findAllWithSections: jest.fn(),
@@ -45,22 +49,22 @@ describe('UsersService', () => {
       email: 'john@example.com',
       password: 'password123',
       role: Role.TECHNICIAN,
-      sectionId: 1,
+      sectionIds: [1],
     };
 
     it('throws BadRequestException when section does not exist', async () => {
-      mockUsersRepository.findSectionById.mockResolvedValueOnce(undefined);
+      mockUsersRepository.findSectionsByIds.mockResolvedValue([]);
 
       await expect(service.createUser(createUserDto)).rejects.toThrow(
         BadRequestException,
       );
       await expect(service.createUser(createUserDto)).rejects.toThrow(
-        `Laboratory section with ID ${createUserDto.sectionId} does not exist.`,
+        'Laboratory section IDs do not exist: 1',
       );
     });
 
     it('throws ConflictException when email already exists', async () => {
-      mockUsersRepository.findSectionById.mockResolvedValue({ id: 1 });
+      mockUsersRepository.findSectionsByIds.mockResolvedValue([{ id: 1 }]);
       mockUsersRepository.findByEmail.mockResolvedValue({
         id: 5,
         email: createUserDto.email,
@@ -75,7 +79,7 @@ describe('UsersService', () => {
     });
 
     it('returns user without password hash when creation is successful', async () => {
-      mockUsersRepository.findSectionById.mockResolvedValueOnce({ id: 1 });
+      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 1 }]);
       mockUsersRepository.findByEmail.mockResolvedValueOnce(undefined);
       mockUsersRepository.create.mockResolvedValueOnce({
         id: 10,
@@ -85,7 +89,11 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: Role.TECHNICIAN,
         isActive: true,
-        sectionId: 1,
+      });
+      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([1]);
+      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
+        id: 10,
+        sectionNames: ['Hematology'],
       });
 
       const result = await service.createUser(createUserDto);
@@ -97,12 +105,13 @@ describe('UsersService', () => {
         email: 'john@example.com',
         role: Role.TECHNICIAN,
         isActive: true,
-        sectionId: 1,
+        sectionIds: [1],
+        sectionNames: ['Hematology'],
       });
       expect(result).not.toHaveProperty('passwordHash');
     });
 
-    it('creates user without section when sectionId is not provided', async () => {
+    it('creates user without section when sectionIds is not provided', async () => {
       const dtoWithoutSection = {
         firstName: 'Jane',
         lastName: 'Smith',
@@ -119,7 +128,11 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: 'TECHNICIAN',
         isActive: true,
-        sectionId: null,
+      });
+      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([]);
+      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
+        id: 11,
+        sectionNames: [],
       });
 
       const result = await service.createUser(dtoWithoutSection);
@@ -166,7 +179,7 @@ describe('UsersService', () => {
     const updateDto = {
       firstName: 'Updated',
       email: 'updated@example.com',
-      sectionId: 2,
+      sectionIds: [2],
     };
 
     it('throws NotFoundException when user does not exist', async () => {
@@ -198,20 +211,20 @@ describe('UsersService', () => {
     it('throws BadRequestException when section does not exist', async () => {
       mockUsersRepository.findById.mockResolvedValue({ id: 5 });
       mockUsersRepository.findEmailCollision.mockResolvedValue(undefined);
-      mockUsersRepository.findSectionById.mockResolvedValue(undefined);
+      mockUsersRepository.findSectionsByIds.mockResolvedValue([]);
 
       await expect(service.updateUser(5, updateDto)).rejects.toThrow(
         BadRequestException,
       );
       await expect(service.updateUser(5, updateDto)).rejects.toThrow(
-        `Cannot move user. Laboratory section with ID ${updateDto.sectionId} does not exist.`,
+        'Cannot update user. Laboratory section IDs do not exist: 2',
       );
     });
 
     it('returns updated user without password hash when update is successful', async () => {
       mockUsersRepository.findById.mockResolvedValueOnce({ id: 5 });
       mockUsersRepository.findEmailCollision.mockResolvedValueOnce(undefined);
-      mockUsersRepository.findSectionById.mockResolvedValueOnce({ id: 2 });
+      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 2 }]);
       mockUsersRepository.update.mockResolvedValueOnce({
         id: 5,
         firstName: 'Updated',
@@ -220,7 +233,11 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: Role.TECHNICIAN,
         isActive: true,
-        sectionId: 2,
+      });
+      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([2]);
+      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
+        id: 5,
+        sectionNames: ['Chemistry'],
       });
 
       const result = await service.updateUser(5, updateDto);
@@ -232,7 +249,8 @@ describe('UsersService', () => {
         email: 'updated@example.com',
         role: Role.TECHNICIAN,
         isActive: true,
-        sectionId: 2,
+        sectionIds: [2],
+        sectionNames: ['Chemistry'],
       });
       expect(result).not.toHaveProperty('passwordHash');
     });
@@ -273,7 +291,7 @@ describe('UsersService', () => {
 
   describe('getUserById()', () => {
     it('throws NotFoundException when user does not exist', async () => {
-      mockUsersRepository.findById.mockResolvedValue(undefined);
+      mockUsersRepository.findByIdWithSections.mockResolvedValue(undefined);
 
       await expect(service.getUserById(99)).rejects.toThrow(NotFoundException);
       await expect(service.getUserById(99)).rejects.toThrow(
@@ -282,7 +300,7 @@ describe('UsersService', () => {
     });
 
     it('returns user without password hash when user exists', async () => {
-      mockUsersRepository.findById.mockResolvedValueOnce({
+      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
         id: 5,
         firstName: 'John',
         lastName: 'Doe',
@@ -290,6 +308,8 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: Role.TECHNICIAN,
         isActive: true,
+        sectionIds: [1, 3],
+        sectionNames: ['Hematology', 'Chemistry'],
       });
 
       const result = await service.getUserById(5);
@@ -301,6 +321,8 @@ describe('UsersService', () => {
         email: 'john@example.com',
         role: Role.TECHNICIAN,
         isActive: true,
+        sectionIds: [1, 3],
+        sectionNames: ['Hematology', 'Chemistry'],
       });
       expect(result).not.toHaveProperty('passwordHash');
     });

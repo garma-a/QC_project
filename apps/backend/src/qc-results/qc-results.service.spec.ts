@@ -2,14 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { QcResultsService } from './qc-results.service';
 import { QcResultsRepository } from './qc-results.repository';
+import { AlertsService } from '@/alerts/alerts.service';
+import { UsersRepository } from '@/users/users.repository';
 
 describe('QcResultsService', () => {
   let service: QcResultsService;
   let mockRepository: Record<string, jest.Mock>;
+  let mockAlertsService: Record<string, jest.Mock>;
+  let mockUsersRepository: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     mockRepository = {
       getLotById: jest.fn(),
+      getSectionIdByLotId: jest.fn(),
       createQcResult: jest.fn(),
       updateQcResult: jest.fn(),
       getAllLotsTestsMachinesByLotId: jest.fn(),
@@ -17,10 +22,20 @@ describe('QcResultsService', () => {
       getResultAndLotByResultId: jest.fn(),
     };
 
+    mockAlertsService = {
+      createForUsers: jest.fn(),
+    };
+
+    mockUsersRepository = {
+      getUserIdsBySectionId: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QcResultsService,
         { provide: QcResultsRepository, useValue: mockRepository },
+        { provide: AlertsService, useValue: mockAlertsService },
+        { provide: UsersRepository, useValue: mockUsersRepository },
       ],
     }).compile();
 
@@ -42,6 +57,7 @@ describe('QcResultsService', () => {
       const result = await service.create(dto, userId);
 
       expect(result.status).toBe('PASS');
+      expect(mockAlertsService.createForUsers).not.toHaveBeenCalled();
     });
 
     it('should create QC result with WARNING status when z-score is between 2 and 3 SD', async () => {
@@ -55,10 +71,13 @@ describe('QcResultsService', () => {
       mockRepository.createQcResult.mockResolvedValue([
         { id: 1, ...dto, status: 'WARNING', performedBy: userId },
       ]);
+      mockRepository.getSectionIdByLotId.mockResolvedValue(10);
+      mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
 
       const result = await service.create(dto, userId);
 
       expect(result.status).toBe('WARNING');
+      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
     it('should create QC result with FAIL status when z-score exceeds 3 SD', async () => {
@@ -68,10 +87,13 @@ describe('QcResultsService', () => {
       mockRepository.createQcResult.mockResolvedValue([
         { id: 1, ...dto, status: 'FAIL', performedBy: userId },
       ]);
+      mockRepository.getSectionIdByLotId.mockResolvedValue(10);
+      mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
 
       const result = await service.create(dto, userId);
 
       expect(result.status).toBe('FAIL');
+      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when control lot does not exist', async () => {

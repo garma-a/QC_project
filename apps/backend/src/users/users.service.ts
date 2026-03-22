@@ -14,20 +14,33 @@ import { UsersRepository } from './users.repository';
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
+  private async validateSectionIds(
+    sectionIds: number[] | undefined,
+    context: 'create' | 'update',
+  ) {
+    if (sectionIds === undefined) return;
+
+    const uniqueSectionIds = [...new Set(sectionIds)];
+    if (uniqueSectionIds.length === 0) return;
+
+    const existingSections =
+      await this.usersRepository.findSectionsByIds(uniqueSectionIds);
+    const existingIds = new Set(existingSections.map((s) => s.id));
+    const missing = uniqueSectionIds.filter((id) => !existingIds.has(id));
+
+    if (missing.length > 0) {
+      const prefix =
+        context === 'create'
+          ? 'Laboratory section IDs do not exist:'
+          : 'Cannot update user. Laboratory section IDs do not exist:';
+      throw new BadRequestException(`${prefix} ${missing.join(', ')}`);
+    }
+  }
+
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
     const hashedPassword = await argon2.hash(adminCreateUserDto.password);
 
-    if (adminCreateUserDto.sectionId !== undefined) {
-      const sectionExists = await this.usersRepository.findSectionById(
-        adminCreateUserDto.sectionId,
-      );
-
-      if (!sectionExists) {
-        throw new BadRequestException(
-          `Laboratory section with ID ${adminCreateUserDto.sectionId} does not exist.`,
-        );
-      }
-    }
+    await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
 
     const existing = await this.usersRepository.findByEmail(
       adminCreateUserDto.email,
@@ -44,11 +57,26 @@ export class UsersService {
       passwordHash: hashedPassword,
       role: adminCreateUserDto.role ?? 'TECHNICIAN',
       isActive: adminCreateUserDto.isActive ?? true,
-      sectionId: adminCreateUserDto.sectionId,
     });
 
+    await this.usersRepository.assignSections(
+      createdUser.id,
+      adminCreateUserDto.sectionIds ?? [],
+    );
+
+    const sectionIds = await this.usersRepository.getSectionIdsForUser(
+      createdUser.id,
+    );
+    const createdWithSections = await this.usersRepository.findByIdWithSections(
+      createdUser.id,
+    );
+
     const { passwordHash, ...safeUser } = createdUser;
-    return safeUser;
+    return {
+      ...safeUser,
+      sectionIds,
+      sectionNames: createdWithSections?.sectionNames ?? [],
+    };
   }
 
   async deactivateUser(id: number, currentAdminId: number) {
@@ -84,24 +112,30 @@ export class UsersService {
         );
       }
     }
-    if (adminUpdateUserDto.sectionId !== undefined) {
-      const sectionExists = await this.usersRepository.findSectionById(
-        adminUpdateUserDto.sectionId,
-      );
-      if (!sectionExists) {
-        throw new BadRequestException(
-          `Cannot move user. Laboratory section with ID ${adminUpdateUserDto.sectionId} does not exist.`,
-        );
-      }
-    }
+    await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
+
+    const { sectionIds: nextSectionIds, ...updatableUserFields } =
+      adminUpdateUserDto;
 
     const updatedUser = await this.usersRepository.update(
       id,
-      adminUpdateUserDto,
+      updatableUserFields,
     );
 
+    if (nextSectionIds !== undefined) {
+      await this.usersRepository.replaceUserSections(id, nextSectionIds);
+    }
+
+    const sectionIds = await this.usersRepository.getSectionIdsForUser(id);
+    const updatedWithSections =
+      await this.usersRepository.findByIdWithSections(id);
+
     const { passwordHash, ...safeUser } = updatedUser;
-    return safeUser;
+    return {
+      ...safeUser,
+      sectionIds,
+      sectionNames: updatedWithSections?.sectionNames ?? [],
+    };
   }
 
   async getUsers(roleFilter?: Role) {
@@ -114,7 +148,7 @@ export class UsersService {
   }
 
   async getUserById(id: number) {
-    const user = await this.usersRepository.findById(id);
+    const user = await this.usersRepository.findByIdWithSections(id);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);

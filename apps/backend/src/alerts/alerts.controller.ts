@@ -33,7 +33,7 @@ import {
 @ApiTags('Alerts')
 @Controller('alerts')
 export class AlertsController {
-  constructor(private readonly alertsService: AlertsService) {}
+  constructor(private readonly alertsService: AlertsService) { }
 
   @Get()
   @ApiOperation({
@@ -89,40 +89,6 @@ export class AlertsController {
     return await this.alertsService.markSeen(id, userId);
   }
 
-  @Patch('/markSeen/:id')
-  @ApiOperation({
-    summary: 'Mark an alert as seen (deprecated)',
-    description:
-      "Deprecated alias for `PATCH /alerts/mark-seen/:id`. Marks the authenticated user's alert notification state as `SEEN`.",
-    deprecated: true,
-  })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'The alert ID to mark as seen',
-    example: 12,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User-alert status updated to seen.',
-    type: [UserAlertStatusResponseDto],
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid alert ID format.',
-    type: ValidationErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'JWT token missing or invalid.',
-    type: UnauthorizedResponseDto,
-  })
-  async markSeenDeprecated(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser('userId') userId: number,
-  ) {
-    return await this.alertsService.markSeen(id, userId);
-  }
 
   @Patch('/mark-resolved/:id')
   @ApiOperation({
@@ -164,44 +130,4 @@ export class AlertsController {
     );
   }
 
-  @Patch('/markResolved/:id')
-  @ApiOperation({
-    summary: 'Mark an alert as resolved (deprecated)',
-    description:
-      "Deprecated alias for `PATCH /alerts/mark-resolved/:id`. Marks the authenticated user's alert notification state as `RESOLVED`.",
-    deprecated: true,
-  })
-  @ApiBody({ type: ResolveAlertDto, required: false })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'The alert ID to mark as resolved',
-    example: 12,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'User-alert status updated to resolved.',
-    type: [UserAlertStatusResponseDto],
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid alert ID format.',
-    type: ValidationErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'JWT token missing or invalid.',
-    type: UnauthorizedResponseDto,
-  })
-  async markResolvedDeprecated(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser('userId') userId: number,
-    @Body() resolveAlertDto?: ResolveAlertDto,
-  ) {
-    return await this.alertsService.markResolved(
-      id,
-      userId,
-      resolveAlertDto?.resolutionNote,
-    );
-  }
 }

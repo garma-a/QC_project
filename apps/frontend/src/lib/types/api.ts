@@ -3,9 +3,19 @@
 // ===================================================================
 
 export type Role = 'TECHNICIAN' | 'ADMIN';
-export type Specialization = 'HEMATOLOGY' | 'CHEMISTRY' | 'MICROBIOLOGY' | 'IMMUNOLOGY' | 'OTHER';
+export type Specialization =
+  | 'HEMATOLOGY'
+  | 'CHEMISTRY'
+  | 'MICROBIOLOGY'
+  | 'IMMUNOLOGY'
+  | 'OTHER';
 export type QcResultStatus = 'PASS' | 'FAIL' | 'WARNING';
-export type MachineStatus = 'IDLE' | 'RUNNING' | 'MAINTENANCE' | 'OFFLINE' | 'ERROR';
+export type MachineStatus =
+  | 'IDLE'
+  | 'RUNNING'
+  | 'MAINTENANCE'
+  | 'OFFLINE'
+  | 'ERROR';
 export type AlertPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 // ===================================================================
@@ -33,7 +43,8 @@ export interface UserResponseDto {
   phone?: string | null;
   role: Role;
   isActive: boolean;
-  sectionId?: number | null;
+  sectionIds: number[];
+  sectionNames?: string[];
   createdAt: string;
   updatedAt?: string | null;
 }
@@ -45,7 +56,8 @@ export interface UserListItemDto {
   email: string;
   role: Role;
   isActive: boolean;
-  sectionName?: string | null;
+  sectionIds: number[];
+  sectionNames: string[];
 }
 
 export interface AdminCreateUserDto {
@@ -55,7 +67,7 @@ export interface AdminCreateUserDto {
   password: string;
   role?: Role;
   isActive?: boolean;
-  sectionId?: number;
+  sectionIds?: number[];
 }
 
 export interface AdminUpdateUserDto {
@@ -64,7 +76,7 @@ export interface AdminUpdateUserDto {
   email?: string;
   role?: Role;
   isActive?: boolean;
-  sectionId?: number;
+  sectionIds?: number[];
 }
 
 export interface DeactivateUserResponseDto {
