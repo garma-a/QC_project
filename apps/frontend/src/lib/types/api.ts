@@ -251,26 +251,37 @@ export interface QcResultsWithLotResponseDto {
 }
 
 // ===================================================================
-// Alert DTOs (schema exists, endpoint TBD)
+// Alert DTOs
 // ===================================================================
 
 export interface AlertResponseDto {
   id: number;
   type?: string | null;
-  priority: AlertPriority;
+  priority?: AlertPriority | null;
   message?: string | null;
   ruleViolated?: string | null;
   suggestedSolution?: string | null;
   resultId: number;
-  createdAt: string;
+  createdAt?: string | null;
+  status: UserAlertStatus;
+  seenAt?: string | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
 }
 
-export interface UserToAlertDto {
+export type UserAlertStatus = 'UNSEEN' | 'SEEN' | 'RESOLVED';
+
+export interface UserAlertStatusResponseDto {
   userId: number;
   alertId: number;
-  isAcknowledged: boolean;
-  acknowledgedAt?: string | null;
-  actionTaken?: string | null;
+  status: UserAlertStatus;
+  seenAt?: string | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+}
+
+export interface ResolveAlertDto {
+  resolutionNote?: string;
 }
 
 // ===================================================================

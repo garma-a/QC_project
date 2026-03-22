@@ -2,26 +2,47 @@ import { Injectable } from '@nestjs/common';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { DatabaseService } from '@/database/database.service';
 import { alerts, usersToAlerts } from '@/drizzle/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 @Injectable()
 export class AlertsRepository {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll() {
-    return await this.databaseService.db.select().from(alerts);
+  async findAllByUser(userId: number) {
+    return await this.databaseService.db
+      .select({
+        id: alerts.id,
+        type: alerts.type,
+        priority: alerts.priority,
+        message: alerts.message,
+        ruleViolated: alerts.ruleViolated,
+        suggestedSolution: alerts.suggestedSolution,
+        resultId: alerts.resultId,
+        createdAt: alerts.createdAt,
+        status: usersToAlerts.status,
+        seenAt: usersToAlerts.seenAt,
+        resolvedAt: usersToAlerts.resolvedAt,
+        resolutionNote: usersToAlerts.resolutionNote,
+      })
+      .from(usersToAlerts)
+      .innerJoin(alerts, eq(usersToAlerts.alertId, alerts.id))
+      .where(eq(usersToAlerts.userId, userId))
+      .orderBy(desc(alerts.createdAt));
   }
 
   async create(createAlertDto: typeof alerts.$inferInsert) {
-    const [alert] = await this.databaseService.db.insert(alerts).values(createAlertDto).returning();
+    const [alert] = await this.databaseService.db
+      .insert(alerts)
+      .values(createAlertDto)
+      .returning();
     return alert;
   }
 
-  async markSeen(alertId: number, userId: number,) {
+  async markSeen(alertId: number, userId: number) {
     return this.databaseService.db
       .update(usersToAlerts)
       .set({
-        status: "SEEN",
+        status: 'SEEN',
         seenAt: new Date(),
       })
       .where(
@@ -33,14 +54,13 @@ export class AlertsRepository {
       .returning();
   }
 
-  async markResolved(alertId: number, userId: number, resolutionNote?: string,) {
-
+  async markResolved(alertId: number, userId: number, resolutionNote?: string) {
     return this.databaseService.db
       .update(usersToAlerts)
       .set({
-        status: "RESOLVED",
+        status: 'RESOLVED',
         resolvedAt: new Date(),
-        resolutionNote: resolutionNote || null,
+        resolutionNote: resolutionNote ?? null,
       })
       .where(
         and(
@@ -50,5 +70,4 @@ export class AlertsRepository {
       )
       .returning();
   }
-
 }

@@ -11,7 +11,7 @@ import { MachinesRepository } from './machines.repository';
 
 @Injectable()
 export class MachinesService {
-  constructor(private readonly machinesRepository: MachinesRepository) {}
+  constructor(private readonly machinesRepository: MachinesRepository) { }
 
   async create(createMachineDto: CreateMachineDto) {
     try {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { UserPlus, Users, Mail, User, Lock, CheckCircle, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { UserPlus, Users, Mail, User, Lock, CheckCircle, AlertCircle, Pencil, Power } from 'lucide-react';
 import { LogoCompact } from '@/components/layout/Logo';
-import { createUser, deleteUser, updateUser } from '@/lib/actions';
+import { createUser, updateUser } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { AdminUpdateUserDto, Role } from '@/lib/types/api';
 
@@ -128,20 +128,29 @@ export function UsersManager({ initialUsers, currentUser: serverCurrentUser }: {
     setEditingUser(user);
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (window.confirm('Are you sure you want to deactivate this technician?')) {
+  const handleToggleUserActive = async (user: UserType) => {
+    const nextIsActive = !user.isActive;
+    const confirmMessage = nextIsActive
+      ? 'Are you sure you want to activate this technician?'
+      : 'Are you sure you want to deactivate this technician?';
+
+    if (window.confirm(confirmMessage)) {
       setIsPending(true);
       try {
-        const res = await deleteUser(id);
+        const res = await updateUser(user.id, { isActive: nextIsActive });
         if (res.error) {
           setMessage({ type: 'error', text: res.error });
         } else {
-          // Mark user as inactive locally
-          setUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: false } : u));
-          setMessage({ type: 'success', text: 'Technician deactivated successfully' });
+          setUsers(prev => prev.map(u => u.id === user.id ? { ...u, isActive: nextIsActive } : u));
+          setMessage({
+            type: 'success',
+            text: nextIsActive
+              ? 'Technician activated successfully'
+              : 'Technician deactivated successfully',
+          });
         }
       } catch (err) {
-        setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete user' });
+        setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to update user status' });
       }
       setIsPending(false);
       setTimeout(() => setMessage(null), 3000);
@@ -406,12 +415,12 @@ export function UsersManager({ initialUsers, currentUser: serverCurrentUser }: {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteUser(technician.id)}
+                            onClick={() => handleToggleUserActive(technician)}
                             disabled={isPending}
                             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-[#c41e3a]/10 dark:hover:bg-[#e84855]/20 hover:text-[#c41e3a] dark:hover:text-[#e84855] transition-colors"
                           >
-                            <Trash2 size={14} />
-                            Delete
+                            <Power size={14} />
+                            {technician.isActive ? 'Deactivate' : 'Activate'}
                           </button>
                         </div>
                       )}

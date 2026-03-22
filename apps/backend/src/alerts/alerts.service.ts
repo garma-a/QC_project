@@ -1,26 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAlertDto } from './dto/create-alert.dto';
-import { UpdateAlertDto } from './dto/update-alert.dto';
+import { AlertsRepository } from './alerts.repository';
 
 @Injectable()
 export class AlertsService {
-  create(createAlertDto: CreateAlertDto) {
-    return 'This action adds a new alert';
+  constructor(private readonly alertsRepository: AlertsRepository) {}
+
+  async findAllByUser(userId: number) {
+    return await this.alertsRepository.findAllByUser(userId);
   }
 
-  findAll() {
-    return `This action returns all alerts`;
+  async markSeen(alertId: number, userId: number) {
+    return await this.alertsRepository.markSeen(alertId, userId);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} alert`;
-  }
-
-  update(id: number, updateAlertDto: UpdateAlertDto) {
-    return `This action updates a #${id} alert`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} alert`;
+  async markResolved(alertId: number, userId: number, resolutionNote?: string) {
+    return await this.alertsRepository.markResolved(
+      alertId,
+      userId,
+      resolutionNote,
+    );
   }
 }

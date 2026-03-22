@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { QcTestsService } from './qc-tests.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/auth/guards/roles.guard';
 import { CreateQcTestDto } from './dto/create-qc-test.dto';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { Role } from '@/auth/auth.types';
@@ -28,10 +29,10 @@ import {
   NotFoundResponseDto,
 } from '@/common/dto/error-response.dto';
 
-@ApiTags('qc-tests')
+@ApiTags('QC Tests')
 @ApiBearerAuth()
 @Controller('qc-tests')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class QcTestsController {
   constructor(private readonly qcTestsService: QcTestsService) {}
 
@@ -40,7 +41,7 @@ export class QcTestsController {
   @ApiOperation({
     summary: 'Create a new QC test',
     description:
-      'Creates a new quality control test definition linked to a specific machine. The machine must exist. Only administrators should create QC tests (note: RolesGuard must be added to enforce this).',
+      'Creates a new quality control test definition linked to a specific machine. The machine must exist. Only administrators can create QC tests.',
   })
   @ApiBody({ type: CreateQcTestDto })
   @ApiResponse({
