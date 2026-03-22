@@ -30,6 +30,8 @@ export const machineStatusEnum = pgEnum('machine_status_enum', [
   'ERROR',
 ]);
 
+export const userAlertStatusEnum = pgEnum('user_alert_status_enum', ['UNSEEN', 'SEEN', 'RESOLVED',]);
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   firstName: text('first_name').notNull(),
@@ -133,9 +135,10 @@ export const usersToAlerts = pgTable(
     alertId: integer('alert_id')
       .references(() => alerts.id)
       .notNull(),
-    isAcknowledged: boolean('is_acknowledged').default(false),
-    acknowledgedAt: timestamp('acknowledged_at'),
-    actionTaken: text('action_taken'),
+    status: userAlertStatusEnum('status').notNull().default('UNSEEN'),
+    seenAt: timestamp('seen_at'),
+    resolvedAt: timestamp('resolved_at'),
+    resolutionNote: text('resolution_note'),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.alertId] }),
