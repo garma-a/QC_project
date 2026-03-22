@@ -40,7 +40,7 @@ import {
   ConflictResponseDto,
 } from '@/common/dto/error-response.dto';
 
-@ApiTags('users')
+@ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {

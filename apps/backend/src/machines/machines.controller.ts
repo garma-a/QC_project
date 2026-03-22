@@ -22,7 +22,7 @@ import {
 @ApiTags('Machines')
 @Controller('machines')
 export class MachinesController {
-  constructor(private readonly machinesService: MachinesService) {}
+  constructor(private readonly machinesService: MachinesService) { }
 
   @Post()
   @ApiOperation({

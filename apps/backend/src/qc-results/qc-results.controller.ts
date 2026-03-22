@@ -38,7 +38,7 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller('qc-results')
 export class QcResultsController {
-  constructor(private readonly qcResultsService: QcResultsService) {}
+  constructor(private readonly qcResultsService: QcResultsService) { }
 
   @Post()
   @ApiOperation({

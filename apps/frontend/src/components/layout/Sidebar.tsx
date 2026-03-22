@@ -35,7 +35,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/monitor", label: "Monitor Machines", icon: Activity },
     { href: "/qc", label: "QC Management", icon: Clipboard },
-    { href: "/errors", label: "General Errors", icon: AlertCircle },
+    { href: "/alerts", label: "Alerts", icon: AlertCircle },
   ];
 
   // Add User Management for admins only
