@@ -17,7 +17,7 @@ export class QcResultsService {
     private readonly qcResultsRepository: QcResultsRepository,
     private readonly alertsService: AlertsService,
     private readonly usersRepository: UsersRepository,
-  ) {}
+  ) { }
 
   async create(createQcResultDto: CreateQcResultDto, userId: number) {
     const lot = await this.qcResultsRepository.getLotById(
@@ -45,19 +45,20 @@ export class QcResultsService {
     );
 
     if (status === QcStatus.WARNING || status === QcStatus.FAIL) {
+
       const absZScore = Number(Math.abs(zScore).toFixed(2));
       const alertPriority =
         status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
       const ruleViolated =
         status === QcStatus.FAIL ? '1_3s (Violation)' : '1_2s (Warning)';
+      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(
+        createQcResultDto.lotId,
+      );
+      //this should replace with suggestion from AI model based on historical data and root cause analysis, but for now we will hardcode some common suggestions based on the type of deviation
       const suggestedSolution =
         status === QcStatus.FAIL
           ? 'Stop patient testing. Rerun control. If failure persists, recalibrate and troubleshoot the analyzer before releasing patient results.'
           : 'Repeat QC run and monitor trend. If warning repeats, inspect reagents, calibration status, and instrument maintenance logs.';
-
-      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(
-        createQcResultDto.lotId,
-      );
       const sectionUserIds = sectionId
         ? await this.usersRepository.getUserIdsBySectionId(sectionId)
         : [];
