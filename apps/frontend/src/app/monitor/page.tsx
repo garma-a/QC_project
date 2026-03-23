@@ -108,7 +108,9 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
       );
 
       machines = fetchedMachines.map((machine) => {
-        const machineResults = qcHistory.filter((entry) => entry.machineId === machine.id);
+        const machineResults = qcHistory
+          .filter((entry) => entry.machineId === machine.id)
+          .sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime());
         const latestResult = machineResults[0];
 
         const machineLots = lotsWithContext.filter((ctx) => ctx.machineId === machine.id);
