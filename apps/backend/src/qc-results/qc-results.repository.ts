@@ -8,7 +8,7 @@ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
 @Injectable()
 export class QcResultsRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService) { }
 
   async getLotById(lotId: number) {
     const [lot] = await this.databaseService.db
