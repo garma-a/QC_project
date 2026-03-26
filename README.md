@@ -1,7 +1,7 @@
 ## AHC QC Project Documentation
 
 
-### How to run this project on your machine 
+### How to run this project on your machine
 
 1. **Clone the Repository**: Start by cloning the repository to your local machine using the following command:
    ```
@@ -26,14 +26,11 @@ npm ci
 npm run dev
 ```
 
+### Thanks for the Amazing team
 
-
-
-
-
-
-
-
+<a href="https://github.com/garma-a/qc_project/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=garma-a/qc_project" />
+</a>
 
 
 
