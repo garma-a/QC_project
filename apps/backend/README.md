@@ -10,6 +10,14 @@ NestJS backend for the AHC QC platform. This service provides authentication, ro
 - Alert state transitions (`UNSEEN`, `SEEN`, `RESOLVED`)
 - OpenAPI/Swagger documentation
 
+## Backend Responsibilities
+
+- enforce request validation and payload contracts
+- protect routes via auth guards and role checks
+- persist QC entities and relationships in PostgreSQL
+- evaluate QC results and expose alert workflows
+- provide stable APIs for frontend dashboards
+
 ## Stack
 
 - NestJS 11
@@ -90,3 +98,12 @@ The script creates sample users, machines, tests, control lots, and results, the
 - `bun run test:cov` - coverage run
 - `bun run lint` - lint code
 - `bun run seed` - seed demo data
+
+## Suggested Backend Validation Flow
+
+After startup, validate core behavior in this order:
+
+1. Open Swagger and verify API docs load.
+2. Execute login request and obtain token.
+3. Call one protected endpoint with Bearer token.
+4. Create/read one QC domain entity (machine/test/lot/result).
