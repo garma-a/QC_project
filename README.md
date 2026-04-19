@@ -21,6 +21,15 @@ AHC QC Project is a laboratory quality control platform built as a monorepo with
 - Swagger API documentation for backend endpoints
 - Modern dashboard UX for login, monitor, QC history, users, and alerts
 
+## Backend-Centric Scope
+
+This project is designed around backend reliability for laboratory operations:
+
+- clear domain boundaries in the API layer
+- validation and role-guarded endpoints
+- relational modeling for QC auditability
+- alert-state lifecycle for operational follow-up
+
 ## Tech Stack
 
 - Backend: NestJS 11, Drizzle ORM, PostgreSQL, JWT, Swagger
@@ -97,6 +106,18 @@ bun run dev
 
 Frontend default URL: `http://localhost:3000` (Next.js)
 
+## API Domains (Backend)
+
+Main backend modules exposed under `/api/v1`:
+
+- `auth` - login and token issuance
+- `users` - role-protected user management
+- `machines` - machine registration and updates
+- `qc-tests` - test definitions by machine
+- `control-lots` - lot metadata and target ranges
+- `qc-results` - measured values and status computation
+- `alerts` - alert retrieval and resolution workflow
+
 ## Optional: Seed Demo Data
 
 From `apps/backend`:
@@ -106,6 +127,12 @@ bun run seed
 ```
 
 The seed script creates users and prints demo credentials in the terminal.
+
+## Troubleshooting
+
+- If frontend requests fail, verify `NEXT_PUBLIC_API_URL` points to the backend port you actually run.
+- If backend fails to connect, verify PostgreSQL is up and `DATABASE_URL` matches your local container config.
+- If auth-protected calls return `401`, ensure login succeeded and token is included in requests.
 
 ## Useful Commands
 
@@ -131,5 +158,4 @@ From `apps/frontend`:
 <a href="https://github.com/garma-a/qc_project/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=garma-a/qc_project" alt="Contributors" />
 </a>
-
 

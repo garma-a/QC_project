@@ -11,6 +11,15 @@ Next.js dashboard for the AHC QC platform. The frontend provides authenticated w
 - Alerts inbox and resolution actions
 - User management (admin)
 
+## Backend Integration Focus
+
+This frontend is primarily an API consumer for backend workflows:
+
+- authenticated requests to protected endpoints
+- QC entity creation/update flows via server actions
+- dashboard rendering from backend datasets
+- alert acknowledgement and resolution actions
+
 ## Stack
 
 - Next.js 16 + React 19
