@@ -42,14 +42,14 @@ Create `.env` in this directory:
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mydb"
 JWT_SECRET="replace-with-a-strong-secret"
-PORT=3000
+PORT=4000
 ```
 
 Notes:
 
 - `DATABASE_URL` is used by Drizzle.
 - `JWT_SECRET` is required for token signing and verification.
-- `PORT` is optional (defaults to `3000`).
+- `PORT` is optional (defaults to `3000`). Use `4000` for local full-stack runs to avoid clashing with Next.js.
 
 ## Local Development
 

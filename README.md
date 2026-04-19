@@ -60,7 +60,7 @@ Set at least the following variables in `apps/backend/.env`:
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mydb"
 JWT_SECRET="replace-with-a-strong-secret"
-PORT=3000
+PORT=4000
 ```
 
 Then start the backend:
@@ -70,9 +70,9 @@ bun install
 bun run start:dev
 ```
 
-Backend default URL: `http://localhost:3000`
+Backend URL in this setup: `http://localhost:4000`
 
-Swagger docs: `http://localhost:3000/api/v1/docs`
+Swagger docs: `http://localhost:4000/api/v1/docs`
 
 ### 4) Run frontend
 
@@ -86,7 +86,7 @@ bun install
 Create `apps/frontend/.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL="http://localhost:3000"
+NEXT_PUBLIC_API_URL="http://localhost:4000"
 ```
 
 Start the frontend:
@@ -131,6 +131,5 @@ From `apps/frontend`:
 <a href="https://github.com/garma-a/qc_project/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=garma-a/qc_project" alt="Contributors" />
 </a>
-
 
 

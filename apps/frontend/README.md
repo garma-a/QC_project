@@ -25,12 +25,16 @@ The UI calls backend endpoints under `/api/v1/*` through shared helpers in `src/
 
 Default backend fallback URL is `http://localhost:3000`, and can be overridden using an environment variable.
 
+For local full-stack development, running backend on `4000` is recommended to avoid port collision with Next.js.
+
+Important: the frontend currently defaults internally to `http://localhost:3000` when `NEXT_PUBLIC_API_URL` is not set.
+
 ## Environment
 
 Create `apps/frontend/.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL="http://localhost:3000"
+NEXT_PUBLIC_API_URL="http://localhost:4000"
 ```
 
 ## Run Locally
