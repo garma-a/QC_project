@@ -4,9 +4,9 @@ import { check, sleep } from 'k6';
 export const options = {
   // Ramp-up and ramp-down simulation for realistic real-world load
   stages: [
-    { duration: '5s', target: 20 },  // Ramp-up to 20 virtual users over 5 seconds
-    { duration: '15s', target: 50 }, // Ramp-up to 50 users and hold for 15 seconds
-    { duration: '5s', target: 0 },   // Ramp-down to 0 users gracefully
+    { duration: '30s', target: 50 },  // Ramp-up to 50 virtual users over 30 seconds
+    { duration: '2m', target: 50 },   // Hold 50 users for 2 minutes
+    { duration: '30s', target: 0 },   // Ramp-down to 0 users gracefully
   ],
 };
 
@@ -17,7 +17,7 @@ const BASE_URL = 'http://localhost:4000/api/v1';
 // =========================================================================
 export function setup() {
   const loginPayload = JSON.stringify({
-    email: 'admin@lab.local',
+    email: 'admin@fake.local',
     password: 'Password123!'
   });
 
@@ -90,7 +90,7 @@ export default function (data) {
   // 3. SIMULATE QC RESULT SUBMISSION (WRITE)
   // ==========================================
   const qcPayload = JSON.stringify({
-    machineId: 1,
+    machineId: 703399,
     testId: 1,
     lotId: 1,
     measuredValue: Math.floor(Math.random() * (120 - 80 + 1) + 80), // Random value between 80 and 120
@@ -103,7 +103,25 @@ export default function (data) {
   });
 
   // ==========================================
-  // 4. SIMULATE NOTIFICATIONS CHECK
+  // 4. SIMULATE BACKGROUND DATA FETCHES (ALL DOMAINS)
+  // ==========================================
+  const usersRes = http.get(`${BASE_URL}/users?limit=20&offset=0`, authParams);
+  check(usersRes, { 'fetched users': (r) => r.status === 200 });
+
+  const sectionsRes = http.get(`${BASE_URL}/sections`, authParams);
+  check(sectionsRes, { 'fetched sections': (r) => r.status === 200 });
+
+  const machinesRes = http.get(`${BASE_URL}/machines`, authParams);
+  check(machinesRes, { 'fetched machines': (r) => r.status === 200 });
+
+  const testsRes = http.get(`${BASE_URL}/qc-tests/machine/703399`, authParams);
+  check(testsRes, { 'fetched tests': (r) => r.status === 200 || r.status === 404 });
+
+  const lotsRes = http.get(`${BASE_URL}/control-lots?isActive=true`, authParams);
+  check(lotsRes, { 'fetched control lots': (r) => r.status === 200 });
+
+  // ==========================================
+  // 5. SIMULATE NOTIFICATIONS CHECK
   // ==========================================
   const alertsRes = http.get(`${BASE_URL}/alerts`, authParams);
   check(alertsRes, {
@@ -111,7 +129,7 @@ export default function (data) {
   });
 
   // ==========================================
-  // 5. THINK TIME
+  // 6. THINK TIME
   // ==========================================
   sleep(1);
 }

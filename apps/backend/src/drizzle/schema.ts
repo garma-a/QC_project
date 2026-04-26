@@ -87,6 +87,7 @@ export const machines = pgTable('machines', {
   isActive: boolean('is_active').default(true),
 }, (t) => ({
   sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
+  isActiveIdx: index('idx_machines_is_active').on(t.isActive),
 }));
 
 export const qualityControlTests = pgTable('quality_control_tests', {

@@ -43,6 +43,7 @@ export class BffService {
   private async _getDashboardData(): Promise<DashboardBffResponseDto> {
     const [fetchedMachines, allResultsResponse] = await Promise.all([
       this.databaseService.db.query.machines.findMany({
+        limit: 100,
         // @ts-ignore: Drizzle ORM type resolution bug with Bun
         where: (machines, { eq }) => eq(machines.isActive, true),
         with: {
@@ -57,7 +58,7 @@ export class BffService {
           },
         },
       }),
-      this.qualityControlResultsService.getRecentAll(),
+      this.qualityControlResultsService.findAll(undefined, 100, 0),
     ]);
 
     const allResults = Array.isArray(allResultsResponse)
@@ -205,6 +206,7 @@ export class BffService {
 
   private async _getQcPageMachines(): Promise<QcPageMachinesResponseDto> {
     const fetchedMachines = await this.databaseService.db.query.machines.findMany({
+      limit: 100,
       // @ts-ignore: Drizzle ORM type resolution bug with Bun
       where: (machines, { eq }) => eq(machines.isActive, true),
       with: {

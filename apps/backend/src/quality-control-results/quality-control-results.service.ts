@@ -243,7 +243,7 @@ export class QualityControlResultsService {
   }
 
   async getRecentAll() {
-    const results = await this.qualityControlResultsRepository.getRecentResultsAll();
+    const results = await this.qualityControlResultsRepository.getPaginatedResults(100, 0);
     return { lot: null, results };
   }
 

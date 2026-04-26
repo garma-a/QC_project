@@ -57,6 +57,13 @@
       "when": 1782348111341,
       "tag": "0007_careless_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785058323362,
+      "tag": "0008_loud_manta",
+      "breakpoints": true
     }
   ]
 }
