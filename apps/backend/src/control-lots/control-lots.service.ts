@@ -7,6 +7,21 @@ import { ControlLotsRepository } from './control-lots.repository';
 export class ControlLotsService {
   constructor(private readonly controlLotsRepository: ControlLotsRepository) {}
 
+  // Helper to compute expiration warning fields
+  private computeExpiration<T extends { createdAt: Date | null }>(lot: T) {
+    if (!lot.createdAt) {
+      return { ...lot, daysActive: 0, needsChecking: false };
+    }
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const diffMs = Date.now() - lot.createdAt.getTime();
+    const daysActive = Math.floor(diffMs / msPerDay);
+    return {
+      ...lot,
+      daysActive,
+      needsChecking: daysActive >= 10,
+    };
+  }
+
   async create(createControlLotDto: CreateControlLotDto) {
     const test = await this.controlLotsRepository.findTestById(
       createControlLotDto.testId,
@@ -18,16 +33,20 @@ export class ControlLotsService {
       );
     }
 
-    const newLot = await this.controlLotsRepository.create({
-      ...createControlLotDto,
-      expirationDate: new Date(createControlLotDto.expirationDate),
-    });
+    const newLot = await this.controlLotsRepository.createWithDeactivation(
+      createControlLotDto.testId,
+      {
+        ...createControlLotDto,
+        expirationDate: new Date(createControlLotDto.expirationDate),
+      }
+    );
 
-    return newLot;
+    return this.computeExpiration(newLot);
   }
 
   async findAll() {
-    return await this.controlLotsRepository.findAll();
+    const lots = await this.controlLotsRepository.findAll();
+    return lots.map((lot) => this.computeExpiration(lot));
   }
 
   async findOne(id: number) {
@@ -36,11 +55,12 @@ export class ControlLotsService {
     if (!lot) {
       throw new NotFoundException(`Control lot with ID ${id} not found`);
     }
-    return lot;
+    return this.computeExpiration(lot);
   }
 
   async findByTestId(testId: number) {
-    return await this.controlLotsRepository.findByTestId(testId);
+    const lots = await this.controlLotsRepository.findByTestId(testId);
+    return lots.map((lot) => this.computeExpiration(lot));
   }
 
   async update(id: number, updateControlLotDto: UpdateControlLotDto) {
@@ -57,7 +77,7 @@ export class ControlLotsService {
 
     const updatedLot = await this.controlLotsRepository.update(id, updateData);
 
-    return updatedLot;
+    return this.computeExpiration(updatedLot);
   }
 
   async remove(id: number) {
