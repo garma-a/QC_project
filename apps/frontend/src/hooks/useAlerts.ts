@@ -3,23 +3,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { AlertResponseDto } from '@/lib/types/api';
+import type {
+  AlertResponseDto,
+  ResolveAlertDto,
+  UserAlertStatusResponseDto,
+} from '@/lib/types/api';
 
 interface UseAlertsReturn {
   alerts: AlertResponseDto[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  markSeen: (alertId: number) => Promise<UserAlertStatusResponseDto[]>;
+  markResolved: (
+    alertId: number,
+    payload?: ResolveAlertDto,
+  ) => Promise<UserAlertStatusResponseDto[]>;
 }
 
-/**
- * Placeholder hook for fetching alerts.
- * The alerts endpoint does not exist in the Swagger spec yet,
- * so this will gracefully fail with an empty array.
- * 
- * Includes polling support — set `pollIntervalMs` to enable
- * automatic refetching (default: disabled).
- */
 export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
   const [alerts, setAlerts] = useState<AlertResponseDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,16 +35,40 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
       const data = await clientFetch<AlertResponseDto[]>('/api/v1/alerts', {}, token);
       setAlerts(data);
     } catch (err) {
-      // Silently handle 404 since endpoint may not exist yet
-      if (err instanceof Error && err.message.includes('404')) {
-        setAlerts([]);
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
-      }
+      setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
     } finally {
       setLoading(false);
     }
   }, [token]);
+
+  const markSeen = useCallback(
+    async (alertId: number) => {
+      const updated = await clientFetch<UserAlertStatusResponseDto[]>(
+        `/api/v1/alerts/mark-seen/${alertId}`,
+        { method: 'PATCH' },
+        token,
+      );
+      await fetchAlerts();
+      return updated;
+    },
+    [fetchAlerts, token],
+  );
+
+  const markResolved = useCallback(
+    async (alertId: number, payload?: ResolveAlertDto) => {
+      const updated = await clientFetch<UserAlertStatusResponseDto[]>(
+        `/api/v1/alerts/mark-resolved/${alertId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(payload ?? {}),
+        },
+        token,
+      );
+      await fetchAlerts();
+      return updated;
+    },
+    [fetchAlerts, token],
+  );
 
   useEffect(() => {
     fetchAlerts();
@@ -59,5 +84,12 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     };
   }, [fetchAlerts, pollIntervalMs]);
 
-  return { alerts, loading, error, refetch: fetchAlerts };
+  return {
+    alerts,
+    loading,
+    error,
+    refetch: fetchAlerts,
+    markSeen,
+    markResolved,
+  };
 }

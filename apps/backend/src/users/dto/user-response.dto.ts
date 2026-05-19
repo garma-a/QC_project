@@ -36,10 +36,18 @@ export class UserResponseDto {
   isActive: boolean;
 
   @ApiPropertyOptional({
-    example: 1,
-    description: 'ID of the assigned lab section',
+    example: [1, 3],
+    description: 'IDs of lab sections assigned to this user',
+    type: [Number],
   })
-  sectionId: number | null;
+  sectionIds: number[];
+
+  @ApiPropertyOptional({
+    example: ['Hematology', 'Chemistry'],
+    description: 'Names of lab sections assigned to this user',
+    type: [String],
+  })
+  sectionNames?: string[];
 
   @ApiProperty({
     example: '2026-03-15T10:30:00.000Z',
@@ -74,11 +82,11 @@ export class UserListItemDto {
   isActive: boolean;
 
   @ApiPropertyOptional({
-    example: 'Hematology',
-    description:
-      'Name of the assigned lab section (joined from sections table)',
+    example: ['Hematology', 'Chemistry'],
+    description: 'Names of lab sections assigned to this user',
+    type: [String],
   })
-  sectionName: string | null;
+  sectionNames: string[];
 }
 
 export class DeactivateUserResponseDto {

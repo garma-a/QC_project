@@ -32,7 +32,7 @@ export class ControlLotResponseDto {
   mean: number | null;
 
   @ApiPropertyOptional({ example: 0.5, description: 'Standard deviation' })
-  standardDevi: number | null;
+  standardDeviation: number | null;
 
   @ApiPropertyOptional({
     example: 15.5,

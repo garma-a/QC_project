@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { UserType } from '@/components/client/UsersManager';
+import type { UserType } from '@/features/users/components/UsersManager';
 
 interface UserStoreState {
   usersList: UserType[];

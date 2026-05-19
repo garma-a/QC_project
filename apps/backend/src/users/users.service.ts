@@ -1,65 +1,91 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
-import { users, sections } from '@/drizzle/schema';
 import * as argon2 from 'argon2';
-import { DatabaseService } from '@/database/database.service';
-import { eq, and, ne } from 'drizzle-orm';
-import { AdminUpdateUserDto } from '@/users/dto/admin-update-user-dto';
+import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
 import { Role } from '@/auth/auth.types';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private databaseService: DatabaseService) { }
+  constructor(private readonly usersRepository: UsersRepository) {}
+
+  private async validateSectionIds(
+    sectionIds: number[] | undefined,
+    context: 'create' | 'update',
+  ) {
+    if (sectionIds === undefined) return;
+
+    const uniqueSectionIds = [...new Set(sectionIds)];
+    if (uniqueSectionIds.length === 0) return;
+
+    const existingSections =
+      await this.usersRepository.findSectionsByIds(uniqueSectionIds);
+    const existingIds = new Set(existingSections.map((s) => s.id));
+    const missing = uniqueSectionIds.filter((id) => !existingIds.has(id));
+
+    if (missing.length > 0) {
+      const prefix =
+        context === 'create'
+          ? 'Laboratory section IDs do not exist:'
+          : 'Cannot update user. Laboratory section IDs do not exist:';
+      throw new BadRequestException(`${prefix} ${missing.join(', ')}`);
+    }
+  }
 
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
     const hashedPassword = await argon2.hash(adminCreateUserDto.password);
 
-    if (adminCreateUserDto.sectionId !== undefined) {
-      const [sectionExists] = await this.databaseService.db
-        .select()
-        .from(sections)
-        .where(eq(sections.id, adminCreateUserDto.sectionId));
+    await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
 
-      if (!sectionExists) {
-        throw new BadRequestException(`Laboratory section with ID ${adminCreateUserDto.sectionId} does not exist.`);
-      }
-    }
+    const existing = await this.usersRepository.findByEmail(
+      adminCreateUserDto.email,
+    );
 
-    const existing = await this.databaseService.db
-      .select()
-      .from(users)
-      .where(eq(users.email, adminCreateUserDto.email));
-
-    if (existing.length > 0) {
+    if (existing) {
       throw new ConflictException('Email already exists');
     }
 
-    const [createdUser] = await this.databaseService.db
-      .insert(users)
-      .values({
-        firstName: adminCreateUserDto.firstName,
-        lastName: adminCreateUserDto.lastName,
-        email: adminCreateUserDto.email,
-        passwordHash: hashedPassword,
-        role: adminCreateUserDto.role ?? 'TECHNICIAN',
-        isActive: adminCreateUserDto.isActive ?? true,
-        sectionId: adminCreateUserDto.sectionId,
-      })
-      .returning();
-    const { passwordHash, ...safeUser } = createdUser;
-    return safeUser;
+    const createdUser = await this.usersRepository.create({
+      firstName: adminCreateUserDto.firstName,
+      lastName: adminCreateUserDto.lastName,
+      email: adminCreateUserDto.email,
+      passwordHash: hashedPassword,
+      role: adminCreateUserDto.role ?? 'TECHNICIAN',
+      isActive: adminCreateUserDto.isActive ?? true,
+    });
 
+    await this.usersRepository.assignSections(
+      createdUser.id,
+      adminCreateUserDto.sectionIds ?? [],
+    );
+
+    const sectionIds = await this.usersRepository.getSectionIdsForUser(
+      createdUser.id,
+    );
+    const createdWithSections = await this.usersRepository.findByIdWithSections(
+      createdUser.id,
+    );
+
+    const { passwordHash, ...safeUser } = createdUser;
+    return {
+      ...safeUser,
+      sectionIds,
+      sectionNames: createdWithSections?.sectionNames ?? [],
+    };
   }
 
   async deactivateUser(id: number, currentAdminId: number) {
     if (id === currentAdminId) {
-      throw new BadRequestException("You cannot deactivate your own administrator account.");
+      throw new BadRequestException(
+        'You cannot deactivate your own administrator account.',
+      );
     }
-    const [user] = await this.databaseService.db
-      .update(users)
-      .set({ isActive: false })
-      .where(eq(users.id, id))
-      .returning();
+    const user = await this.usersRepository.deactivate(id);
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -69,95 +95,67 @@ export class UsersService {
   }
 
   async updateUser(id: number, adminUpdateUserDto: AdminUpdateUserDto) {
-    const [existingUser] = await this.databaseService.db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
+    const existingUser = await this.usersRepository.findById(id);
 
     if (!existingUser) {
       throw new NotFoundException('User not found');
     }
     if (adminUpdateUserDto.email) {
-      const [emailCollision] = await this.databaseService.db
-        .select()
-        .from(users)
-        .where(
-          and(
-            eq(users.email, adminUpdateUserDto.email),
-            ne(users.id, id)
-          )
-        );
+      const emailCollision = await this.usersRepository.findEmailCollision(
+        adminUpdateUserDto.email,
+        id,
+      );
 
       if (emailCollision) {
-        throw new ConflictException(`Email ${adminUpdateUserDto.email} is already in use by another staff member.`);
-      }
-    }
-    if (adminUpdateUserDto.sectionId !== undefined) {
-      const [sectionExists] = await this.databaseService.db
-        .select()
-        .from(sections)
-        .where(eq(sections.id, adminUpdateUserDto.sectionId));
-
-      if (!sectionExists) {
-        throw new BadRequestException(
-          `Cannot move user. Laboratory section with ID ${adminUpdateUserDto.sectionId} does not exist.`
+        throw new ConflictException(
+          `Email ${adminUpdateUserDto.email} is already in use by another staff member.`,
         );
       }
     }
+    await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
 
-    const [updatedUser] = await this.databaseService.db
-      .update(users)
-      .set(adminUpdateUserDto)
-      .where(eq(users.id, id))
-      .returning();
+    const { sectionIds: nextSectionIds, ...updatableUserFields } =
+      adminUpdateUserDto;
 
+    const updatedUser = await this.usersRepository.update(
+      id,
+      updatableUserFields,
+    );
+
+    if (nextSectionIds !== undefined) {
+      await this.usersRepository.replaceUserSections(id, nextSectionIds);
+    }
+
+    const sectionIds = await this.usersRepository.getSectionIdsForUser(id);
+    const updatedWithSections =
+      await this.usersRepository.findByIdWithSections(id);
 
     const { passwordHash, ...safeUser } = updatedUser;
-    return safeUser;
+    return {
+      ...safeUser,
+      sectionIds,
+      sectionNames: updatedWithSections?.sectionNames ?? [],
+    };
   }
-  // apps/backend/src/users/users.service.ts
 
   async getUsers(roleFilter?: Role) {
     if (roleFilter && !Object.values(Role).includes(roleFilter)) {
-      throw new BadRequestException(`"${roleFilter}" is not a valid user role.`);
+      throw new BadRequestException(
+        `"${roleFilter}" is not a valid user role.`,
+      );
     }
-    const query = this.databaseService.db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        role: users.role,
-        isActive: users.isActive,
-        sectionName: sections.name,
-      })
-      .from(users)
-      .leftJoin(sections, eq(users.sectionId, sections.id));
-
-    if (roleFilter) {
-      return await query.where(eq(users.role, roleFilter));
-    }
-
-    return await query;
+    return await this.usersRepository.findAllWithSections(roleFilter);
   }
-  // apps/backend/src/users/users.service.ts
 
   async getUserById(id: number) {
-
-    const [user] = await this.databaseService.db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
-
+    const user = await this.usersRepository.findByIdWithSections(id);
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-
     const { passwordHash, ...safeUser } = user;
 
     return safeUser;
   }
-
 }

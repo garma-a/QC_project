@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ControlLotsService } from './control-lots.service';
 import { ControlLotsController } from './control-lots.controller';
-import { DatabaseModule } from '@/database/database.module';
+import { ControlLotsRepository } from './control-lots.repository';
 
 @Module({
-  imports: [DatabaseModule],
-  providers: [ControlLotsService],
-  controllers: [ControlLotsController]
+  providers: [ControlLotsService, ControlLotsRepository],
+  controllers: [ControlLotsController],
 })
-export class ControlLotsModule { }
+export class ControlLotsModule {}

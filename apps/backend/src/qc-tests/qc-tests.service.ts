@@ -1,49 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '@/database/database.service';
-import { qcTests, machines } from '@/drizzle/schema';
-import { eq } from 'drizzle-orm';
 import { CreateQcTestDto } from './dto/create-qc-test.dto';
+import { QcTestsRepository } from './qc-tests.repository';
 
 @Injectable()
 export class QcTestsService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(private readonly qcTestsRepository: QcTestsRepository) { }
 
   async create(createQcTestDto: CreateQcTestDto) {
-    // 1. Check existence using the limit chain
-    const machine = await this.databaseService.db
-      .select()
-      .from(machines)
-      .where(eq(machines.id, createQcTestDto.machineId))
-      .limit(1);
+    const machine = await this.qcTestsRepository.getMachineById(createQcTestDto.machineId);
 
-    // Because .select() returns an array, we check length
-    if (machine.length === 0) {
+    if (!machine) {
       throw new NotFoundException(`Cannot create test: Machine #${createQcTestDto.machineId} not found`);
     }
-
-    const [newTest] = await this.databaseService.db
-      .insert(qcTests)
-      .values(createQcTestDto)
-      .returning();
+    const newTest = await this.qcTestsRepository.createQcTest(createQcTestDto);
 
     return newTest;
   }
 
   async getTestsByMachine(machineId: number) {
-    // 1. Check existence using the limit chain
-    const machine = await this.databaseService.db
-      .select()
-      .from(machines)
-      .where(eq(machines.id, machineId))
-      .limit(1);
+    const machine = await this.qcTestsRepository.getMachineById(machineId);
 
-    if (machine.length === 0) {
+    if (!machine) {
       throw new NotFoundException(`Machine #${machineId} not found`);
     }
 
-    return await this.databaseService.db
-      .select()
-      .from(qcTests)
-      .where(eq(qcTests.machineId, machineId));
+    return await this.qcTestsRepository.getTestsByMachine(machineId);
   }
 }

@@ -3,9 +3,19 @@
 // ===================================================================
 
 export type Role = 'TECHNICIAN' | 'ADMIN';
-export type Specialization = 'HEMATOLOGY' | 'CHEMISTRY' | 'MICROBIOLOGY' | 'IMMUNOLOGY' | 'OTHER';
+export type Specialization =
+  | 'HEMATOLOGY'
+  | 'CHEMISTRY'
+  | 'MICROBIOLOGY'
+  | 'IMMUNOLOGY'
+  | 'OTHER';
 export type QcResultStatus = 'PASS' | 'FAIL' | 'WARNING';
-export type MachineStatus = 'IDLE' | 'RUNNING' | 'MAINTENANCE' | 'OFFLINE' | 'ERROR';
+export type MachineStatus =
+  | 'IDLE'
+  | 'RUNNING'
+  | 'MAINTENANCE'
+  | 'OFFLINE'
+  | 'ERROR';
 export type AlertPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 // ===================================================================
@@ -18,7 +28,7 @@ export interface LoginDto {
 }
 
 export interface LoginResponseDto {
-  access_token: string;
+  accessToken: string;
 }
 
 // ===================================================================
@@ -33,7 +43,8 @@ export interface UserResponseDto {
   phone?: string | null;
   role: Role;
   isActive: boolean;
-  sectionId?: number | null;
+  sectionIds: number[];
+  sectionNames?: string[];
   createdAt: string;
   updatedAt?: string | null;
 }
@@ -45,7 +56,8 @@ export interface UserListItemDto {
   email: string;
   role: Role;
   isActive: boolean;
-  sectionName?: string | null;
+  sectionIds: number[];
+  sectionNames: string[];
 }
 
 export interface AdminCreateUserDto {
@@ -55,7 +67,7 @@ export interface AdminCreateUserDto {
   password: string;
   role?: Role;
   isActive?: boolean;
-  sectionId?: number;
+  sectionIds?: number[];
 }
 
 export interface AdminUpdateUserDto {
@@ -64,7 +76,7 @@ export interface AdminUpdateUserDto {
   email?: string;
   role?: Role;
   isActive?: boolean;
-  sectionId?: number;
+  sectionIds?: number[];
 }
 
 export interface DeactivateUserResponseDto {
@@ -141,7 +153,7 @@ export interface ControlLotResponseDto {
   expirationDate: string;
   targetValue?: number | null;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;
@@ -156,7 +168,7 @@ export interface CreateControlLotDto {
   expirationDate: string;
   targetValue?: number;
   mean?: number;
-  standardDevi?: number;
+  standardDeviation?: number;
   upperControlLimit?: number;
   lowerControlLimit?: number;
   upperWarningLimit?: number;
@@ -167,7 +179,7 @@ export interface UpdateControlLotDto {
   expirationDate?: string;
   targetValue?: number;
   mean?: number;
-  standardDevi?: number;
+  standardDeviation?: number;
   upperControlLimit?: number;
   lowerControlLimit?: number;
   upperWarningLimit?: number;
@@ -187,7 +199,7 @@ export interface ControlLotInResultDto {
   expirationDate: string;
   targetValue?: number | null;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;
@@ -236,7 +248,7 @@ export interface LotSummaryDto {
   id: number;
   lotNumber: string;
   mean?: number | null;
-  standardDevi?: number | null;
+  standardDeviation?: number | null;
   upperControlLimit?: number | null;
   lowerControlLimit?: number | null;
   upperWarningLimit?: number | null;
@@ -251,26 +263,37 @@ export interface QcResultsWithLotResponseDto {
 }
 
 // ===================================================================
-// Alert DTOs (schema exists, endpoint TBD)
+// Alert DTOs
 // ===================================================================
 
 export interface AlertResponseDto {
   id: number;
   type?: string | null;
-  priority: AlertPriority;
+  priority?: AlertPriority | null;
   message?: string | null;
   ruleViolated?: string | null;
   suggestedSolution?: string | null;
   resultId: number;
-  createdAt: string;
+  createdAt?: string | null;
+  status: UserAlertStatus;
+  seenAt?: string | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
 }
 
-export interface UserToAlertDto {
+export type UserAlertStatus = 'UNSEEN' | 'SEEN' | 'RESOLVED';
+
+export interface UserAlertStatusResponseDto {
   userId: number;
   alertId: number;
-  isAcknowledged: boolean;
-  acknowledgedAt?: string | null;
-  actionTaken?: string | null;
+  status: UserAlertStatus;
+  seenAt?: string | null;
+  resolvedAt?: string | null;
+  resolutionNote?: string | null;
+}
+
+export interface ResolveAlertDto {
+  resolutionNote?: string;
 }
 
 // ===================================================================

@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AHC QC Frontend
 
-## Getting Started
+Next.js dashboard for the AHC QC platform. The frontend provides authenticated workflows for laboratory monitoring, QC history analysis, alert handling, and user administration.
 
-First, run the development server:
+## Main Screens
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Login
+- Dashboard overview
+- Machine monitor view
+- QC history and submission flows
+- Alerts inbox and resolution actions
+- User management (admin)
+
+## Backend Integration Focus
+
+This frontend is primarily an API consumer for backend workflows:
+
+- authenticated requests to protected endpoints
+- QC entity creation/update flows via server actions
+- dashboard rendering from backend datasets
+- alert acknowledgement and resolution actions
+
+## Stack
+
+- Next.js 16 + React 19
+- TypeScript
+- Zustand for client-side state
+- Recharts for data visualization
+- Tailwind CSS
+
+## API Integration
+
+The UI calls backend endpoints under `/api/v1/*` through shared helpers in `src/lib/api`.
+
+Default backend fallback URL is `http://localhost:3000`, and can be overridden using an environment variable.
+
+For local full-stack development, running backend on `4000` is recommended to avoid port collision with Next.js.
+
+Important: the frontend currently defaults internally to `http://localhost:3000` when `NEXT_PUBLIC_API_URL` is not set.
+
+## Environment
+
+Create `apps/frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL="http://localhost:4000"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run Locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+bun install
+bun run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open `http://localhost:3000`.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `bun run dev` - start Next.js dev server
+- `bun run build` - production build
+- `bun run start` - run production build
+- `bun run lint` - run linter
+- `bun run dev:vinext` - run Vinext/Vite dev mode (experimental)
+- `bun run build:vinext` - build Vinext/Vite mode
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Suggested Local Workflow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Start backend from `apps/backend`.
+2. Start frontend from this directory.
+3. Sign in using seeded credentials from backend seeding output.

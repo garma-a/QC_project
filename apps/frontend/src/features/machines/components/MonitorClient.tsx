@@ -3,19 +3,38 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
-import { MachineCharts } from '@/components/MachineCharts';
-import { LogoCompact } from '@/components/Logo';
+import { MachineCharts } from '@/features/machines/components/MachineCharts';
+import { LogoCompact } from '@/components/layout/Logo';
 
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+
+type MonitorResultEntry = QcResultResponseDto & {
+  machineId: number;
+  testName: string;
+  lotId: number;
+  lotNumber: string;
+};
 
 type MonitorClientProps = {
   machines: (MachineResponseDto & {
     testsToday?: number;
     lastQC?: { date: string; status: string };
-    tests?: { name: string; category: string; code: string; unit: string; lowRange: number; highRange: number }[];
+    tests?: {
+      id: string;
+      name: string;
+      category: string;
+      code: string;
+      unit: string;
+      lowRange: number;
+      highRange: number;
+      lotId: number;
+      lotNumber: string;
+      mean: number;
+      standardDeviation: number;
+    }[];
   })[];
   categories: { id: string; name: string }[];
-  qcHistory: QcResultResponseDto[];
+  qcHistory: MonitorResultEntry[];
 };
 
 export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
@@ -41,9 +60,9 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
   }, [searchParams, machines]);
 
   const machine = machines.find(m => m.id.toString() === selectedMachineId);
-  // Temporary: since qcHistory doesn't have machineId, we just show all results passed in for now
-  // In a real app we'd fetch qc results specifically for this machine's lots
-  const history = qcHistory;
+  const history = selectedMachineId
+    ? qcHistory.filter((entry) => entry.machineId.toString() === selectedMachineId)
+    : [];
 
   // Show machine selection if no machine is selected
   if (!selectedMachineId || !machine) {
@@ -233,28 +252,28 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
           </div>
 
           <div className={`rounded-2xl border-2 p-5 shadow-lg ${
-            machine.lastQC?.status === 'pass' 
-              ? 'bg-white dark:bg-[#1e1e1e] border-[#10b981]/30'
-              : 'bg-white dark:bg-[#1e1e1e] border-[#c41e3a]/30 dark:border-[#e84855]/30'
-          }`}>
+             machine.lastQC?.status === 'pass' 
+               ? 'bg-white dark:bg-[#1e1e1e] border-[#10b981]/30'
+               : 'bg-white dark:bg-[#1e1e1e] border-[#c41e3a]/30 dark:border-[#e84855]/30'
+           }`}>
             <div className="flex items-center gap-3 mb-3">
               <div className={`p-2 rounded-lg ${
                 machine.lastQC?.status === 'pass'
                   ? 'bg-[#10b981]/10 dark:bg-[#10b981]/20'
                   : 'bg-[#c41e3a]/10 dark:bg-[#e84855]/20'
               }`}>
-                {machine.lastQC?.status === 'pass' ? (
-                  <CheckCircle className="text-[#10b981]" size={20} />
-                ) : (
-                  <AlertCircle className="text-[#c41e3a] dark:text-[#e84855]" size={20} />
-                )}
+                 {machine.lastQC?.status === 'pass' ? (
+                   <CheckCircle className="text-[#10b981]" size={20} />
+                 ) : (
+                   <AlertCircle className="text-[#c41e3a] dark:text-[#e84855]" size={20} />
+                 )}
               </div>
               <h3 className="text-gray-900 dark:text-white font-semibold">QC Status</h3>
             </div>
-            <p className={`text-lg font-bold ${machine.lastQC?.status === 'pass' ? 'text-[#10b981]' : 'text-[#c41e3a] dark:text-[#e84855]'}`}>
-              {machine.lastQC?.status?.toUpperCase() ?? 'UNKNOWN'}
-            </p>
-          </div>
+             <p className={`text-lg font-bold ${machine.lastQC?.status === 'pass' ? 'text-[#10b981]' : machine.lastQC?.status === 'warning' ? 'text-[#b8860b] dark:text-[#ffd700]' : 'text-[#c41e3a] dark:text-[#e84855]'}`}>
+               {machine.lastQC?.status?.toUpperCase() ?? 'UNKNOWN'}
+             </p>
+           </div>
         </div>
 
         {/* QC History */}
@@ -269,22 +288,30 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
                 }`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <p className="font-medium text-gray-900 dark:text-white truncate text-sm">Test Result</p>
+                    <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{qc.testName}</p>
                     <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{new Date(qc.testDate).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs sm:text-sm">
-                    <span className="text-gray-600 dark:text-gray-400 truncate">By User {qc.performedBy}</span>
-                    <span className="text-gray-300 dark:text-gray-600">•</span>
-                    <span className="font-medium text-gray-900 dark:text-white">Val: {qc.measuredValue}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                     <span className="text-gray-600 dark:text-gray-400 truncate">By User {qc.performedBy}</span>
+                     <span className="text-gray-300 dark:text-gray-600">•</span>
+                     <span className="font-medium text-gray-900 dark:text-white">Val: {qc.measuredValue}</span>
+                     <span className="text-gray-300 dark:text-gray-600">•</span>
+                     <span className="text-gray-600 dark:text-gray-400 truncate">Lot: {qc.lotNumber}</span>
+                   </div>
+                 </div>
+               </div>
+             ))}
+            {history.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">No QC history found for this machine.</p>
+            )}
           </div>
         </div>
         </div>
       ) : (
-        <MachineCharts machineId={selectedMachineId ? Number(selectedMachineId) : undefined} />
+        <MachineCharts
+          machine={machine}
+          qcHistory={history}
+        />
       )}
     </div>
   );

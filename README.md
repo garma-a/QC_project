@@ -1,40 +1,161 @@
-## AHC QC Project Documentation
+# AHC QC Project
 
+AHC QC Project is a laboratory quality control platform built as a monorepo with a NestJS backend and a Next.js frontend. It centralizes machine monitoring, QC execution, control-lot management, and alert workflows for lab teams.
 
-### How to run this project on your machine 
+## Repository Structure
 
-1. **Clone the Repository**: Start by cloning the repository to your local machine using the following command:
-   ```
-   git clone <repository_url>
-   ```
-2. **Navigate to the Project Directory**: Change your current directory to the project folder:
-   ```
-   cd <project_directory>
-   ```
-3. **Install Dependencies for the backend**:
-```sh
+```text
+.
+|-- apps/
+|   |-- backend/    # NestJS API + Drizzle/PostgreSQL
+|   `-- frontend/   # Next.js dashboard
+|-- docker-compose.yml
+`-- Dockerfile
+```
+
+## Key Capabilities
+
+- Role-aware authentication and authorization (ADMIN, TECHNICIAN)
+- QC data lifecycle: machines, tests, control lots, and QC results
+- Alerting workflow with seen/resolved state tracking
+- Swagger API documentation for backend endpoints
+- Modern dashboard UX for login, monitor, QC history, users, and alerts
+
+## Backend-Centric Scope
+
+This project is designed around backend reliability for laboratory operations:
+
+- clear domain boundaries in the API layer
+- validation and role-guarded endpoints
+- relational modeling for QC auditability
+- alert-state lifecycle for operational follow-up
+
+## Tech Stack
+
+- Backend: NestJS 11, Drizzle ORM, PostgreSQL, JWT, Swagger
+- Frontend: Next.js 16, React 19, TypeScript, Zustand, Recharts
+- Runtime: Bun
+- Infra: Docker and Docker Compose for local services
+
+## Prerequisites
+
+- Bun 1.0+
+- Docker (recommended for PostgreSQL)
+
+## Quick Start
+
+### 1) Clone the repository
+
+```bash
+git clone https://github.com/garma-a/QC_project.git
+cd QC_project
+```
+
+### 2) Start PostgreSQL
+
+```bash
+docker compose up -d db
+```
+
+### 3) Run backend
+
+```bash
 cd apps/backend
-npm ci
-npm run start:dev
+cp .env-example .env
 ```
 
+Set at least the following variables in `apps/backend/.env`:
 
-3. **Install Dependencies for the frontend**:
-```sh
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/mydb"
+JWT_SECRET="replace-with-a-strong-secret"
+PORT=4000
+```
+
+Then start the backend:
+
+```bash
+bun install
+bun run start:dev
+```
+
+Backend URL in this setup: `http://localhost:4000`
+
+Swagger docs: `http://localhost:4000/api/v1/docs`
+
+### 4) Run frontend
+
+In a new terminal:
+
+```bash
 cd apps/frontend
-npm ci
-npm run dev
+bun install
 ```
 
+Create `apps/frontend/.env.local`:
 
+```env
+NEXT_PUBLIC_API_URL="http://localhost:4000"
+```
 
+Start the frontend:
 
+```bash
+bun run dev
+```
 
+Frontend default URL: `http://localhost:3000` (Next.js)
 
+## API Domains (Backend)
 
+Main backend modules exposed under `/api/v1`:
 
+- `auth` - login and token issuance
+- `users` - role-protected user management
+- `machines` - machine registration and updates
+- `qc-tests` - test definitions by machine
+- `control-lots` - lot metadata and target ranges
+- `qc-results` - measured values and status computation
+- `alerts` - alert retrieval and resolution workflow
 
+## Optional: Seed Demo Data
 
+From `apps/backend`:
 
+```bash
+bun run seed
+```
 
+The seed script creates users and prints demo credentials in the terminal.
+
+## Troubleshooting
+
+- If frontend requests fail, verify `NEXT_PUBLIC_API_URL` points to the backend port you actually run.
+- If backend fails to connect, verify PostgreSQL is up and `DATABASE_URL` matches your local container config.
+- If auth-protected calls return `401`, ensure login succeeded and token is included in requests.
+
+## Useful Commands
+
+From repository root:
+
+- `npm run docker:up` - build and start local containers
+- `npm run docker:down` - stop containers
+
+From `apps/backend`:
+
+- `bun run start:dev` - run API in watch mode
+- `bun run test` - run tests
+- `bun run build` - compile production build
+
+From `apps/frontend`:
+
+- `bun run dev` - run Next.js app locally
+- `bun run build` - build frontend
+- `bun run lint` - lint frontend code
+
+## Contributors
+
+<a href="https://github.com/garma-a/qc_project/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=garma-a/qc_project" alt="Contributors" />
+</a>
 

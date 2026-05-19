@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
-import { CreateQCTest } from '@/components/CreateQCTest';
-import { QCHistory } from '@/components/QCHistory';
-import { LogoCompact } from '@/components/Logo';
+import { CreateQCTest } from '@/features/qc/components/CreateQCTest';
+import { QCHistory } from '@/features/qc/components/QCHistory';
+import { LogoCompact } from '@/components/layout/Logo';
 
 type QcHistoryType = {
   id: string;

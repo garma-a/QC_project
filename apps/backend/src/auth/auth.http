@@ -1,24 +1,40 @@
 ### ===================================================
+
+
 ### Auth Controller - /api/v1/auth
+
+
 ### ===================================================
 
 @baseUrl = http://localhost:3000/api/v1
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Valid credentials
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
-  "email": "admin@example.com",
-  "password": "password123"
+  "email": "admin@lab.local",
+  "password": "Password123!"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Technician credentials
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
@@ -26,10 +42,16 @@ Content-Type: application/json
   "password": "password123"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Invalid email format (should fail validation)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
@@ -37,38 +59,62 @@ Content-Type: application/json
   "password": "password123"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Missing email (should fail validation)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
   "password": "password123"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Missing password (should fail validation)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
   "email": "admin@example.com"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Empty body (should fail validation)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {}
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Wrong password (should fail auth)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {
@@ -76,10 +122,16 @@ Content-Type: application/json
   "password": "wrongpassword"
 }
 
+
 ### ---------------------------------------------------
+
+
 ### Login - Non-existent user (should fail auth)
+
+
 ### ---------------------------------------------------
-POST {{baseUrl}}/auth/login
+
+POST {{baseUrl}}/auth/login HTTP/1.1
 Content-Type: application/json
 
 {

@@ -53,7 +53,7 @@ class LotSummaryDto {
   mean: number | null;
 
   @ApiPropertyOptional({ example: 0.5 })
-  standardDevi: number | null;
+  standardDeviation: number | null;
 
   @ApiPropertyOptional({ example: 15.5 })
   upperControlLimit: number | null;
@@ -108,7 +108,7 @@ class ControlLotInResultDto {
   mean: number | null;
 
   @ApiPropertyOptional({ example: 0.5 })
-  standardDevi: number | null;
+  standardDeviation: number | null;
 
   @ApiPropertyOptional({ example: 15.5 })
   upperControlLimit: number | null;

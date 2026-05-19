@@ -1,5 +1,5 @@
 import { ThemeProvider } from "../contexts/ThemeContext";
-import { AppShell } from "../components/AppShell";
+import { AppShell } from "../components/layout/AppShell";
 import "./globals.css"; // Make sure this matches your global CSS file name
 
 export const metadata = {
