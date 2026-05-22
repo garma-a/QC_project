@@ -3,6 +3,7 @@ import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { DatabaseModule } from '@/database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { SectionsModule } from './sections/sections.module';
 import { MachinesModule } from '@/machines/machines.module';
 import { UsersModule } from '@/users/users.module';
 import { AuthModule } from '@/auth/auth.module';
@@ -19,6 +20,8 @@ import { AlertsModule } from './alerts/alerts.module';
       isGlobal: true,
     }),
     DatabaseModule,
+
+    SectionsModule,
 
     MachinesModule,
 

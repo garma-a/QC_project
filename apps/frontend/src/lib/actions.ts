@@ -10,13 +10,16 @@ import type {
   AdminUpdateUserDto,
   UserResponseDto,
   CreateQcTestDto,
+  UpdateQcTestDto,
   QcTestResponseDto,
   CreateQcResultDto,
   QcResultResponseDto,
   CreateMachineDto,
   MachineResponseDto,
+  UpdateMachineDto,
   CreateControlLotDto,
   ControlLotResponseDto,
+  UpdateControlLotDto,
 } from './types/api';
 
 import { revalidatePath } from 'next/cache';
@@ -171,6 +174,34 @@ export async function createMachine(payload: CreateMachineDto) {
   }
 }
 
+export async function updateMachine(machineId: number, payload: UpdateMachineDto) {
+  try {
+    await api.patch<MachineResponseDto>(`/api/v1/machines/${machineId}`, payload);
+    revalidatePath('/machines');
+    revalidatePath('/dashboard');
+    revalidatePath('/monitor');
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update machine.',
+    };
+  }
+}
+
+export async function deleteMachine(machineId: number) {
+  try {
+    await api.delete(`/api/v1/machines/${machineId}`);
+    revalidatePath('/machines');
+    revalidatePath('/dashboard');
+    revalidatePath('/monitor');
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to delete machine.',
+    };
+  }
+}
+
 // ===================================================================
 // QC Test Actions
 // ===================================================================
@@ -179,11 +210,25 @@ export async function createQcTest(payload: CreateQcTestDto) {
   try {
     await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
     revalidatePath('/qc');
+    revalidatePath('/qc-tests');
     return { success: true };
   } catch (error: unknown) {
     return {
       error:
         error instanceof Error ? error.message : 'Failed to create QC test.',
+    };
+  }
+}
+
+export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
+  try {
+    await api.patch<QcTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
+    revalidatePath('/qc');
+    revalidatePath('/qc-tests');
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update QC test.',
     };
   }
 }
@@ -209,6 +254,18 @@ export async function submitQcResult(payload: CreateQcResultDto) {
   }
 }
 
+export async function updateQcResult(resultId: number, payload: { comments?: string }) {
+  try {
+    await api.patch(`/api/v1/qc-results/${resultId}`, payload);
+    revalidatePath('/qc');
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update QC result.',
+    };
+  }
+}
+
 // ===================================================================
 // Control Lot Actions
 // ===================================================================
@@ -227,6 +284,37 @@ export async function createControlLot(payload: CreateControlLotDto) {
         error instanceof Error
           ? error.message
           : 'Failed to create control lot.',
+    };
+  }
+}
+
+export async function updateControlLot(lotId: number, payload: UpdateControlLotDto) {
+  try {
+    const lot = await api.patch<ControlLotResponseDto>(
+      `/api/v1/control-lots/${lotId}`,
+      payload,
+    );
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
+    revalidatePath('/monitor');
+    return { success: true, data: lot };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to update control lot.',
+    };
+  }
+}
+
+export async function deactivateControlLot(lotId: number) {
+  try {
+    await api.delete(`/api/v1/control-lots/${lotId}`);
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
+    revalidatePath('/monitor');
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      error: error instanceof Error ? error.message : 'Failed to deactivate control lot.',
     };
   }
 }
