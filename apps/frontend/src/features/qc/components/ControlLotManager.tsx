@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, X, Heart, AlertTriangle } from "lucide-react";
 import { createControlLot } from "@/lib/actions";
 import type {
@@ -42,6 +43,7 @@ function NumField({
 
 // ─── main component ──────────────────────────────────────────────────────────
 export function ControlLotManager({ initialLots, machines, allTests }: ControlLotManagerProps) {
+  const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function ControlLotManager({ initialLots, machines, allTests }: ControlLo
       setFormError(result.error);
     } else {
       handleClose();
-      window.location.reload();
+      router.refresh();
     }
   };
 
