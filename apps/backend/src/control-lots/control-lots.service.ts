@@ -14,7 +14,7 @@ export class ControlLotsService {
     }
     const msPerDay = 1000 * 60 * 60 * 24;
     const diffMs = Date.now() - lot.createdAt.getTime();
-    const daysActive = Math.floor(diffMs / msPerDay);
+    const daysActive = Math.max(0, Math.floor(diffMs / msPerDay));
     return {
       ...lot,
       daysActive,
