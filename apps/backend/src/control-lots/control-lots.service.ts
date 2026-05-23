@@ -7,8 +7,8 @@ import { ControlLotsRepository } from './control-lots.repository';
 export class ControlLotsService {
   constructor(private readonly controlLotsRepository: ControlLotsRepository) {}
 
-  // Helper to compute expiration warning fields
-  private computeExpiration<T extends { createdAt: Date | null }>(lot: T) {
+  // Helper to compute age-based warning fields
+  private computeAgeFlags<T extends { createdAt: Date | null }>(lot: T) {
     if (!lot.createdAt) {
       return { ...lot, daysActive: 0, needsChecking: false };
     }
@@ -41,12 +41,12 @@ export class ControlLotsService {
       }
     );
 
-    return this.computeExpiration(newLot);
+    return this.computeAgeFlags(newLot);
   }
 
   async findAll() {
     const lots = await this.controlLotsRepository.findAll();
-    return lots.map((lot) => this.computeExpiration(lot));
+    return lots.map((lot) => this.computeAgeFlags(lot));
   }
 
   async findOne(id: number) {
@@ -55,12 +55,12 @@ export class ControlLotsService {
     if (!lot) {
       throw new NotFoundException(`Control lot with ID ${id} not found`);
     }
-    return this.computeExpiration(lot);
+    return this.computeAgeFlags(lot);
   }
 
   async findByTestId(testId: number) {
     const lots = await this.controlLotsRepository.findByTestId(testId);
-    return lots.map((lot) => this.computeExpiration(lot));
+    return lots.map((lot) => this.computeAgeFlags(lot));
   }
 
   async update(id: number, updateControlLotDto: UpdateControlLotDto) {
@@ -77,7 +77,7 @@ export class ControlLotsService {
 
     const updatedLot = await this.controlLotsRepository.update(id, updateData);
 
-    return this.computeExpiration(updatedLot);
+    return this.computeAgeFlags(updatedLot);
   }
 
   async remove(id: number) {
