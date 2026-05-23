@@ -20,6 +20,7 @@ describe('QcResultsService', () => {
       getLotTestMachineByLotId: jest.fn(),
       getResultsByLotId: jest.fn(),
       getResultAndLotByResultId: jest.fn(),
+      getRecentZScoresByLotId: jest.fn(),
     };
 
     mockAlertsService = {
@@ -45,80 +46,115 @@ describe('QcResultsService', () => {
   describe('create', () => {
     const userId = 5;
     const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5 };
+    const baseDto = { lotId: 1, comments: 'test' };
+
+    beforeEach(() => {
+      // Arrange - common setup
+      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.getSectionIdByLotId.mockResolvedValue(10);
+      mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
+    });
 
     it('should create QC result with PASS status when z-score is within 2 SD', async () => {
-      // z-score = (14.5 - 14.0) / 0.5 = 1.0 (PASS)
-      const dto = { measuredValue: 14.5, lotId: 1, comments: 'Normal reading' };
-      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 14.5 }; // z-score = +1.0
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
       mockRepository.createQcResult.mockResolvedValue([
         { id: 1, ...dto, status: 'PASS', performedBy: userId },
       ]);
 
+      // Act
       const result = await service.create(dto, userId);
 
+      // Assert
       expect(result.status).toBe('PASS');
+      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
+        dto, 'PASS', userId, 1.0, null,
+      );
       expect(mockAlertsService.createForUsers).not.toHaveBeenCalled();
     });
 
-    it('should create QC result with WARNING status when z-score is between 2 and 3 SD', async () => {
-      // z-score = (15.2 - 14.0) / 0.5 = 2.4 (WARNING)
-      const dto = {
-        measuredValue: 15.2,
-        lotId: 1,
-        comments: 'Elevated reading',
-      };
-      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+    it('should create QC result with WARNING status (1_2s) when z-score exceeds 2 SD', async () => {
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 15.2 };
+      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
       mockRepository.createQcResult.mockResolvedValue([
         { id: 1, ...dto, status: 'WARNING', performedBy: userId },
       ]);
-      mockRepository.getSectionIdByLotId.mockResolvedValue(10);
-      mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
 
+      // Act
       const result = await service.create(dto, userId);
 
+      // Assert
       expect(result.status).toBe('WARNING');
+      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
+        dto, 'WARNING', userId, expectedZScore, '1_2s',
+      );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status when z-score exceeds 3 SD', async () => {
-      // z-score = (16.0 - 14.0) / 0.5 = 4.0 (FAIL)
-      const dto = { measuredValue: 16.0, lotId: 1, comments: 'Out of control' };
-      mockRepository.getLotById.mockResolvedValue(lotWithStats);
+    it('should create QC result with FAIL status (1_3s) when z-score exceeds 3 SD', async () => {
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 16.0 }; // z-score = +4.0
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
       mockRepository.createQcResult.mockResolvedValue([
         { id: 1, ...dto, status: 'FAIL', performedBy: userId },
       ]);
-      mockRepository.getSectionIdByLotId.mockResolvedValue(10);
-      mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
 
+      // Act
       const result = await service.create(dto, userId);
 
+      // Assert
       expect(result.status).toBe('FAIL');
+      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
+        dto, 'FAIL', userId, 4.0, '1_3s',
+      );
+      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
+    });
+
+    it('should create QC result with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 15.1 };
+      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
+      // previous z-score was +2.1, which triggers the 2_2s rule
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]); 
+      mockRepository.createQcResult.mockResolvedValue([
+        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
+      ]);
+
+      // Act
+      const result = await service.create(dto, userId);
+
+      // Assert
+      expect(result.status).toBe('FAIL');
+      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
+        dto, 'FAIL', userId, expectedZScore, '2_2s',
+      );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when control lot does not exist', async () => {
-      const dto = { measuredValue: 14.5, lotId: 999, comments: '' };
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 14.5, lotId: 999 };
       mockRepository.getLotById.mockResolvedValue(undefined);
 
-      await expect(service.create(dto, userId)).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.create(dto, userId)).rejects.toThrow(
-        'Control lot not found',
-      );
+      // Act & Assert
+      await expect(service.create(dto, userId)).rejects.toThrow(NotFoundException);
+      await expect(service.create(dto, userId)).rejects.toThrow('Control lot not found');
     });
 
     it('should throw BadRequestException when lot is missing statistical values', async () => {
-      const dto = { measuredValue: 14.5, lotId: 1, comments: '' };
+      // Arrange
+      const dto = { ...baseDto, measuredValue: 14.5 };
       mockRepository.getLotById.mockResolvedValue({
         id: 1,
         mean: null,
         standardDeviation: 0.5,
       });
 
-      await expect(service.create(dto, userId)).rejects.toThrow(
-        BadRequestException,
-      );
+      // Act & Assert
+      await expect(service.create(dto, userId)).rejects.toThrow(BadRequestException);
       await expect(service.create(dto, userId)).rejects.toThrow(
         'Control lot is missing required statistical values',
       );
