@@ -40,6 +40,12 @@ export class QcResultResponseDto {
     description: 'ID of the user who performed the measurement',
   })
   performedBy: number;
+
+  @ApiProperty({ example: 1.4, description: 'Stored Z-Score at time of submission' })
+  zScore: number;
+
+  @ApiPropertyOptional({ example: '1_2s', description: 'Westgard rule that triggered this status, null if PASS' })
+  violatedRule: string | null;
 }
 
 class LotSummaryDto {
@@ -136,10 +142,5 @@ export class QcResultDetailResponseDto extends QcResultResponseDto {
   })
   controlLot: ControlLotInResultDto;
 
-  @ApiProperty({
-    example: 1.0,
-    description:
-      'Dynamically calculated Z-Score: (measuredValue - mean) / standardDeviation',
-  })
-  zScore: number;
 }
+
