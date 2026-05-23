@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Heart, AlertTriangle } from "lucide-react";
 import { createControlLot } from "@/lib/actions";
@@ -107,6 +107,15 @@ export function ControlLotManager({ initialLots, machines, allTests }: ControlLo
   const toNum = (s: string) => (s.trim() === "" ? undefined : parseFloat(s));
 
   const handleClose = () => { setShowForm(false); resetForm(); };
+
+  useEffect(() => {
+    if (!showForm) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showForm, handleClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,7 +315,11 @@ export function ControlLotManager({ initialLots, machines, allTests }: ControlLo
       {/* ── Create Control Lot Modal ────────────────────────────────────── */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white dark:bg-[#1e1e1e] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40"
+          >
 
             {/* modal header */}
             <div className="flex items-center justify-between p-5 sm:p-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 sticky top-0 bg-white dark:bg-[#1e1e1e] z-10">
