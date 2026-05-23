@@ -68,6 +68,8 @@ function DialogContent({ className, children, ...props }: React.ComponentProps<"
       />
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           "relative z-50 w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-xl",
           className,
