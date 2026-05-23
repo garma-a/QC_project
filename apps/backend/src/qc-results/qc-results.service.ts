@@ -128,12 +128,8 @@ export class QcResultsService {
 
     return {
       ...result,
-      zScore: Number(
-        (
-          (result.qc_results!.measuredValue - result.control_lots!.mean) /
-          result.control_lots!.standardDeviation
-        ).toFixed(2),
-      ),
+      zScore: result.qc_results!.zScore,
+      violatedRule: result.qc_results!.violatedRule,
     };
   }
   async update(id: number, updateQcResultDto: UpdateQcResultDto) {

@@ -44,7 +44,10 @@ export class QcResultsController {
   @ApiOperation({
     summary: 'Submit a new QC result',
     description:
-      "Records a new quality control measurement against a specific control lot. The system automatically calculates the Z-Score based on the lot's mean and standard deviation, then assigns a status: **PASS** (|Z| <= 2), **WARNING** (2 < |Z| <= 3), or **FAIL** (|Z| > 3). The `performedBy` field is automatically set from the authenticated user's JWT token.",
+      'Records a new quality control measurement for a specific control lot. ' +
+      'The system automatically evaluates the result against the Core 5 Westgard Rules ' +
+      '(1_3s, 2_2s, R_4s, 4_1s, 10_x) and the 1_2s warning rule using historical data ' +
+      'to assign a PASS, WARNING, or FAIL status.',
   })
   @ApiResponse({
     status: 201,

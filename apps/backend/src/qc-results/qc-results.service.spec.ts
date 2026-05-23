@@ -196,16 +196,22 @@ describe('QcResultsService', () => {
   });
 
   describe('findOne', () => {
-    it('should return QC result with calculated z-score', async () => {
-      // z-score = (15.0 - 14.0) / 0.5 = 2.0
+    it('should return QC result with stored z-score and violatedRule', async () => {
       mockRepository.getResultAndLotByResultId.mockResolvedValue({
-        qc_results: { id: 1, measuredValue: 15.0, status: 'WARNING' },
+        qc_results: { 
+          id: 1, 
+          measuredValue: 15.0, 
+          status: 'WARNING',
+          zScore: 2.0,
+          violatedRule: '1_2s'
+        },
         control_lots: { mean: 14.0, standardDeviation: 0.5 },
       });
 
       const result = await service.findOne(1);
 
-      expect(result.zScore).toBe(2);
+      expect(result.zScore).toBe(2.0);
+      expect(result.violatedRule).toBe('1_2s');
     });
 
     it('should throw NotFoundException when QC result does not exist', async () => {
