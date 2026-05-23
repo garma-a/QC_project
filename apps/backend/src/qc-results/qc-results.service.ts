@@ -10,6 +10,7 @@ import { QcStatus } from './qc-results.types';
 import { AlertsService } from '@/alerts/alerts.service';
 import { AlertPriority } from '@/alerts/alerts.types';
 import { UsersRepository } from '@/users/users.repository';
+import { evaluateWestgardRules, WESTGARD_HISTORY_SIZE } from './westgard.utils';
 
 @Injectable()
 export class QcResultsService {
@@ -32,33 +33,40 @@ export class QcResultsService {
       );
     }
 
-    const zScore =
-      (createQcResultDto.measuredValue - lot.mean) / lot.standardDeviation;
-    let status = QcStatus.PASS;
-    if (Math.abs(zScore) > 3) status = QcStatus.FAIL;
-    else if (Math.abs(zScore) > 2) status = QcStatus.WARNING;
+    // 1. Compute the current z-score
+    const zScore = (createQcResultDto.measuredValue - lot.mean) / lot.standardDeviation;
 
-    const [result] = await this.qcResultsRepository.createQcResult(
-      createQcResultDto,
-      status,
-      userId,
+    // 2. Fetch the last WESTGARD_HISTORY_SIZE (9) z-scores, newest-first
+    const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
+      createQcResultDto.lotId,
+      WESTGARD_HISTORY_SIZE,
     );
 
-    if (status === QcStatus.WARNING || status === QcStatus.FAIL) {
+    // 3. Build the window: current point first, then history
+    //    [z_current, z_prev1, z_prev2, ..., z_prev9]
+    const zScoreWindow = [zScore, ...priorZScores];
 
+    // 4. Evaluate all 6 Westgard rules
+    const { status, violatedRule, suggestedSolution } = evaluateWestgardRules(zScoreWindow);
+
+    // 5. Persist the result with zScore and violatedRule stored
+    const [result] = await this.qcResultsRepository.createQcResult(
+      createQcResultDto,
+      status as QcStatus,
+      userId,
+      zScore,
+      violatedRule,
+    );
+
+    // 6. Fire an alert for WARNING or FAIL
+    if (status === QcStatus.WARNING || status === QcStatus.FAIL) {
       const absZScore = Number(Math.abs(zScore).toFixed(2));
       const alertPriority =
         status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
-      const ruleViolated =
-        status === QcStatus.FAIL ? '1_3s (Violation)' : '1_2s (Warning)';
+
       const sectionId = await this.qcResultsRepository.getSectionIdByLotId(
         createQcResultDto.lotId,
       );
-      //this should replace with suggestion from AI model based on historical data and root cause analysis, but for now we will hardcode some common suggestions based on the type of deviation
-      const suggestedSolution =
-        status === QcStatus.FAIL
-          ? 'Stop patient testing. Rerun control. If failure persists, recalibrate and troubleshoot the analyzer before releasing patient results.'
-          : 'Repeat QC run and monitor trend. If warning repeats, inspect reagents, calibration status, and instrument maintenance logs.';
       const sectionUserIds = sectionId
         ? await this.usersRepository.getUserIdsBySectionId(sectionId)
         : [];
@@ -69,7 +77,7 @@ export class QcResultsService {
           type: 'QC_DEVIATION',
           priority: alertPriority,
           message: `QC result for lot ${lot.lotNumber} is ${status} (|Z|=${absZScore}).`,
-          ruleViolated,
+          ruleViolated: violatedRule ?? undefined,
           suggestedSolution,
         },
         sectionUserIds,

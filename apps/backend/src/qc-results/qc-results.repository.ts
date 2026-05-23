@@ -35,11 +35,15 @@ export class QcResultsRepository {
     createQcResultDto: CreateQcResultDto,
     status: QcStatus,
     userId: number,
+    zScore: number,
+    violatedRule: string | null,
   ) {
     const res = this.databaseService.db
       .insert(qcResults)
       .values({
         measuredValue: createQcResultDto.measuredValue,
+        zScore,
+        violatedRule: violatedRule ?? undefined,
         status: status,
         comments: createQcResultDto.comments,
         lotId: createQcResultDto.lotId,

@@ -1,3 +1,9 @@
+/**
+ * How many prior z-scores to fetch from the DB before evaluating rules.
+ * The 10ₓ rule needs 10 consecutive points total → 1 current + 9 history.
+ */
+export const WESTGARD_HISTORY_SIZE = 9;
+
 export type QcStatus = 'PASS' | 'WARNING' | 'FAIL';
 
 export interface WestgardEvaluation {
