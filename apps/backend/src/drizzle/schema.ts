@@ -105,16 +105,15 @@ export const controlLots = pgTable('control_lots', {
 export const qcResults = pgTable('qc_results', {
   id: serial('id').primaryKey(),
   measuredValue: doublePrecision('measured_value').notNull(),
+  zScore: doublePrecision('z_score').notNull().default(0),             // NEW
+  violatedRule: varchar('violated_rule', { length: 50 }),   // NEW — null = PASS
   testDate: timestamp('test_date').defaultNow(),
   status: statusEnum('status').notNull(),
   comments: text('comments'),
-  lotId: integer('lot_id')
-    .references(() => controlLots.id)
-    .notNull(),
-  performedBy: integer('performed_by')
-    .references(() => users.id)
-    .notNull(),
+  lotId: integer('lot_id').references(() => controlLots.id).notNull(),
+  performedBy: integer('performed_by').references(() => users.id).notNull(),
 });
+
 
 export const alerts = pgTable('alerts', {
   id: serial('id').primaryKey(),
