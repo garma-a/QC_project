@@ -91,4 +91,17 @@ export class QcResultsRepository {
       .limit(1);
     return result;
   }
+
+  async getRecentZScoresByLotId(lotId: number, limit: number): Promise<number[]> {
+    // Returns last `limit` z-scores ordered newest-first
+    // so they align with zScores[1], zScores[2], ... in the evaluator
+    const rows = await this.databaseService.db
+      .select({ zScore: qcResults.zScore })
+      .from(qcResults)
+      .where(eq(qcResults.lotId, lotId))
+      .orderBy(desc(qcResults.testDate))
+      .limit(limit);
+    return rows.map(r => r.zScore);
+  }
+
 }
