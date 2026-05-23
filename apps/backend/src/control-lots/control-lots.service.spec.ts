@@ -12,7 +12,7 @@ describe('ControlLotsService', () => {
   let mockRepository: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    // Lock the system clock so computeExpiration() always sees FROZEN_NOW
+    // Lock the system clock so computeAgeFlags() always sees FROZEN_NOW
     jest.useFakeTimers();
     jest.setSystemTime(FROZEN_NOW);
 
