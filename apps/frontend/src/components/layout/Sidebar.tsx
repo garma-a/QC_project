@@ -11,9 +11,9 @@ import {
   LogOut,
   Heart,
   AlertCircle,
-  Package,
   Database,
   TestTube,
+  Server,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -35,15 +35,15 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const menuItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/monitor", label: "Monitor Machines", icon: Activity },
-    { href: "/qc", label: "QC Management", icon: Clipboard },
-    { href: "/qc-tests", label: "QC Tests", icon: TestTube },
-    { href: "/control-lots", label: "Control Lots", icon: Database },
-    { href: "/machines", label: "Machines", icon: Server },
-    { href: "/alerts", label: "Alerts", icon: AlertCircle },
-  ];
+const menuItems = [
+  { href: "/dashboard",    label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/monitor",      label: "Monitor Machines",  icon: Activity },
+  { href: "/qc",           label: "QC Management",    icon: Clipboard },
+  { href: "/qc-tests",     label: "QC Tests",         icon: TestTube },
+  { href: "/control-lots", label: "Control Lots",     icon: Database },
+  { href: "/machines",     label: "Machines",         icon: Server },
+  { href: "/alerts",       label: "Alerts",           icon: AlertCircle },
+];
 
   // Add User Management for admins only
   if (isAdmin) {
