@@ -10,8 +10,7 @@ import { QcResultsModule } from './qc-results/qc-results.module';
 import { ControlLotsModule } from './control-lots/control-lots.module';
 import { QcTestsModule } from './qc-tests/qc-tests.module';
 import { AlertsModule } from './alerts/alerts.module';
-
-
+import { SectionsModule } from './sections/sections.module';
 
 @Module({
   imports: [
@@ -33,7 +32,7 @@ import { AlertsModule } from './alerts/alerts.module';
     ControlLotsModule,
     QcTestsModule,
     AlertsModule,
-
+    SectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
