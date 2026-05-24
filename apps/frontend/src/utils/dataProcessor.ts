@@ -1,4 +1,4 @@
-import bigData from '../data/big_data.json';
+import bigData from '../../../backend/src/database/big-data.json';
 import { QCDataPoint } from './westgardRules';
 
 // Type definition for the raw data structure
