@@ -11,6 +11,7 @@ import {
   LogOut,
   Heart,
   AlertCircle,
+  Database,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -36,6 +37,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/monitor", label: "Monitor Machines", icon: Activity },
     { href: "/qc", label: "QC Management", icon: Clipboard },
+    { href: "/control-lots", label: "Control Lots", icon: Database },
     { href: "/alerts", label: "Alerts", icon: AlertCircle },
   ];
 
