@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
-import { applyWestgardRules, getPointColor, formatWestgardStats } from '@/utils/westgardRules';
+import { getPointColor, formatWestgardStats } from '@/utils/westgardRules';
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 interface MachineChartsProps {
@@ -179,13 +179,45 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         date: new Date(entry.testDate).toLocaleString(),
         value: entry.measuredValue,
         testName: entry.testName,
+        zScore: entry.zScore,
+        violatedRule: entry.violatedRule,
+        status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
   }, [activeTest, qcHistory]);
 
-  // Apply Westgard Rules
+  // Use Westgard Rules from backend data
   const westgardAnalysis = useMemo(() => {
-    return applyWestgardRules(qcData);
-  }, [qcData]);
+    const mean = activeTest?.mean ?? 0;
+    const stdDev = activeTest?.standardDeviation ?? 1;
+
+    return {
+      violations: qcData
+        .filter(t => t.violatedRule)
+        .map(t => ({
+          severity: t.status === 'reject' ? 'reject' : 'warning',
+          rule: t.violatedRule!,
+          description: `${t.violatedRule} Violation`,
+          message: `Violated on ${t.date}`,
+        })),
+      stats: {
+        mean,
+        stdDev,
+        plus3s: mean + 3 * stdDev,
+        plus2s: mean + 2 * stdDev,
+        plus1s: mean + 1 * stdDev,
+        minus1s: mean - 1 * stdDev,
+        minus2s: mean - 2 * stdDev,
+        minus3s: mean - 3 * stdDev,
+      },
+      pointsWithStatus: qcData.map(t => ({
+        status: t.status as 'normal' | 'warning' | 'reject',
+        date: t.date,
+        value: t.value,
+        zScore: t.zScore,
+        violations: t.violatedRule ? [t.violatedRule] : [],
+      })),
+    };
+  }, [qcData, activeTest]);
 
   // Magdi Yacoub Theme Colors
   const isDark = theme === 'dark';
@@ -309,8 +341,8 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
                   tick={{ fontSize: 12, fill: textColor, fontWeight: 'bold' }}
                   stroke={gridColor}
                   domain={[
-                    westgardAnalysis.stats.mean - (westgardAnalysis.stats.stdDev * 3.5),
-                    westgardAnalysis.stats.mean + (westgardAnalysis.stats.stdDev * 3.5)
+                    (dataMin: number) => Math.min(westgardAnalysis.stats.mean - (westgardAnalysis.stats.stdDev * 3.5), dataMin),
+                    (dataMax: number) => Math.max(westgardAnalysis.stats.mean + (westgardAnalysis.stats.stdDev * 3.5), dataMax)
                   ]}
                   ticks={[
                     westgardAnalysis.stats.minus3s,
