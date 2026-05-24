@@ -142,6 +142,12 @@ export interface CreateQcTestDto {
   machineId: number;
 }
 
+export interface UpdateQcTestDto {
+  testName?: string;
+  testType?: string;
+  machineId?: number;
+}
+
 // ===================================================================
 // Control Lot DTOs
 // ===================================================================
@@ -176,6 +182,7 @@ export interface CreateControlLotDto {
 }
 
 export interface UpdateControlLotDto {
+  lotNumber?: string;
   expirationDate?: string;
   targetValue?: number;
   mean?: number;

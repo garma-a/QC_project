@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { drizzle, NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 
 
 import * as schema from '../drizzle/schema';
 
 @Injectable()
 export class DatabaseService {
-  public readonly db: NeonHttpDatabase<typeof schema>;
+  public readonly db: PostgresJsDatabase<typeof schema>;
 
   constructor(private configService: ConfigService) {
     const databaseUrl = this.configService.get<string>('DATABASE_URL');
@@ -17,8 +17,8 @@ export class DatabaseService {
       throw new Error('DATABASE_URL is missing!');
     }
 
-    // Use the standard postgres driver for local development
-    const sql = neon(databaseUrl);
+    // Use postgres-js for local PostgreSQL connections.
+    const sql = postgres(databaseUrl);
     this.db = drizzle(sql, { schema });
 
 

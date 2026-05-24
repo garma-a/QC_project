@@ -15,6 +15,7 @@ type QcHistoryType = {
   machineId: string;
   testName: string;
   date: string;
+  rawDate: string;
   performedBy: string;
   numericResult?: number;
   result: string;
@@ -119,6 +120,7 @@ export default async function QCPage() {
             machineId: ctx.machineId.toString(),
             testName: ctx.test.testName,
             date: formatDateTime(result.testDate),
+            rawDate: result.testDate,
             performedBy: `User #${result.performedBy}`,
             numericResult: result.measuredValue,
             result: result.measuredValue.toFixed(2),

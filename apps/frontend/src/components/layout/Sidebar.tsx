@@ -76,7 +76,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
       <aside
         className={`
         fixed lg:static inset-y-0 left-0 z-50
-        w-full sm:w-80 lg:w-72
+        w-full sm:w-80 lg:w-72 flex flex-col h-screen
         bg-white dark:bg-[#1a1a1a]
         border-r-2 border-[#c41e3a]/20 dark:border-[#e84855]/30
         transform transition-all duration-300 ease-in-out
@@ -85,7 +85,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
       `}
       >
         {/* Header with Logo and Pattern Background */}
-        <div className="relative p-4 sm:p-6 flex items-center justify-between border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-gradient-to-br from-white to-[#fff8f0] dark:from-[#1a1a1a] dark:to-[#2a2a2a] myc-pattern">
+        <div className="relative p-4 sm:p-6 flex flex-shrink-0 items-center justify-between border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-gradient-to-br from-white to-[#fff8f0] dark:from-[#1a1a1a] dark:to-[#2a2a2a] myc-pattern">
           {/* Decorative heart pulse in background */}
           <div className="absolute top-2 right-2 opacity-5 dark:opacity-10">
             <Heart
@@ -110,7 +110,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="px-4 py-6 space-y-2">
+        <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#c41e3a]/20 hover:[&::-webkit-scrollbar-thumb]:bg-[#c41e3a]/50 dark:[&::-webkit-scrollbar-thumb]:bg-[#e84855]/20 dark:hover:[&::-webkit-scrollbar-thumb]:bg-[#e84855]/50 [&::-webkit-scrollbar-thumb]:rounded-full px-4 py-6 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = isPathActive(item.href);
@@ -134,7 +134,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
         </nav>
 
         {/* User Info, Theme Toggle and Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 space-y-2 bg-gradient-to-t from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1a1a1a]">
+        <div className="flex-shrink-0 p-4 border-t-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 space-y-2 bg-gradient-to-t from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1a1a1a]">
           {/* User Info */}
           <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
               <div className="flex items-center gap-3">
