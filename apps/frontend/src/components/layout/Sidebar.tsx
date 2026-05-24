@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Package,
   Database,
+  TestTube,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -126,8 +127,8 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
-                    ? "bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-lg shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:text-[#c41e3a] dark:hover:text-[#e84855]"
+                  ? "bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-lg shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:text-[#c41e3a] dark:hover:text-[#e84855]"
                   }`}
               >
                 <Icon size={20} />
