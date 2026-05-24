@@ -12,6 +12,7 @@ import {
   Heart,
   AlertCircle,
   Package,
+  Database,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,7 +26,7 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
+export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const currentUser = useAuthStore((s) => s.currentUser);
   const isAdmin = useAuthStore((s) => s.isAdmin);
@@ -37,8 +38,10 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/monitor", label: "Monitor Machines", icon: Activity },
     { href: "/qc", label: "QC Management", icon: Clipboard },
+    { href: "/qc-tests", label: "QC Tests", icon: TestTube },
+    { href: "/control-lots", label: "Control Lots", icon: Database },
+    { href: "/machines", label: "Machines", icon: Server },
     { href: "/alerts", label: "Alerts", icon: AlertCircle },
-    { href: "/control-lots", label: "Control Lots", icon: Package },
   ];
 
   // Add User Management for admins only
@@ -122,11 +125,10 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-                  isActive
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
                     ? "bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-lg shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30"
                     : "text-gray-700 dark:text-gray-300 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:text-[#c41e3a] dark:hover:text-[#e84855]"
-                }`}
+                  }`}
               >
                 <Icon size={20} />
                 <span>{item.label}</span>
@@ -139,11 +141,11 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
         <div className="flex-shrink-0 p-4 border-t-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 space-y-2 bg-gradient-to-t from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1a1a1a]">
           {/* User Info */}
           <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
-                  {currentUser?.firstName?.[0] || ''}
-                  {currentUser?.lastName?.[0] || ''}
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
+                {currentUser?.firstName?.[0] || ''}
+                {currentUser?.lastName?.[0] || ''}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-gray-900 dark:text-white text-sm font-medium truncate">
                   {currentUser?.firstName} {currentUser?.lastName}

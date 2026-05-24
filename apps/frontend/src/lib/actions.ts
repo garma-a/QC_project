@@ -276,8 +276,10 @@ export async function createControlLot(payload: CreateControlLotDto) {
       '/api/v1/control-lots',
       payload,
     );
-    revalidatePath('/qc');
     revalidatePath('/control-lots');
+    revalidatePath('/qc');
+    revalidatePath('/monitor');
+    revalidatePath('/machines');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
