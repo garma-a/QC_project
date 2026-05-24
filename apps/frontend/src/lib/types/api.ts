@@ -222,6 +222,8 @@ export interface QcResultResponseDto {
   comments?: string | null;
   lotId: number;
   performedBy: number;
+  zScore: number;
+  violatedRule: string | null;
 }
 
 export interface CreateQcResultDto {
@@ -244,6 +246,7 @@ export interface QcResultDetailResponseDto {
   performedBy: number;
   controlLot: ControlLotInResultDto;
   zScore: number;
+  violatedRule: string | null;
 }
 
 export interface LotSummaryDto {

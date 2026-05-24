@@ -17,6 +17,10 @@ type QcHistoryType = {
   expectedRange: string;
   status: string;
   notes?: string | null;
+  zScore: number;
+  violatedRule: string | null;
+  lotMean: number;
+  lotSd: number;
 };
 
 export function QCHistoryInteractive({ 

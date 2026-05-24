@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { CheckCircle, AlertCircle, Calendar, User, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, XCircle } from 'lucide-react';
-import { applyWestgardRules } from '@/utils/westgardRules';
 
 type MachineType = { id: string; name: string; category: string; model?: string };
 type CategoryType = { id: string; name: string };
@@ -17,6 +16,10 @@ type QcHistoryType = {
   expectedRange: string;
   status: string;
   notes?: string | null;
+  zScore: number;
+  violatedRule: string | null;
+  lotMean: number;
+  lotSd: number;
 };
 
 type TestGroupAnalysis = {
@@ -90,13 +93,36 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
       })
       .slice(0, 7);
     
-    const dataPoints = sortedTests.map((t: QcHistoryType) => ({
-      date: t.date,
-      value: t.numericResult || 0,
-      testName: t.testName,
-    }));
+    const firstTest = sortedTests[0];
+    const mean = firstTest?.lotMean ?? 0;
+    const stdDev = firstTest?.lotSd ?? 1;
 
-    const analysis = applyWestgardRules(dataPoints);
+    // Build the analysis object directly from our backend data
+    const analysis = {
+      violations: sortedTests
+        .filter(t => t.violatedRule)
+        .map(t => ({
+          severity: t.status === 'error' ? 'reject' : 'warning',
+          rule: t.violatedRule!,
+          description: `${t.violatedRule} Violation`,
+          message: `Violated on ${t.date}`,
+        })),
+      stats: {
+        mean,
+        stdDev,
+        plus3s: mean + 3 * stdDev,
+        plus2s: mean + 2 * stdDev,
+        minus2s: mean - 2 * stdDev,
+        minus3s: mean - 3 * stdDev,
+      },
+      pointsWithStatus: sortedTests.map(t => ({
+        status: t.status === 'error' ? 'reject' : t.status,
+        date: t.date.split(' ')[0] || t.date,
+        value: t.numericResult || 0,
+        zScore: t.zScore,
+        violations: t.violatedRule ? [t.violatedRule] : [],
+      })),
+    };
 
     return {
       key,

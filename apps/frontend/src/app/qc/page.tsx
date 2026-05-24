@@ -21,6 +21,10 @@ type QcHistoryType = {
   expectedRange: string;
   status: string;
   notes?: string | null;
+  zScore: number;
+  violatedRule: string | null;
+  lotMean: number;
+  lotSd: number;
 };
 
 export default async function QCPage() {
@@ -125,6 +129,10 @@ export default async function QCPage() {
             expectedRange,
             status: normalizedStatus,
             notes: result.comments ?? `Lot: ${ctx.lot.lotNumber}`,
+            zScore: result.zScore,
+            violatedRule: result.violatedRule,
+            lotMean: ctx.lot.mean ?? 0,
+            lotSd: ctx.lot.standardDeviation ?? 1,
           };
         }),
       );
