@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -70,6 +71,10 @@ export async function serverFetch<T>(
       }
     } catch {
       // Could not parse error body
+    }
+
+    if (res.status === 401) {
+      redirect('/login');
     }
 
     throw new ApiRequestError(res.status, errorMessage, details);
