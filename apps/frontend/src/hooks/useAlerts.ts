@@ -28,16 +28,25 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
   const token = useAuthStore((s) => s.accessToken);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchAlerts = useCallback(async () => {
-    setLoading(true);
+  const fetchAlerts = useCallback(async (background = false) => {
+    if (!background) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await clientFetch<AlertResponseDto[]>('/api/v1/alerts', {}, token);
-      setAlerts(data);
+      setAlerts((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(data)) {
+          return prev;
+        }
+        return data;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   }, [token]);
 
@@ -48,7 +57,7 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
         { method: 'PATCH' },
         token,
       );
-      await fetchAlerts();
+      await fetchAlerts(true);
       return updated;
     },
     [fetchAlerts, token],
@@ -64,17 +73,17 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
         },
         token,
       );
-      await fetchAlerts();
+      await fetchAlerts(true);
       return updated;
     },
     [fetchAlerts, token],
   );
 
   useEffect(() => {
-    fetchAlerts();
+    fetchAlerts(false);
 
     if (pollIntervalMs && pollIntervalMs > 0) {
-      intervalRef.current = setInterval(fetchAlerts, pollIntervalMs);
+      intervalRef.current = setInterval(() => fetchAlerts(true), pollIntervalMs);
     }
 
     return () => {
@@ -88,7 +97,7 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     alerts,
     loading,
     error,
-    refetch: fetchAlerts,
+    refetch: () => fetchAlerts(false),
     markSeen,
     markResolved,
   };
