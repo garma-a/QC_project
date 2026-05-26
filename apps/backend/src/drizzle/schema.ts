@@ -105,7 +105,7 @@ export const controlLots = pgTable('control_lots', {
 export const qcResults = pgTable('qc_results', {
   id: serial('id').primaryKey(),
   measuredValue: doublePrecision('measured_value').notNull(),
-  zScore: doublePrecision('z_score').notNull().default(0),             // NEW
+  zScore: doublePrecision('z_score').notNull(),             // NEW
   violatedRule: varchar('violated_rule', { length: 50 }),   // NEW — null = PASS
   testDate: timestamp('test_date').defaultNow(),
   status: statusEnum('status').notNull(),

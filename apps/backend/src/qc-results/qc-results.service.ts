@@ -33,6 +33,12 @@ export class QcResultsService {
       );
     }
 
+    if (!Number.isFinite(lot.mean) || !Number.isFinite(lot.standardDeviation) || lot.standardDeviation <= 0) {
+      throw new BadRequestException(
+        'Control lot has invalid statistical values (mean must be finite and standard deviation must be a positive finite number)',
+      );
+    }
+
     // 1. Compute the current z-score
     const zScore = (createQcResultDto.measuredValue - lot.mean) / lot.standardDeviation;
 

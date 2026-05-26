@@ -91,7 +91,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
 
         return a.date.localeCompare(b.date);
       })
-      .slice(0, 7);
+      .slice(-7);
     
     const firstTest = sortedTests[0];
     const mean = firstTest?.lotMean ?? 0;
