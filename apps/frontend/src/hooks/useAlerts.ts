@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type {
@@ -13,7 +13,7 @@ interface UseAlertsReturn {
   alerts: AlertResponseDto[];
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
   markSeen: (alertId: number) => Promise<UserAlertStatusResponseDto[]>;
   markResolved: (
     alertId: number,
@@ -22,83 +22,70 @@ interface UseAlertsReturn {
 }
 
 export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
-  const [alerts, setAlerts] = useState<AlertResponseDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const token = useAuthStore((s) => s.accessToken);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchAlerts = useCallback(async (background = false) => {
-    if (!background) {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      const data = await clientFetch<AlertResponseDto[]>('/api/v1/alerts', {}, token);
-      setAlerts((prev) => {
-        if (JSON.stringify(prev) === JSON.stringify(data)) {
-          return prev;
-        }
-        return data;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch alerts');
-    } finally {
-      if (!background) {
-        setLoading(false);
-      }
-    }
-  }, [token]);
+  // ── Main query ──────────────────────────────────────────────────────────────
+  // React Query differentiates `isLoading` (first fetch, no cached data) from
+  // `isFetching` (background refetch). This eliminates the loading-flash bug
+  // that the background-flag workaround was solving.
+  // The AbortSignal is forwarded by React Query so in-flight requests are
+  // automatically cancelled on unmount or when a newer request supersedes them.
+  const {
+    data: alerts = [],
+    isLoading,
+    isError,
+    error: rawError,
+    refetch,
+  } = useQuery({
+    queryKey: ['alerts', token],
+    queryFn: async ({ signal }) =>
+      clientFetch<AlertResponseDto[]>('/api/v1/alerts', { signal }, token),
+    // Poll in the background. React Query keeps showing the previous (cached)
+    // data while the background fetch is in progress — no visible flash.
+    refetchInterval: pollIntervalMs && pollIntervalMs > 0 ? pollIntervalMs : false,
+    // Disable the query entirely when there is no auth token
+    enabled: !!token,
+  });
 
-  const markSeen = useCallback(
-    async (alertId: number) => {
-      const updated = await clientFetch<UserAlertStatusResponseDto[]>(
+  // ── markSeen mutation ───────────────────────────────────────────────────────
+  const { mutateAsync: markSeen } = useMutation({
+    mutationFn: (alertId: number) =>
+      clientFetch<UserAlertStatusResponseDto[]>(
         `/api/v1/alerts/mark-seen/${alertId}`,
         { method: 'PATCH' },
         token,
-      );
-      await fetchAlerts(true);
-      return updated;
+      ),
+    // After a successful mutation, invalidate the cache so the list refreshes
+    // with accurate statuses. No manual fetch call needed.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
-    [fetchAlerts, token],
-  );
+  });
 
-  const markResolved = useCallback(
-    async (alertId: number, payload?: ResolveAlertDto) => {
-      const updated = await clientFetch<UserAlertStatusResponseDto[]>(
+  // ── markResolved mutation ───────────────────────────────────────────────────
+  const { mutateAsync: markResolved } = useMutation({
+    mutationFn: ({ alertId, payload }: { alertId: number; payload?: ResolveAlertDto }) =>
+      clientFetch<UserAlertStatusResponseDto[]>(
         `/api/v1/alerts/mark-resolved/${alertId}`,
         {
           method: 'PATCH',
           body: JSON.stringify(payload ?? {}),
         },
         token,
-      );
-      await fetchAlerts(true);
-      return updated;
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
-    [fetchAlerts, token],
-  );
-
-  useEffect(() => {
-    fetchAlerts(false);
-
-    if (pollIntervalMs && pollIntervalMs > 0) {
-      intervalRef.current = setInterval(() => fetchAlerts(true), pollIntervalMs);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [fetchAlerts, pollIntervalMs]);
+  });
 
   return {
     alerts,
-    loading,
-    error,
-    refetch: () => fetchAlerts(false),
+    loading: isLoading,
+    error: isError ? (rawError instanceof Error ? rawError.message : 'Failed to fetch alerts') : null,
+    refetch,
+    // Flatten the tuple signature to match the original hook's interface
     markSeen,
-    markResolved,
+    markResolved: (alertId, payload) => markResolved({ alertId, payload }),
   };
 }

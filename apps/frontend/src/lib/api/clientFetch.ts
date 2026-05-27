@@ -30,10 +30,19 @@ export async function clientFetch<T>(
 
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      // Forward any AbortSignal supplied by React Query / useEffect cleanup
+      signal: options.signal,
+    });
+  } catch (err) {
+    // Re-throw AbortError as-is so React Query can detect and discard it
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    throw err;
+  }
 
   if (!res.ok) {
     let errorMessage = `HTTP ${res.status}`;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { QcResultsWithLotResponseDto } from '@/lib/types/api';
@@ -9,40 +9,44 @@ interface UseQcResultsReturn {
   data: QcResultsWithLotResponseDto | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 /**
  * Fetch all QC results for a specific control lot.
  * Returns the lot summary + array of results (for Levey-Jennings chart).
+ *
+ * The lotId is included in the query key, so React Query maintains a
+ * separate cache entry per lot. When the user switches lots rapidly,
+ * in-flight requests for the previous lot are automatically cancelled via
+ * AbortSignal — the most critical race condition in the app.
  */
 export function useQcResults(lotId: number | null): UseQcResultsReturn {
-  const [data, setData] = useState<QcResultsWithLotResponseDto | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const token = useAuthStore((s) => s.accessToken);
 
-  const fetchResults = useCallback(async () => {
-    if (lotId === null) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await clientFetch<QcResultsWithLotResponseDto>(
+  const {
+    data = null,
+    isLoading,
+    isError,
+    error: rawError,
+    refetch,
+  } = useQuery({
+    queryKey: ['qc-results', lotId, token],
+    queryFn: ({ signal }) =>
+      clientFetch<QcResultsWithLotResponseDto>(
         `/api/v1/qc-results?lotId=${lotId}`,
-        {},
+        { signal },
         token,
-      );
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch QC results');
-    } finally {
-      setLoading(false);
-    }
-  }, [lotId, token]);
+      ),
+    // Do not fire the request at all when no lot is selected.
+    // This also resets the loading/error states cleanly.
+    enabled: lotId !== null && !!token,
+  });
 
-  useEffect(() => {
-    fetchResults();
-  }, [fetchResults]);
-
-  return { data, loading, error, refetch: fetchResults };
+  return {
+    data,
+    loading: isLoading,
+    error: isError ? (rawError instanceof Error ? rawError.message : 'Failed to fetch QC results') : null,
+    refetch,
+  };
 }
