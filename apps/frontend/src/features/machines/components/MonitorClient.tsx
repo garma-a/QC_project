@@ -143,7 +143,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium cursor-pointer"
           >
             <ArrowLeft size={20} />
             <span className="hidden sm:inline">Back</span>
@@ -158,20 +158,20 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       <div className="flex gap-2 sm:gap-4 mb-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30">
         <button
           onClick={() => setUrlParams({ tab: 'overview' })}
-          className={`pb-3 px-4 transition-all font-medium ${
+          className={`pb-3 px-4 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'overview'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
-              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855]'
+              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           Overview
         </button>
         <button
           onClick={() => setUrlParams({ tab: 'charts' })}
-          className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium ${
+          className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'charts'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
-              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855]'
+              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           <BarChart3 size={18} />
