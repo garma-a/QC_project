@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CartesianGrid,
   Cell,
@@ -165,8 +166,17 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
     return Array.from(uniqueByLot.values());
   }, [machine, qcHistory]);
 
-  const [selectedTestId, setSelectedTestId] = useState<string>(availableTests[0]?.id ?? '');
-  const activeTest = availableTests.find((test) => test.id === selectedTestId) ?? availableTests[0];
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlTestId = searchParams.get('testId');
+
+  const activeTest = availableTests.find((test) => test.id === urlTestId) ?? availableTests[0];
+
+  const handleTestChange = (newTestId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('testId', newTestId);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
 
   const qcData = useMemo(() => {
     if (!activeTest) return [];
@@ -262,7 +272,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
           <select
             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
             value={activeTest?.id ?? ''}
-            onChange={(e) => setSelectedTestId(e.target.value)}
+            onChange={(e) => handleTestChange(e.target.value)}
             disabled={availableTests.length === 0}
           >
             {availableTests.map((test) => (

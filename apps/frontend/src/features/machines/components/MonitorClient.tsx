@@ -38,26 +38,23 @@ type MonitorClientProps = {
 };
 
 export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'charts'>('overview');
-  const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const machineIdFromUrl = searchParams.get('machineId');
-    if (!machineIdFromUrl) {
-      return;
-    }
+  const selectedMachineId = searchParams.get('machineId');
+  const activeTab = (searchParams.get('tab') as 'overview' | 'charts') || 'overview';
 
-    const machineExists = machines.some((m) => m.id.toString() === machineIdFromUrl);
-    if (machineExists) {
-      const frameId = window.requestAnimationFrame(() => {
-        setSelectedMachineId(machineIdFromUrl);
-      });
-
-      return () => window.cancelAnimationFrame(frameId);
+  const setUrlParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
     }
-  }, [searchParams, machines]);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
 
   const machine = machines.find(m => m.id.toString() === selectedMachineId);
   const history = selectedMachineId
@@ -94,7 +91,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
                     <div
                       key={machine.id}
                       className="group bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 hover:shadow-2xl hover:shadow-[#c41e3a]/20 dark:hover:shadow-[#e84855]/30 transition-all cursor-pointer hover:border-[#c41e3a] dark:hover:border-[#e84855] hover:-translate-y-1 myc-pattern relative"
-                      onClick={() => setSelectedMachineId(machine.id.toString())}
+                      onClick={() => setUrlParams({ machineId: machine.id.toString(), tab: null, testId: null })}
                     >
                       {/* Corner accent */}
                       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
@@ -145,7 +142,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => router.push('/dashboard')} 
+            onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium"
           >
             <ArrowLeft size={20} />
@@ -160,7 +157,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       {/* Tabs */}
       <div className="flex gap-2 sm:gap-4 mb-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30">
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => setUrlParams({ tab: 'overview' })}
           className={`pb-3 px-4 transition-all font-medium ${
             activeTab === 'overview'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
@@ -170,7 +167,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
           Overview
         </button>
         <button
-          onClick={() => setActiveTab('charts')}
+          onClick={() => setUrlParams({ tab: 'charts' })}
           className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium ${
             activeTab === 'charts'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
