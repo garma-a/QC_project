@@ -1,3 +1,4 @@
+ qc-tests
 "use client"
 
 import * as React from "react"
@@ -50,11 +51,31 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
       {...props}
     />
   )
+
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+function Table({ className, ...props }: React.ComponentProps<"table">) {
+  return (
+    <div className="relative w-full overflow-x-auto">
+      <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    </div>
+  );
+}
+
+function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+  return <thead className={cn("[&_tr]:border-b", className)} {...props} />;
+}
+
+function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
+  return <tbody className={cn("[&_tr:last-child]:border-0", className)} {...props} />;
+main
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
+ qc-tests
       data-slot="table-row"
       className={cn(
         "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
@@ -63,11 +84,18 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
       {...props}
     />
   )
+
+      className={cn("border-b transition-colors hover:bg-muted/50", className)}
+      {...props}
+    />
+  );
+ main
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
+ qc-tests
       data-slot="table-head"
       className={cn(
         "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
@@ -114,3 +142,19 @@ export {
   TableCell,
   TableCaption,
 }
+
+      className={cn(
+        "h-10 px-4 text-left align-middle font-medium text-muted-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+  return <td className={cn("p-4 align-middle", className)} {...props} />;
+}
+
+export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell };
+ main
