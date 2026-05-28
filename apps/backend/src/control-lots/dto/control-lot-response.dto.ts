@@ -69,6 +69,18 @@ export class ControlLotResponseDto {
     description: 'Creation timestamp',
   })
   createdAt: Date;
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Number of days since creation',
+  })
+  daysActive?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether the lot is older than 10 days and needs checking',
+  })
+  needsChecking?: boolean;
 }
 
 export class ControlLotDeactivateResponseDto {
