@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 @Injectable()
 export class ControlLotsRepository {
@@ -15,12 +15,27 @@ export class ControlLotsRepository {
     return test;
   }
 
-  async create(data: typeof controlLots.$inferInsert) {
-    const [newLot] = await this.databaseService.db
-      .insert(controlLots)
-      .values(data)
-      .returning();
-    return newLot;
+  async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
+    return await this.databaseService.db.transaction(async (tx) => {
+      // 1. Deactivate existing active lots for this test
+      await tx
+        .update(controlLots)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(controlLots.testId, testId),
+            eq(controlLots.isActive, true)
+          )
+        );
+
+      // 2. Create the new lot
+      const [newLot] = await tx
+        .insert(controlLots)
+        .values(data)
+        .returning();
+
+      return newLot;
+    });
   }
 
   async findAll() {

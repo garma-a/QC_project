@@ -166,6 +166,8 @@ export interface ControlLotResponseDto {
   lowerWarningLimit?: number | null;
   isActive: boolean;
   createdAt: string;
+  daysActive?: number;
+  needsChecking?: boolean;
 }
 
 export interface CreateControlLotDto {
