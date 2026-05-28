@@ -1,8 +1,8 @@
 /**
  * How many prior z-scores to fetch from the DB before evaluating rules.
- * The 10ₓ rule needs 10 consecutive points total → 1 current + 9 history.
+ * The 12ₓ rule needs 12 consecutive points total → 1 current + 11 history.
  */
-export const WESTGARD_HISTORY_SIZE = 9;
+export const WESTGARD_HISTORY_SIZE = 11;
 
 export type QcStatus = 'PASS' | 'WARNING' | 'FAIL';
 
@@ -52,7 +52,30 @@ export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
         }
     }
 
-    // 4₁s — four consecutive on same side, all > ±1 SD → systematic drift
+    // 2 of 3_2s — 2 out of 3 consecutive points > ±2 SD on the same side
+    if (zScores.length >= 3) {
+        const last3 = zScores.slice(0, 3);
+        const countPlus2 = last3.filter(z => z >= 2).length;
+        const countMinus2 = last3.filter(z => z <= -2).length;
+        if (countPlus2 >= 2 || countMinus2 >= 2) {
+            return {
+                status: 'FAIL',
+                violatedRule: '2of3_2s',
+                suggestedSolution: '2 out of 3 points exceeded 2 SD on the same side. Systematic bias.',
+            };
+        }
+        
+        // 3_1s — 3 consecutive points > ±1 SD on the same side
+        if (last3.every(z => z >= 1) || last3.every(z => z <= -1)) {
+            return {
+                status: 'FAIL',
+                violatedRule: '3_1s',
+                suggestedSolution: '3 consecutive points exceeded 1 SD. Shift in the mean.',
+            };
+        }
+    }
+
+    // 4₁s — four consecutive on same side, all > ±1 SD
     if (zScores.length >= 4) {
         const last4 = zScores.slice(0, 4);
         if (last4.every(z => z >= 1) || last4.every(z => z <= -1)) {
@@ -64,15 +87,45 @@ export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
         }
     }
 
-    // 10ₓ — ten consecutive on same side of mean → long-term systematic error
-    if (zScores.length >= 10) {
-        const last10 = zScores.slice(0, 10);
-        if (last10.every(z => z > 0) || last10.every(z => z < 0)) {
+    // 7_T (Trend Rule) — 7 consecutive points trending in the same direction
+    if (zScores.length >= 7) {
+        const last7 = zScores.slice(0, 7);
+        let trendingUp = true;
+        let trendingDown = true;
+        // zScores are newest-first: zScores[0] is newest.
+        // Trending up means zScores[0] > zScores[1] > zScores[2] ...
+        for (let i = 0; i < 6; i++) {
+            if (last7[i] <= last7[i+1]) trendingUp = false;
+            if (last7[i] >= last7[i+1]) trendingDown = false;
+        }
+        if (trendingUp || trendingDown) {
             return {
                 status: 'FAIL',
-                violatedRule: '10_x',
-                suggestedSolution: 'Long-term systematic shift. Recalibrate and review reagent lot performance over past days.',
+                violatedRule: '7_T',
+                suggestedSolution: 'Systematic drift detected (7 points trending). Inspect reagent aging or instrument drift.',
             };
+        }
+    }
+
+    // X consecutive points on same side of mean (12_x, 10_x, 9_x, 8_x, 6_x)
+    const shiftRules = [
+        { count: 12, rule: '12_x' },
+        { count: 10, rule: '10_x' },
+        { count: 9, rule: '9_x' },
+        { count: 8, rule: '8_x' },
+        { count: 6, rule: '6_x' }
+    ];
+
+    for (const { count, rule } of shiftRules) {
+        if (zScores.length >= count) {
+            const lastX = zScores.slice(0, count);
+            if (lastX.every(z => z > 0) || lastX.every(z => z < 0)) {
+                return {
+                    status: 'FAIL',
+                    violatedRule: rule,
+                    suggestedSolution: `Long-term systematic shift (${count} points). Recalibrate and review reagent lot performance.`,
+                };
+            }
         }
     }
 

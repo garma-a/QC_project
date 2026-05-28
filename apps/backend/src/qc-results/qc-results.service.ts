@@ -36,7 +36,7 @@ export class QcResultsService {
     // 1. Compute the current z-score
     const zScore = (createQcResultDto.measuredValue - lot.mean) / lot.standardDeviation;
 
-    // 2. Fetch the last WESTGARD_HISTORY_SIZE (9) z-scores, newest-first
+    // 2. Fetch the last WESTGARD_HISTORY_SIZE z-scores, newest-first
     const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
       createQcResultDto.lotId,
       WESTGARD_HISTORY_SIZE,
