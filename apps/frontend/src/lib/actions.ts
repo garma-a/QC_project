@@ -277,6 +277,7 @@ export async function createControlLot(payload: CreateControlLotDto) {
       payload,
     );
     revalidatePath('/qc');
+    revalidatePath('/control-lots');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {

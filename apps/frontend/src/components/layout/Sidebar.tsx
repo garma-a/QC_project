@@ -11,9 +11,13 @@ import {
   LogOut,
   Heart,
   AlertCircle,
+ fontend-0
   Server,
   FlaskConical,
   TestTube,
+
+  Package,
+ main
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,6 +47,7 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
     { href: "/machines", label: "Machines", icon: Server },
     { href: "/control-lots", label: "Control Lots", icon: FlaskConical },
     { href: "/alerts", label: "Alerts", icon: AlertCircle },
+    { href: "/control-lots", label: "Control Lots", icon: Package },
   ];
 
   // Add User Management for admins only
