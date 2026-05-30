@@ -78,8 +78,7 @@ export function QCHistoryInteractive({
         >
           <Plus size={20} />
           <span className="hidden sm:inline">Log Daily QC Result</span>
-          <span className="sm:hidden">New Test</span>
-        </button>
+          <span className="sm:hidden">Log QC</span>
       </div>
 
       {/* Decorative line */}
