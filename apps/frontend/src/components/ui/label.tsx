@@ -1,3 +1,4 @@
+ some_ui_fixes
 'use client';
 
 import * as React from 'react';
@@ -11,11 +12,28 @@ function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimiti
       data-slot="label"
       className={cn(
         'flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+const Label = React.forwardRef<HTMLLabelElement, React.ComponentProps<"label">>(
+  ({ className, ...props }, ref) => (
+    <label
+      ref={ref}
+      className={cn(
+        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+ main
         className,
       )}
       {...props}
     />
+ some_ui_fixes
   );
 }
+
+  ),
+);
+Label.displayName = "Label";
+ main
 
 export { Label };

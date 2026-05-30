@@ -11,9 +11,13 @@ import {
   LogOut,
   Heart,
   AlertCircle,
+ some_ui_fixes
   Database,
   TestTube,
   Server,
+
+  Package,
+ main
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,6 +47,7 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
     { href: "/control-lots", label: "Control Lots", icon: Database },
     { href: "/machines", label: "Machines", icon: Server },
     { href: "/alerts", label: "Alerts", icon: AlertCircle },
+    { href: "/control-lots", label: "Control Lots", icon: Package },
   ];
 
   // Add User Management for admins only

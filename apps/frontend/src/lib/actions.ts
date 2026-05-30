@@ -279,8 +279,12 @@ export async function createControlLot(payload: CreateControlLotDto) {
     );
     revalidatePath('/control-lots');
     revalidatePath('/qc');
+ some_ui_fixes
     revalidatePath('/monitor');
     revalidatePath('/machines');
+
+    revalidatePath('/control-lots');
+ main
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
