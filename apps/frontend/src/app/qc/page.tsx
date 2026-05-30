@@ -28,6 +28,13 @@ export default async function QCPage() {
   let machines: MachineType[] = [];
   let categories: CategoryType[] = [];
   let qcHistory: QcHistoryType[] = [];
+  let mappedLots: {
+    lotId: number;
+    lotNumber: string;
+    testName: string;
+    machineId: number;
+    machineName: string;
+  }[] = [];
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return 'N/A N/A';
@@ -87,6 +94,17 @@ export default async function QCPage() {
         })
         .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
 
+      mappedLots = lotsWithContext.map(ctx => {
+        const machine = machines.find(m => m.id === ctx.machineId.toString());
+        return {
+          lotId: ctx.lot.id,
+          lotNumber: ctx.lot.lotNumber,
+          testName: ctx.test.testName,
+          machineId: ctx.machineId,
+          machineName: machine?.name ?? `Machine #${ctx.machineId}`,
+        };
+      });
+
       const lotResults = await Promise.all(
         lotsWithContext.map(async (ctx) => {
           try {
@@ -140,7 +158,8 @@ export default async function QCPage() {
       <QCHistoryInteractive 
         qcHistory={qcHistory} 
         machines={machines} 
-        categories={categories} 
+        categories={categories}
+        lots={mappedLots}
       />
     </div>
   );
