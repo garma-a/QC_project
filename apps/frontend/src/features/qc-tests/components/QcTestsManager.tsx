@@ -1,7 +1,6 @@
 'use client';
 
 import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
-import { CreateQcTestDialog } from './CreateQcTestDialog';
 import { QcTestsTable } from './QcTestsTable';
 
 interface QcTestsManagerProps {
