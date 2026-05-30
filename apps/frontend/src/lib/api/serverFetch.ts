@@ -73,7 +73,7 @@ export async function serverFetch<T>(
       // Could not parse error body
     }
 
-    if (res.status === 401) {
+    if (res.status === 401 && token) {
       redirect('/login');
     }
 
