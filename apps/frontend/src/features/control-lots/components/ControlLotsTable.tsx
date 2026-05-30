@@ -36,6 +36,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
   const [isMounted, setIsMounted] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lotToDeactivate, setLotToDeactivate] = useState<ControlLotResponseDto | null>(null);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Filter state
@@ -117,6 +118,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
 
   const handleDeactivateClick = (lot: ControlLotResponseDto) => {
     setLotToDeactivate(lot);
+    setDeactivateError(null);
     setDeleteConfirmOpen(true);
   };
 
@@ -125,9 +127,12 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
 
     startTransition(async () => {
       const result = await deactivateControlLot(lotToDeactivate.id);
-      if (!result?.error) {
+      if (result?.error) {
+        setDeactivateError(result.error);
+      } else {
         setDeleteConfirmOpen(false);
         setLotToDeactivate(null);
+        setDeactivateError(null);
       }
     });
   };
@@ -164,9 +169,18 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
     });
   }, [initialLots, search, statusFilter, expiringOnly]);
 
-  const expiredLotsCount = initialLots.filter(
-    (lot) => lot.isActive && calculateDaysActive(lot.createdAt) > 10
-  ).length;
+  const expiredLotsCount = initialLots.filter((lot) => {
+    if (!lot.isActive || !lot.expirationDate) return false;
+    try {
+      const expiry = new Date(lot.expirationDate);
+      expiry.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return expiry < today;
+    } catch {
+      return false;
+    }
+  }).length;
 
   return (
     <>
@@ -230,7 +244,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
         <div className="text-sm">
           <p className="font-semibold leading-none mb-1">Notice</p>
           <p className="text-amber-800 dark:text-amber-300">
-            Creating a new lot for a test automatically deactivates the previous one.
+            You will be prompted to deactivate the previous lot when creating a new one.
           </p>
         </div>
       </div>
@@ -238,7 +252,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
       {expiredLotsCount > 0 && (
         <div className="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-500/50 text-amber-700 dark:text-amber-400 p-4 rounded-xl mb-6 flex items-center gap-3 font-medium">
           <AlertTriangle className="h-5 w-5" />
-          <span>{expiredLotsCount} active {expiredLotsCount === 1 ? 'lot is' : 'lots are'} older than 10 days and require review or replacement.</span>
+          <span>{expiredLotsCount} active {expiredLotsCount === 1 ? 'lot has' : 'lots have'} passed their expiration date and require review or replacement.</span>
         </div>
       )}
 
@@ -325,7 +339,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
       </div>
 
       {/* Deactivate Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => { setDeleteConfirmOpen(open); if (!open) setDeactivateError(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate Control Lot</AlertDialogTitle>
@@ -334,6 +348,11 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
               reversed by editing the lot.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deactivateError && (
+            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+              {deactivateError}
+            </p>
+          )}
           <div className="flex gap-2 justify-end">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction

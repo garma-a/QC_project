@@ -77,7 +77,7 @@ export function QCHistoryInteractive({
           className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
         >
           <Plus size={20} />
-          <span className="hidden sm:inline">Log Daily QC Result</span>
+          <span className="hidden sm:inline">Create New QC Test</span>
           <span className="sm:hidden">New Test</span>
         </button>
       </div>

@@ -163,6 +163,7 @@ export async function updateUser(userId: number, payload: AdminUpdateUserDto) {
 export async function createMachine(payload: CreateMachineDto) {
   try {
     await api.post<MachineResponseDto>('/api/v1/machines', payload);
+    revalidatePath('/machines');
     revalidatePath('/dashboard');
     revalidatePath('/monitor');
     return { success: true };

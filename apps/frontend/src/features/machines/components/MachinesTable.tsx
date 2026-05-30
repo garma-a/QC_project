@@ -35,6 +35,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
   const [isMounted, setIsMounted] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [machineToDelete, setMachineToDelete] = useState<MachineResponseDto | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -78,17 +79,21 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
 
   const handleDeleteClick = (machine: MachineResponseDto) => {
     setMachineToDelete(machine);
+    setDeleteError(null);
     setDeleteConfirmOpen(true);
   };
 
   const confirmDelete = () => {
     if (!machineToDelete) return;
-    
+
     startTransition(async () => {
       const result = await deleteMachine(machineToDelete.id);
-      if (!result?.error) {
+      if (result?.error) {
+        setDeleteError(result.error);
+      } else {
         setDeleteConfirmOpen(false);
         setMachineToDelete(null);
+        setDeleteError(null);
       }
     });
   };
@@ -152,7 +157,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => { setDeleteConfirmOpen(open); if (!open) setDeleteError(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Machine</AlertDialogTitle>
@@ -160,6 +165,11 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
               Are you sure you want to delete &quot;{machineToDelete?.name}&quot;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+              {deleteError}
+            </p>
+          )}
           <div className="flex gap-2 justify-end">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
