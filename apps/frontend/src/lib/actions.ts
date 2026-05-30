@@ -254,7 +254,7 @@ export async function submitQcResult(payload: CreateQcResultDto) {
   }
 }
 
-export async function updateQcResult(resultId: number, payload: { comments?: string }) {
+export async function updateQcResult(resultId: number, payload: UpdateQcResultDto) {
   try {
     await api.patch(`/api/v1/qc-results/${resultId}`, payload);
     revalidatePath('/qc');
