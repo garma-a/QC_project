@@ -184,7 +184,6 @@ export interface CreateControlLotDto {
 }
 
 export interface UpdateControlLotDto {
-  lotNumber?: string;
   expirationDate?: string;
   targetValue?: number;
   mean?: number;
