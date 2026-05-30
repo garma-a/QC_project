@@ -180,16 +180,16 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
     setNoteError(null);
   };
 
-  const saveNote = (qcId: string) => {
+  const saveNote = async (qcId: string) => {
     setNoteError(null);
 
-    startNoteTransition(async () => {
-      const result = await updateQcResult(Number(qcId), { comments: draftNote });
-      if (result?.error) {
-        setNoteError(result.error);
-        return;
-      }
+    const result = await updateQcResult(Number(qcId), { comments: draftNote });
+    if (result?.error) {
+      setNoteError(result.error);
+      return;
+    }
 
+    startNoteTransition(() => {
       setLocalNotes((current) => ({
         ...current,
         [qcId]: draftNote,
