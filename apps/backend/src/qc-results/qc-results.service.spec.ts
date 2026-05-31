@@ -67,10 +67,13 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with PASS status when z-score is within 2 SD', async () => {
+      // Arrange
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('PASS'));
 
+      // Act
       const result = await service.create(buildDto(14.5), userId);
 
+      // Assert
       expect(result.results[0].status).toBe('PASS');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -80,10 +83,13 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with WARNING status (1_2s) when z-score exceeds 2 SD', async () => {
+      // Arrange
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('WARNING'));
 
+      // Act
       const result = await service.create(buildDto(15.2), userId);
 
+      // Assert
       expect(result.results[0].status).toBe('WARNING');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -93,10 +99,13 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with FAIL status (1_3s) when z-score exceeds 3 SD', async () => {
+      // Arrange
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
+      // Act
       const result = await service.create(buildDto(16.0), userId); // z-score = +4.0
 
+      // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -106,11 +115,14 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
+      // Arrange
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]);
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
+      // Act
       const result = await service.create(buildDto(15.1), userId);
 
+      // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -119,11 +131,14 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with FAIL status (3_1s) when three consecutive z-scores exceed 1 SD', async () => {
+      // Arrange
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.3, 1.4]);
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
+      // Act
       const result = await service.create(buildDto(14.6), userId); // z-score = +1.2
 
+      // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -132,11 +147,14 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with FAIL status (7_T) when 7 consecutive z-scores trend upwards', async () => {
+      // Arrange
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
+      // Act
       const result = await service.create(buildDto(14.35), userId); // z-score = +0.7
 
+      // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -145,11 +163,14 @@ describe('QcResultsService', () => {
     });
 
     it('should create a QC run with FAIL status (6_x) when 6 consecutive z-scores fall on the same side', async () => {
+      // Arrange
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.5, 0.3, 0.6, 0.2, 0.8]);
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
+      // Act
       const result = await service.create(buildDto(14.2), userId); // z-score = +0.4
 
+      // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
         machineId, userId,
@@ -158,14 +179,18 @@ describe('QcResultsService', () => {
     });
 
     it('should throw NotFoundException when control lot does not exist', async () => {
+      // Arrange
       mockRepository.getLotById.mockResolvedValue(undefined);
 
+      // Act & Assert
       await expect(service.create(buildDto(14.5, 999), userId)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when lot is missing statistical values', async () => {
+      // Arrange
       mockRepository.getLotById.mockResolvedValue({ id: 1, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
 
+      // Act & Assert
       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(
         'is missing required statistical values',
@@ -175,6 +200,7 @@ describe('QcResultsService', () => {
 
   describe('findAll', () => {
     it('should return lot information with test and machine names', async () => {
+      // Arrange
       const lot = {
         id: 1,
         lotNumber: 'LOT-HGB-2026',
@@ -193,22 +219,27 @@ describe('QcResultsService', () => {
       });
       mockRepository.getResultsByLotId.mockResolvedValue([]);
 
+      // Act
       const result = await service.findAll(1);
 
+      // Assert
       expect(result.lot.testName).toBe('Hemoglobin');
       expect(result.lot.machineName).toBe('Sysmex XN-1000');
       expect(result.lot.mean).toBe(14.0);
     });
 
     it('should throw NotFoundException when lot does not exist', async () => {
+      // Arrange
       mockRepository.getLotById.mockResolvedValue(undefined);
 
+      // Act & Assert
       await expect(service.findAll(999)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findOne', () => {
     it('should return QC result with stored z-score and violatedRule', async () => {
+      // Arrange
       mockRepository.getResultAndLotByResultId.mockResolvedValue({
         qc_results: { 
           id: 1, 
@@ -220,31 +251,38 @@ describe('QcResultsService', () => {
         control_lots: { mean: 14.0, standardDeviation: 0.5 },
       });
 
+      // Act
       const result = await service.findOne(1);
 
+      // Assert
       expect(result.zScore).toBe(2.0);
       expect(result.violatedRule).toBe('1_2s');
     });
 
     it('should throw NotFoundException when QC result does not exist', async () => {
+      // Arrange
       mockRepository.getResultAndLotByResultId.mockResolvedValue(undefined);
 
+      // Act & Assert
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
       await expect(service.findOne(999)).rejects.toThrow('QC Result not found');
     });
 
     it('should throw BadRequestException when associated lot is missing stats', async () => {
+      // Arrange
       mockRepository.getResultAndLotByResultId.mockResolvedValue({
         qc_results: { id: 1, measuredValue: 15.0 },
         control_lots: { mean: null, standardDeviation: null },
       });
 
+      // Act & Assert
       await expect(service.findOne(1)).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('update', () => {
     it('should update comments and return the full result', async () => {
+      // Arrange
       const updateDto = { comments: 'Recalibration performed' };
       mockRepository.updateQcResult.mockResolvedValue({
         id: 1,
@@ -260,14 +298,18 @@ describe('QcResultsService', () => {
         zScore: 1,
       } as any);
 
+      // Act
       const result = await service.update(1, updateDto);
 
+      // Assert
       expect(result.zScore).toBe(1);
     });
 
     it('should throw NotFoundException when QC result does not exist', async () => {
+      // Arrange
       mockRepository.updateQcResult.mockResolvedValue(undefined);
 
+      // Act & Assert
       await expect(service.update(999, { comments: 'test' })).rejects.toThrow(
         NotFoundException,
       );
