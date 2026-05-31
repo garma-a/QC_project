@@ -25,7 +25,7 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
   const token = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
-  // ── Main query ──────────────────────────────────────────────────────────────
+  // ── Main query ─────────────────────────────────────────────────────────────
   // React Query differentiates `isLoading` (first fetch, no cached data) from
   // `isFetching` (background refetch). This eliminates the loading-flash bug
   // that the background-flag workaround was solving.
@@ -48,7 +48,7 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     enabled: !!token,
   });
 
-  // ── markSeen mutation ───────────────────────────────────────────────────────
+  // ── markSeen mutation ──────────────────────────────────────────────────────
   const { mutateAsync: markSeen } = useMutation({
     mutationFn: (alertId: number) =>
       clientFetch<UserAlertStatusResponseDto[]>(
@@ -63,7 +63,7 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     },
   });
 
-  // ── markResolved mutation ───────────────────────────────────────────────────
+  // ── markResolved mutation ──────────────────────────────────────────────────
   const { mutateAsync: markResolved } = useMutation({
     mutationFn: ({ alertId, payload }: { alertId: number; payload?: ResolveAlertDto }) =>
       clientFetch<UserAlertStatusResponseDto[]>(
