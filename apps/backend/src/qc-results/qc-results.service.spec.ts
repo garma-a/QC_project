@@ -178,6 +178,44 @@ describe('QcResultsService', () => {
       );
     });
 
+    it('should process a multi-lot run (Level 1 and Level 2) simultaneously', async () => {
+      // Arrange
+      const multiLotDto = {
+        machineId: 9,
+        results: [
+          { lotId: 1, measuredValue: 14.5, comments: 'Level 1' }, // z-score = +1.0 (PASS)
+          { lotId: 2, measuredValue: 15.2, comments: 'Level 2' }, // z-score = +2.4 (WARNING)
+        ],
+      };
+      mockRepository.getLotById.mockImplementation((id: number) => {
+        if (id === 1) return Promise.resolve({ id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+        if (id === 2) return Promise.resolve({ id: 2, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+      });
+      mockRepository.createQcRun.mockResolvedValue({
+        run: { id: 100, machineId: 9, performedBy: userId, runDate: new Date() },
+        results: [
+          { id: 1, status: 'PASS', zScore: 1.0, violatedRule: null, lotId: 1 },
+          { id: 2, status: 'WARNING', zScore: 2.4, violatedRule: '1_2s', lotId: 2 },
+        ],
+      });
+
+      // Act
+      const result = await service.create(multiLotDto, userId);
+
+      // Assert
+      expect(result.results).toHaveLength(2);
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        9,
+        userId,
+        expect.arrayContaining([
+          expect.objectContaining({ lotId: 1, status: 'PASS' }),
+          expect.objectContaining({ lotId: 2, status: 'WARNING', violatedRule: '1_2s' }),
+        ]),
+      );
+      // Verify alert was fired only for the WARNING result (Level 2), not the PASS (Level 1)
+      expect(mockAlertsService.createForUsers).toHaveBeenCalledTimes(1);
+    });
+
     it('should throw NotFoundException when control lot does not exist', async () => {
       // Arrange
       mockRepository.getLotById.mockResolvedValue(undefined);
