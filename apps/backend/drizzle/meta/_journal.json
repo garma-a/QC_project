@@ -8,6 +8,13 @@
       "when": 1779517669932,
       "tag": "0000_glorious_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780213921141,
+      "tag": "0001_typical_catseye",
+      "breakpoints": true
     }
   ]
 }
