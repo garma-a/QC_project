@@ -35,6 +35,7 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
       lotId: number;
       level: number;
       lotNumber: string;
+      isActive: boolean;
       mean: number;
       standardDeviation: number;
     }[];
@@ -137,6 +138,7 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
               lotNumber: ctx.lot.lotNumber,
               mean: ctx.lot.mean ?? 0,
               standardDeviation: ctx.lot.standardDeviation ?? 0,
+              isActive: ctx.lot.isActive ?? true,
             }));
           } else {
             return [{
@@ -152,6 +154,7 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
               lotNumber: 'No Lot',
               mean: 0,
               standardDeviation: 1,
+              isActive: true,
             }];
           }
         });

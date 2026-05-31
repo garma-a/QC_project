@@ -32,6 +32,7 @@ type MonitorClientProps = {
       lotId: number;
       level: number;
       lotNumber: string;
+      isActive: boolean;
       mean: number;
       standardDeviation: number;
     }[];

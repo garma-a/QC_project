@@ -48,6 +48,7 @@ type MachineForCharts = MachineResponseDto & {
     lotId: number;
     level: number;
     lotNumber: string;
+    isActive: boolean;
     mean: number;
     standardDeviation: number;
   }[];
@@ -61,6 +62,7 @@ type TestOption = {
     lotId: number;
     level: number;
     lotNumber: string;
+    isActive: boolean;
     mean: number;
     standardDeviation: number;
   }[];
@@ -157,6 +159,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             lotId: t.lotId,
             level: t.level ?? 1,
             lotNumber: t.lotNumber,
+            isActive: t.isActive,
             mean: t.mean,
             standardDeviation: t.standardDeviation,
           });
@@ -179,6 +182,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             lotId: result.lotId,
             level: result.level ?? 1,
             lotNumber: result.lotNumber,
+            isActive: false,
             mean: 0,
             standardDeviation: 1,
           });
@@ -200,16 +204,24 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
   const activeTest = availableTests.find((test) => test.testId === urlTestId) ?? availableTests[0];
 
-  const [activeLevel, setActiveLevel] = useState<number>(1);
+  const [activeLotId, setActiveLotId] = useState<number | null>(null);
+  const [showInactiveLots, setShowInactiveLots] = useState(false);
 
-  // Sync activeLevel when activeTest changes
+  const visibleLots = useMemo(() => {
+    if (!activeTest) return [];
+    return activeTest.lots.filter(l => showInactiveLots || l.isActive);
+  }, [activeTest, showInactiveLots]);
+
+  // Sync activeLotId when activeTest or visibleLots changes
   useEffect(() => {
-    if (activeTest && activeTest.lots.length > 0) {
-      if (!activeTest.lots.find((l) => l.level === activeLevel)) {
-        setActiveLevel(activeTest.lots[0].level);
+    if (visibleLots.length > 0) {
+      if (!visibleLots.find((l) => l.lotId === activeLotId)) {
+        setActiveLotId(visibleLots[0].lotId);
       }
+    } else {
+      setActiveLotId(null);
     }
-  }, [activeTest, activeLevel]);
+  }, [visibleLots, activeLotId]);
 
   const handleTestChange = (newTestId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -218,11 +230,12 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
     const test = availableTests.find(t => t.testId === newTestId);
     if (test && test.lots.length > 0) {
-      setActiveLevel(test.lots[0].level);
+      const activeLots = test.lots.filter(l => showInactiveLots || l.isActive);
+      setActiveLotId(activeLots.length > 0 ? activeLots[0].lotId : test.lots[0].lotId);
     }
   };
 
-  const activeLot = activeTest?.lots.find(l => l.level === activeLevel) ?? activeTest?.lots[0];
+  const activeLot = activeTest?.lots.find(l => l.lotId === activeLotId) ?? visibleLots[0] ?? activeTest?.lots[0];
 
   const qcData = useMemo(() => {
     if (!activeLot) return [];
@@ -327,24 +340,41 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         </div>
       </div>
 
-      {/* Level Tabs (only show if test has multiple lots) */}
-      {activeTest && activeTest.lots.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {activeTest.lots.map((lot) => {
-            const isActive = lot.level === activeLevel;
+      {/* Level Tabs */}
+      {visibleLots.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6 relative z-10">
+          {visibleLots.map((lot) => {
+            const isActive = activeLotId === lot.lotId;
             return (
               <button
                 key={lot.lotId}
-                onClick={() => setActiveLevel(lot.level)}
-                className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 border-2 ${isActive
+                onClick={() => setActiveLotId(lot.lotId)}
+                className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-200 border-2 ${
+                  isActive
                     ? 'bg-[#b8860b] dark:bg-[#ffd700] text-white border-transparent shadow-md'
                     : 'bg-transparent border-[#b8860b] dark:border-[#ffd700] text-[#b8860b] dark:text-[#ffd700] hover:bg-[#b8860b]/10 dark:hover:bg-[#ffd700]/10'
-                  }`}
+                }`}
               >
-                Level {lot.level} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
+                Level {lot.level} {!lot.isActive && "(Inactive)"} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Show Inactive Toggle (only if there are inactive lots) */}
+      {activeTest?.lots.some(l => !l.isActive) && (
+        <div className="flex items-center gap-2 mb-6">
+          <input
+            type="checkbox"
+            id="showInactiveLots"
+            checked={showInactiveLots}
+            onChange={(e) => setShowInactiveLots(e.target.checked)}
+            className="rounded text-[#c41e3a] focus:ring-[#c41e3a]"
+          />
+          <label htmlFor="showInactiveLots" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+            Show Historical / Inactive Lots
+          </label>
         </div>
       )}
 
