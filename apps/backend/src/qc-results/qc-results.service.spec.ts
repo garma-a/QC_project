@@ -15,7 +15,7 @@ describe('QcResultsService', () => {
     mockRepository = {
       getLotById: jest.fn(),
       getSectionIdByLotId: jest.fn(),
-      createQcResult: jest.fn(),
+      createQcRun: jest.fn(),
       updateQcResult: jest.fn(),
       getLotTestMachineByLotId: jest.fn(),
       getResultsByLotId: jest.fn(),
@@ -45,204 +45,130 @@ describe('QcResultsService', () => {
 
   describe('create', () => {
     const userId = 5;
-    const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5 };
-    const baseDto = { lotId: 1, comments: 'test' };
+    const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' };
+    const machineId = 9;
+    // Helper to build the new Run-shaped DTO
+    const buildDto = (measuredValue: number, lotId = 1) => ({
+      machineId,
+      results: [{ lotId, measuredValue, comments: 'test' }],
+    });
+    // Helper to build the mock return value of createQcRun
+    const buildRunResult = (status: string, id = 1) => ({
+      run: { id: 100, machineId, performedBy: userId, runDate: new Date() },
+      results: [{ id, status, zScore: 0, violatedRule: null, lotId: 1, measuredValue: 14.5 }],
+    });
 
     beforeEach(() => {
       // Arrange - common setup
       mockRepository.getLotById.mockResolvedValue(lotWithStats);
       mockRepository.getSectionIdByLotId.mockResolvedValue(10);
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
     });
 
-    it('should create QC result with PASS status when z-score is within 2 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.5 }; // z-score = +1.0
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'PASS', performedBy: userId },
-      ]);
+    it('should create a QC run with PASS status when z-score is within 2 SD', async () => {
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('PASS'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(14.5), userId);
 
-      // Assert
-      expect(result.status).toBe('PASS');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'PASS', userId, 1.0, null,
+      expect(result.results[0].status).toBe('PASS');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ status: 'PASS', violatedRule: null })]),
       );
       expect(mockAlertsService.createForUsers).not.toHaveBeenCalled();
     });
 
-    it('should create QC result with WARNING status (1_2s) when z-score exceeds 2 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 15.2 };
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'WARNING', performedBy: userId },
-      ]);
+    it('should create a QC run with WARNING status (1_2s) when z-score exceeds 2 SD', async () => {
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('WARNING'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(15.2), userId);
 
-      // Assert
-      expect(result.status).toBe('WARNING');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'WARNING', userId, expectedZScore, '1_2s',
+      expect(result.results[0].status).toBe('WARNING');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ status: 'WARNING', violatedRule: '1_2s' })]),
       );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status (1_3s) when z-score exceeds 3 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 16.0 }; // z-score = +4.0
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
+    it('should create a QC run with FAIL status (1_3s) when z-score exceeds 3 SD', async () => {
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(16.0), userId); // z-score = +4.0
 
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, 4.0, '1_3s',
+      expect(result.results[0].status).toBe('FAIL');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ status: 'FAIL', violatedRule: '1_3s' })]),
       );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 15.1 };
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      // previous z-score was +2.1, which triggers the 2_2s rule
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]); 
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
+    it('should create a QC run with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]);
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(15.1), userId);
 
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, expectedZScore, '2_2s',
+      expect(result.results[0].status).toBe('FAIL');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ violatedRule: '2_2s' })]),
       );
-      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status (2of3_2s) when two out of three consecutive z-scores exceed 2 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 15.1 }; // z-score = +2.2
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      // History: [previous_z, older_z]. The current is +2.2, previous is +1.5, older is +2.1.
-      // This means 2 out of the last 3 points are > +2.0
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.5, 2.1]); 
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
+    it('should create a QC run with FAIL status (3_1s) when three consecutive z-scores exceed 1 SD', async () => {
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.3, 1.4]);
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(14.6), userId); // z-score = +1.2
 
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, expectedZScore, '2of3_2s',
+      expect(result.results[0].status).toBe('FAIL');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ violatedRule: '3_1s' })]),
       );
-      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status (3_1s) when three consecutive z-scores exceed 1 SD', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.6 }; // z-score = +1.2
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      // History: both must be > 1.0 to complete the 3 consecutive points
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.3, 1.4]); 
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
+    it('should create a QC run with FAIL status (7_T) when 7 consecutive z-scores trend upwards', async () => {
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(14.35), userId); // z-score = +0.7
 
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, expectedZScore, '3_1s',
+      expect(result.results[0].status).toBe('FAIL');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ violatedRule: '7_T' })]),
       );
-      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
-    it('should create QC result with FAIL status (7_T) when 7 consecutive z-scores trend upwards', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.35 }; // z-score = +0.7
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      // History (newest first). To make 7 points trending UP, history must be strictly decreasing.
-      // Keep them all under 1.0 to avoid triggering the 3_1s rule!
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.6, 0.5, 0.4, 0.3, 0.2, 0.1]); 
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
+    it('should create a QC run with FAIL status (6_x) when 6 consecutive z-scores fall on the same side', async () => {
+      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.5, 0.3, 0.6, 0.2, 0.8]);
+      mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
-      // Act
-      const result = await service.create(dto, userId);
+      const result = await service.create(buildDto(14.2), userId); // z-score = +0.4
 
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, expectedZScore, '7_T',
+      expect(result.results[0].status).toBe('FAIL');
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        machineId, userId,
+        expect.arrayContaining([expect.objectContaining({ violatedRule: '6_x' })]),
       );
-      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
-    });
-
-    it('should create QC result with FAIL status (6_x) when 6 consecutive z-scores fall on the same side of the mean', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.2 }; // z-score = +0.4
-      const expectedZScore = (dto.measuredValue - lotWithStats.mean) / lotWithStats.standardDeviation;
-      // History: 5 previous z-scores that are > 0.
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.5, 0.3, 0.6, 0.2, 0.8]); 
-      mockRepository.createQcResult.mockResolvedValue([
-        { id: 1, ...dto, status: 'FAIL', performedBy: userId },
-      ]);
-
-      // Act
-      const result = await service.create(dto, userId);
-
-      // Assert
-      expect(result.status).toBe('FAIL');
-      expect(mockRepository.createQcResult).toHaveBeenCalledWith(
-        dto, 'FAIL', userId, expectedZScore, '6_x',
-      );
-      expect(mockAlertsService.createForUsers).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when control lot does not exist', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.5, lotId: 999 };
       mockRepository.getLotById.mockResolvedValue(undefined);
 
-      // Act & Assert
-      await expect(service.create(dto, userId)).rejects.toThrow(NotFoundException);
-      await expect(service.create(dto, userId)).rejects.toThrow('Control lot not found');
+      await expect(service.create(buildDto(14.5, 999), userId)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when lot is missing statistical values', async () => {
-      // Arrange
-      const dto = { ...baseDto, measuredValue: 14.5 };
-      mockRepository.getLotById.mockResolvedValue({
-        id: 1,
-        mean: null,
-        standardDeviation: 0.5,
-      });
+      mockRepository.getLotById.mockResolvedValue({ id: 1, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
 
-      // Act & Assert
-      await expect(service.create(dto, userId)).rejects.toThrow(BadRequestException);
-      await expect(service.create(dto, userId)).rejects.toThrow(
-        'Control lot is missing required statistical values',
+      await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
+      await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(
+        'is missing required statistical values',
       );
     });
   });

@@ -1,8 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, machines, qcResults, qcTests } from '@/drizzle/schema';
+import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
-import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
@@ -31,27 +30,46 @@ export class QcResultsRepository {
     return row?.sectionId;
   }
 
-  async createQcResult(
-    createQcResultDto: CreateQcResultDto,
-    status: QcStatus,
+  async createQcRun(
+    machineId: number,
     userId: number,
-    zScore: number,
-    violatedRule: string | null,
+    results: {
+      lotId: number;
+      measuredValue: number;
+      zScore: number;
+      status: QcStatus;
+      violatedRule: string | null;
+      comments?: string;
+    }[],
   ) {
-    const res = this.databaseService.db
-      .insert(qcResults)
-      .values({
-        measuredValue: createQcResultDto.measuredValue,
-        zScore,
-        violatedRule: violatedRule ?? undefined,
-        status: status,
-        comments: createQcResultDto.comments,
-        lotId: createQcResultDto.lotId,
-        performedBy: userId,
-      })
-      .returning();
+    return await this.databaseService.db.transaction(async (tx) => {
+      // 1. Insert the Run
+      const [run] = await tx
+        .insert(qcRuns)
+        .values({
+          machineId,
+          performedBy: userId,
+        })
+        .returning();
 
-    return res;
+      // 2. Insert all results tied to this Run
+      const insertedResults = await tx
+        .insert(qcResults)
+        .values(
+          results.map((r) => ({
+            runId: run.id,
+            lotId: r.lotId,
+            measuredValue: r.measuredValue,
+            zScore: r.zScore,
+            status: r.status,
+            violatedRule: r.violatedRule ?? undefined,
+            comments: r.comments,
+          })),
+        )
+        .returning();
+
+      return { run, results: insertedResults };
+    });
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
@@ -78,10 +96,21 @@ export class QcResultsRepository {
 
   async getResultsByLotId(lotId: number) {
     const results = await this.databaseService.db
-      .select()
+      .select({
+        id: qcResults.id,
+        measuredValue: qcResults.measuredValue,
+        zScore: qcResults.zScore,
+        violatedRule: qcResults.violatedRule,
+        status: qcResults.status,
+        comments: qcResults.comments,
+        runId: qcResults.runId,
+        lotId: qcResults.lotId,
+        testDate: qcRuns.runDate,
+      })
       .from(qcResults)
+      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcResults.testDate));
+      .orderBy(desc(qcRuns.runDate));
 
     return results;
   }
@@ -102,8 +131,9 @@ export class QcResultsRepository {
     const rows = await this.databaseService.db
       .select({ zScore: qcResults.zScore })
       .from(qcResults)
+      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcResults.testDate))
+      .orderBy(desc(qcRuns.runDate))
       .limit(limit);
     return rows.map(r => r.zScore);
   }

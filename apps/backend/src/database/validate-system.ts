@@ -125,6 +125,7 @@ async function main() {
         mean: controlLots.mean,
         standardDeviation: controlLots.standardDeviation,
         sectionId: machines.sectionId,
+        machineId: machines.id,
       })
       .from(controlLots)
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
@@ -174,15 +175,20 @@ async function main() {
       Number(targetLot.mean) + Number(targetLot.standardDeviation) * 4;
     const createdResult = await qcResultsService.create(
       {
-        lotId: targetLot.lotId,
-        measuredValue,
-        comments: 'System validation smoke test',
+        machineId: targetLot.machineId,
+        results: [
+          {
+            lotId: targetLot.lotId,
+            measuredValue,
+            comments: 'System validation smoke test',
+          }
+        ]
       },
       performer.id,
     );
 
     assert(
-      createdResult.status === 'FAIL',
+      createdResult.results[0].status === 'FAIL',
       'Smoke test result should be FAIL for 4 SD deviation.',
     );
 

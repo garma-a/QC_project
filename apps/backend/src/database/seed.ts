@@ -215,9 +215,14 @@ async function bootstrap() {
 
           await qcResultsService.create(
             {
-              measuredValue,
-              lotId: controlLot.id,
-              comments: undefined,
+              machineId: machine.id,
+              results: [
+                {
+                  measuredValue,
+                  lotId: controlLot.id,
+                  comments: undefined,
+                }
+              ]
             },
             randomUser.id,
           );
