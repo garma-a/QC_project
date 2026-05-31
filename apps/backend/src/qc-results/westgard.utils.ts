@@ -13,12 +13,98 @@ export interface WestgardEvaluation {
 }
 
 /**
- * Evaluates Westgard multi-rule analysis.
- * @param zScores - Z-scores newest-first (index 0 = current point just submitted)
+ * Represents a single result from the current run being evaluated.
+ * Used only by the Multi-Lot rules which need to compare results across
+ * different control levels (materials) submitted in the same batch.
  */
-export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
+export interface RunResultItem {
+    lotId: number;
+    zScore: number;
+}
+
+// ─── PHASE 1: MULTI-LOT RULES ────────────────────────────────────────────────
+// These rules are only meaningful when 2+ materials (levels) are submitted in
+// the SAME run. They compare z-scores across different control lots, not across
+// time. This is why they must run before the single-lot historical rules.
+
+/**
+ * Evaluates Westgard rules that require multiple control materials in the same run.
+ * Returns a violation if found, or null if the run is clean across all materials.
+ *
+ * @param currentRun - All results from the current submission batch.
+ * @param currentLotId - The lot being evaluated now (used to pair it with others).
+ */
+export function evaluateMultiLotRules(
+    currentRun: RunResultItem[],
+    currentLotId: number,
+): WestgardEvaluation | null {
+    // Multi-Lot rules only apply when there are 2 or more levels in the run.
+    if (currentRun.length < 2) return null;
+
+    const currentItem = currentRun.find(r => r.lotId === currentLotId);
+    if (!currentItem) return null;
+
+    const z = currentItem.zScore;
+
+    for (const other of currentRun) {
+        if (other.lotId === currentLotId) continue; // Don't compare a lot to itself
+
+        // R₄s (Cross-Material) — the spread between Level 1 and Level 2 exceeds 4 SD.
+        // This is the DEFINITIVE multi-lot rule. It catches random error that would be
+        // completely invisible if you only looked at each level's history separately.
+        // Example: Level 1 = +2.1 SD, Level 2 = -2.1 SD → spread = 4.2 → FAIL.
+        if (Math.abs(z - other.zScore) >= 4) {
+            return {
+                status: 'FAIL',
+                violatedRule: 'R_4s',
+                suggestedSolution:
+                    'Large random error detected across control levels. The spread between materials exceeds 4 SD. Check for sample mix-up, pipetting error, or reagent contamination.',
+            };
+        }
+
+        // 2₂s (Cross-Material) — both Level 1 and Level 2 exceed 2 SD on the SAME side.
+        // This catches a calibration shift that pushes all materials in the same direction.
+        // Single-lot 2₂s catches this over TIME; this cross-material check catches it INSTANTLY
+        // in a single run, making it a much faster early-warning system.
+        if ((z >= 2 && other.zScore >= 2) || (z <= -2 && other.zScore <= -2)) {
+            return {
+                status: 'FAIL',
+                violatedRule: '2_2s',
+                suggestedSolution:
+                    'Systematic bias detected across control levels. Both materials deviated in the same direction. Check calibration and reagent lot integrity.',
+            };
+        }
+    }
+
+    return null; // No multi-lot violation found for this lot
+}
+
+// ─── PHASE 2: SINGLE-LOT HISTORICAL RULES ────────────────────────────────────
+// These rules evaluate a single lot against its own history over time.
+// They detect slow drifts, trends, and systematic shifts that build up over days.
+
+/**
+ * Evaluates Westgard multi-rule analysis for a single control lot using its history.
+ *
+ * @param zScores - Z-scores newest-first (index 0 = current point just submitted).
+ * @param currentRun - All results from the current submission batch (for multi-lot checks).
+ * @param currentLotId - The lot being evaluated (to identify itself within the run).
+ */
+export function evaluateWestgardRules(
+    zScores: number[],
+    currentRun: RunResultItem[] = [],
+    currentLotId?: number,
+): WestgardEvaluation {
     if (zScores.length === 0) return { status: 'PASS', violatedRule: null, suggestedSolution: '' };
 
+    // --- PHASE 1: Check Multi-Lot rules first (instant cross-material detection) ---
+    // We only run this if the caller provided the full run context.
+    if (currentRun.length >= 2 && currentLotId !== undefined) {
+        const multiLotViolation = evaluateMultiLotRules(currentRun, currentLotId);
+        if (multiLotViolation) return multiLotViolation;
+    }
+
+    // --- PHASE 2: Single-Lot Historical rules ---
     const z = zScores[0]; // current point
 
     // 1₃s — single point > ±3 SD → random error, reject immediately
@@ -33,7 +119,7 @@ export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
     if (zScores.length >= 2) {
         const zPrev = zScores[1];
 
-        // 2₂s — two consecutive on same side, both > ±2 SD → systematic error
+        // 2₂s (Historical) — two consecutive on same side, both > ±2 SD → systematic error over time
         if ((z >= 2 && zPrev >= 2) || (z <= -2 && zPrev <= -2)) {
             return {
                 status: 'FAIL',
@@ -42,7 +128,9 @@ export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
             };
         }
 
-        // R₄s — spread between consecutive > 4 SD → random error
+        // R₄s (Historical) — spread between this point and the PREVIOUS run's point > 4 SD
+        // Note: The cross-material R₄s (Phase 1) is more powerful. This catches large swings
+        // in a single lot over consecutive runs (e.g., day 1 = +2.5, day 2 = -2.0).
         if (Math.abs(z - zPrev) >= 4) {
             return {
                 status: 'FAIL',
@@ -64,7 +152,7 @@ export function evaluateWestgardRules(zScores: number[]): WestgardEvaluation {
                 suggestedSolution: '2 out of 3 points exceeded 2 SD on the same side. Systematic bias.',
             };
         }
-        
+
         // 3_1s — 3 consecutive points > ±1 SD on the same side
         if (last3.every(z => z >= 1) || last3.every(z => z <= -1)) {
             return {

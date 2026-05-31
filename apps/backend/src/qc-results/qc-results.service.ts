@@ -10,7 +10,7 @@ import { QcStatus } from './qc-results.types';
 import { AlertsService } from '@/alerts/alerts.service';
 import { AlertPriority } from '@/alerts/alerts.types';
 import { UsersRepository } from '@/users/users.repository';
-import { evaluateWestgardRules, WESTGARD_HISTORY_SIZE } from './westgard.utils';
+import { evaluateWestgardRules, WESTGARD_HISTORY_SIZE, RunResultItem } from './westgard.utils';
 import { QcResultItemDto } from './dto/create-qc-result.dto';
 import { controlLots } from '@/drizzle/schema';
 
@@ -35,7 +35,16 @@ export class QcResultsService {
   async create(createQcResultDto: CreateQcResultDto, userId: number) {
     const evaluatedResults: EvaluatedResultItem[] = [];
 
-    // 1. Loop through every result in the Run Payload
+    // Cache to avoid duplicate database lookups between passes
+    const lotMap = new Map<number, typeof controlLots.$inferSelect>();
+    const currentZScoreMap = new Map<number, number>();
+
+    // 1. FIRST PASS: Validate statistics and compute current Z-scores for ALL items.
+    //    We must do this before any rule evaluation so that the complete run context
+    //    exists before Level 1 is checked — otherwise Level 1 is evaluated blind to
+    //    Level 2's z-score, making cross-material rules like R_4s clinically incorrect.
+    const completeRunContext: RunResultItem[] = [];
+
     for (const resultItem of createQcResultDto.results) {
       const lot = await this.qcResultsRepository.getLotById(resultItem.lotId);
       if (!lot) throw new NotFoundException(`Control lot ${resultItem.lotId} not found`);
@@ -52,20 +61,34 @@ export class QcResultsService {
         );
       }
 
-      // 2. Compute the current z-score
       const zScore = (resultItem.measuredValue - lot.mean) / lot.standardDeviation;
 
-      // 3. Fetch the last WESTGARD_HISTORY_SIZE z-scores, newest-first
+      // Store in maps and complete batch context
+      lotMap.set(resultItem.lotId, lot);
+      currentZScoreMap.set(resultItem.lotId, zScore);
+      completeRunContext.push({ lotId: resultItem.lotId, zScore });
+    }
+
+    // 2. SECOND PASS: Run Westgard analysis using the complete run layout.
+    //    Every lot now has full omniscient visibility of all other levels' z-scores.
+    for (const resultItem of createQcResultDto.results) {
+      const lot = lotMap.get(resultItem.lotId)!;
+      const zScore = currentZScoreMap.get(resultItem.lotId)!;
+
+      // Fetch historical data for this specific lot over time
       const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
         resultItem.lotId,
         WESTGARD_HISTORY_SIZE,
       );
 
-      // 4. Build the window: current point first, then history
       const zScoreWindow = [zScore, ...priorZScores];
 
-      // 5. Evaluate Westgard rules (Currently only Single-Lot, Multi-Lot coming soon!)
-      const { status, violatedRule, suggestedSolution } = evaluateWestgardRules(zScoreWindow);
+      // Evaluate using the full, omniscient run context
+      const { status, violatedRule, suggestedSolution } = evaluateWestgardRules(
+        zScoreWindow,
+        completeRunContext,
+        resultItem.lotId,
+      );
 
       evaluatedResults.push({
         lot,
@@ -77,7 +100,7 @@ export class QcResultsService {
       });
     }
 
-    // 6. Persist the entire RUN and all RESULTS in one atomic database transaction!
+    // 3. THIRD PASS: Persist the entire RUN and all RESULTS atomically
     const savedRunData = await this.qcResultsRepository.createQcRun(
       createQcResultDto.machineId,
       userId,
@@ -91,10 +114,10 @@ export class QcResultsService {
       })),
     );
 
-    // 7. Fire alerts for any WARNING or FAIL results in this run
+    // 4. FOURTH PASS: Fire alerts for any WARNING or FAIL statuses
     for (let i = 0; i < evaluatedResults.length; i++) {
       const e = evaluatedResults[i];
-      const savedResult = savedRunData.results[i]; // Matches index exactly
+      const savedResult = savedRunData.results[i];
 
       if (e.status === QcStatus.WARNING || e.status === QcStatus.FAIL) {
         const absZScore = Number(Math.abs(e.zScore).toFixed(2));

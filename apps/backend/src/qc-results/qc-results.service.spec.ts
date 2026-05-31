@@ -216,6 +216,47 @@ describe('QcResultsService', () => {
       expect(mockAlertsService.createForUsers).toHaveBeenCalledTimes(1);
     });
 
+    it('should flag BOTH levels as FAIL when cross-material R_4s is violated (two-pass correctness)', async () => {
+      // Arrange — Level 1 = +2.5 SD, Level 2 = -2.0 SD → spread = 4.5 SD → R_4s violation.
+      // The key assertion here is that Level 1 is ALSO a FAIL, not just Level 2.
+      // This would be impossible in a single-pass approach where Level 1 is evaluated
+      // before Level 2's z-score even exists.
+      const crossMaterialDto = {
+        machineId: 9,
+        results: [
+          { lotId: 1, measuredValue: 15.25, comments: 'Level 1' }, // z-score = +2.5
+          { lotId: 2, measuredValue: 13.0, comments: 'Level 2' },  // z-score = -2.0
+        ],
+      };
+      mockRepository.getLotById.mockImplementation((id: number) => {
+        if (id === 1) return Promise.resolve({ id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+        if (id === 2) return Promise.resolve({ id: 2, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+      });
+      mockRepository.createQcRun.mockResolvedValue({
+        run: { id: 101, machineId: 9, performedBy: userId, runDate: new Date() },
+        results: [
+          { id: 3, status: 'FAIL', zScore: 2.5, violatedRule: 'R_4s', lotId: 1 },
+          { id: 4, status: 'FAIL', zScore: -2.0, violatedRule: 'R_4s', lotId: 2 },
+        ],
+      });
+
+      // Act
+      const result = await service.create(crossMaterialDto, userId);
+
+      // Assert — both results must be FAIL with R_4s
+      expect(result.results).toHaveLength(2);
+      expect(mockRepository.createQcRun).toHaveBeenCalledWith(
+        9,
+        userId,
+        expect.arrayContaining([
+          expect.objectContaining({ lotId: 1, status: 'FAIL', violatedRule: 'R_4s' }),
+          expect.objectContaining({ lotId: 2, status: 'FAIL', violatedRule: 'R_4s' }),
+        ]),
+      );
+      // Both levels are FAIL → alerts must fire twice
+      expect(mockAlertsService.createForUsers).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw NotFoundException when control lot does not exist', async () => {
       // Arrange
       mockRepository.getLotById.mockResolvedValue(undefined);
