@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CartesianGrid,
@@ -27,8 +27,10 @@ interface MachineChartsProps {
 
 type MonitorResultEntry = QcResultResponseDto & {
   machineId: number;
+  testId: number;
   testName: string;
   lotId: number;
+  level: number;
   lotNumber: string;
 };
 
@@ -44,6 +46,7 @@ type MachineForCharts = MachineResponseDto & {
     lowRange: number;
     highRange: number;
     lotId: number;
+    level: number;
     lotNumber: string;
     mean: number;
     standardDeviation: number;
@@ -51,17 +54,16 @@ type MachineForCharts = MachineResponseDto & {
 };
 
 type TestOption = {
-  id: string;
-  name: string;
+  testId: string;
+  testName: string;
   category: string;
-  code: string;
-  unit: string;
-  lowRange: number;
-  highRange: number;
-  lotId: number;
-  lotNumber: string;
-  mean: number;
-  standardDeviation: number;
+  lots: {
+    lotId: number;
+    level: number;
+    lotNumber: string;
+    mean: number;
+    standardDeviation: number;
+  }[];
 };
 
 interface ChartDataPoint {
@@ -138,51 +140,95 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   const { theme } = useTheme();
 
   const availableTests = useMemo(() => {
-    if (!machine) return [];
+    const testMap = new Map<string, TestOption>();
 
-    if (machine.tests && machine.tests.length > 0) {
-      return machine.tests;
-    }
-
-    const uniqueByLot = new Map<number, TestOption>();
-    for (const result of qcHistory) {
-      if (!uniqueByLot.has(result.lotId)) {
-        uniqueByLot.set(result.lotId, {
-          id: result.lotId.toString(),
-          name: result.testName,
-          category: 'General',
-          code: result.lotId.toString(),
-          unit: 'unit',
-          lowRange: 0,
-          highRange: 0,
-          lotId: result.lotId,
-          lotNumber: result.lotNumber,
-          mean: 0,
-          standardDeviation: 0,
-        });
+    if (machine?.tests && machine.tests.length > 0) {
+      for (const t of machine.tests) {
+        if (!testMap.has(t.id)) {
+          testMap.set(t.id, {
+            testId: t.id,
+            testName: t.name,
+            category: t.category,
+            lots: [],
+          });
+        }
+        if (t.lotId !== -1) {
+          testMap.get(t.id)!.lots.push({
+            lotId: t.lotId,
+            level: t.level ?? 1,
+            lotNumber: t.lotNumber,
+            mean: t.mean,
+            standardDeviation: t.standardDeviation,
+          });
+        }
+      }
+    } else {
+      for (const result of qcHistory) {
+        const tIdStr = result.testId.toString();
+        if (!testMap.has(tIdStr)) {
+          testMap.set(tIdStr, {
+            testId: tIdStr,
+            testName: result.testName,
+            category: 'General',
+            lots: [],
+          });
+        }
+        const testObj = testMap.get(tIdStr)!;
+        if (!testObj.lots.find((l) => l.lotId === result.lotId)) {
+          testObj.lots.push({
+            lotId: result.lotId,
+            level: result.level ?? 1,
+            lotNumber: result.lotNumber,
+            mean: 0,
+            standardDeviation: 1,
+          });
+        }
       }
     }
 
-    return Array.from(uniqueByLot.values());
+    // Sort lots by level within each test
+    for (const test of testMap.values()) {
+      test.lots.sort((a, b) => a.level - b.level);
+    }
+
+    return Array.from(testMap.values());
   }, [machine, qcHistory]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlTestId = searchParams.get('testId');
 
-  const activeTest = availableTests.find((test) => test.id === urlTestId) ?? availableTests[0];
+  const activeTest = availableTests.find((test) => test.testId === urlTestId) ?? availableTests[0];
+
+  const [activeLevel, setActiveLevel] = useState<number>(1);
+
+  // Sync activeLevel when activeTest changes
+  useEffect(() => {
+    if (activeTest && activeTest.lots.length > 0) {
+      if (!activeTest.lots.find((l) => l.level === activeLevel)) {
+        setActiveLevel(activeTest.lots[0].level);
+      }
+    }
+  }, [activeTest, activeLevel]);
 
   const handleTestChange = (newTestId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('testId', newTestId);
     router.replace(`?${params.toString()}`, { scroll: false });
+
+    const test = availableTests.find(t => t.testId === newTestId);
+    if (test && test.lots.length > 0) {
+      setActiveLevel(test.lots[0].level);
+    }
   };
 
+  const activeLot = activeTest?.lots.find(l => l.level === activeLevel) ?? activeTest?.lots[0];
+
   const qcData = useMemo(() => {
-    if (!activeTest) return [];
+    if (!activeLot) return [];
 
     return qcHistory
-      .filter((entry) => entry.lotId === activeTest.lotId)
+      .filter((entry) => entry.lotId === activeLot.lotId)
       .slice()
       .sort((a, b) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
       .map((entry) => ({
@@ -193,12 +239,11 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         violatedRule: entry.violatedRule,
         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
-  }, [activeTest, qcHistory]);
+  }, [activeLot, qcHistory]);
 
-  // Use Westgard Rules from backend data
   const westgardAnalysis = useMemo(() => {
-    const mean = activeTest?.mean ?? 0;
-    const stdDev = activeTest?.standardDeviation ?? 1;
+    const mean = activeLot?.mean ?? 0;
+    const stdDev = activeLot?.standardDeviation ?? 1;
 
     return {
       violations: qcData
@@ -227,7 +272,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         violations: t.violatedRule ? [t.violatedRule] : [],
       })),
     };
-  }, [qcData, activeTest]);
+  }, [qcData, activeLot]);
 
   // Magdi Yacoub Theme Colors
   const isDark = theme === 'dark';
@@ -268,19 +313,40 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         </div>
 
         <div className="w-64">
-          <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Control Lot / Test</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">QC Test</label>
           <select
             className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-            value={activeTest?.id ?? ''}
+            value={activeTest?.testId ?? ''}
             onChange={(e) => handleTestChange(e.target.value)}
             disabled={availableTests.length === 0}
           >
             {availableTests.map((test) => (
-              <option key={test.id} value={test.id}>{test.name} ({test.lotNumber})</option>
+              <option key={test.testId} value={test.testId}>{test.testName}</option>
             ))}
           </select>
         </div>
       </div>
+
+      {/* Level Tabs (only show if test has multiple lots) */}
+      {activeTest && activeTest.lots.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {activeTest.lots.map((lot) => {
+            const isActive = lot.level === activeLevel;
+            return (
+              <button
+                key={lot.lotId}
+                onClick={() => setActiveLevel(lot.level)}
+                className={`px-4 py-2 rounded-full font-semibold transition-all duration-200 border-2 ${isActive
+                    ? 'bg-[#b8860b] dark:bg-[#ffd700] text-white border-transparent shadow-md'
+                    : 'bg-transparent border-[#b8860b] dark:border-[#ffd700] text-[#b8860b] dark:text-[#ffd700] hover:bg-[#b8860b]/10 dark:hover:bg-[#ffd700]/10'
+                  }`}
+              >
+                Level {lot.level} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Westgard QC Chart */}
       {chartData.length > 0 ? (
@@ -294,7 +360,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
               <div>
                 <h3 className="text-gray-900 dark:text-white font-bold text-lg">Westgard QC Chart</h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.name ?? 'Unknown'}
+                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.testName ?? 'Unknown'} (Level {activeLot?.level ?? 1})
                 </p>
               </div>
             </div>

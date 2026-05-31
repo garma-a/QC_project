@@ -10,8 +10,10 @@ import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 type MonitorResultEntry = QcResultResponseDto & {
   machineId: number;
+  testId: number;
   testName: string;
   lotId: number;
+  level: number;
   lotNumber: string;
 };
 
@@ -28,6 +30,7 @@ type MonitorClientProps = {
       lowRange: number;
       highRange: number;
       lotId: number;
+      level: number;
       lotNumber: string;
       mean: number;
       standardDeviation: number;

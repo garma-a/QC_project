@@ -10,8 +10,10 @@ import { MonitorClient } from '@/features/machines/components/MonitorClient';
 
 type MonitorResultEntry = QcResultResponseDto & {
   machineId: number;
+  testId: number;
   testName: string;
   lotId: number;
+  level: number;
   lotNumber: string;
 };
 
@@ -31,6 +33,7 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
       lowRange: number;
       highRange: number;
       lotId: number;
+      level: number;
       lotNumber: string;
       mean: number;
       standardDeviation: number;
@@ -101,8 +104,10 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
         results.map((result) => ({
           ...result,
           machineId: ctx.machineId,
+          testId: ctx.test.id,
           testName: ctx.test.testName,
           lotId: ctx.lot.id,
+          level: ctx.lot.level ?? 1,
           lotNumber: ctx.lot.lotNumber,
         })),
       );
@@ -113,20 +118,43 @@ export default async function MonitorPage(props: { searchParams: Promise<{ machi
           .sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime());
         const latestResult = machineResults[0];
 
+        const machineTestsData = testsByMachine.find(t => t.machineId === machine.id)?.tests || [];
         const machineLots = lotsWithContext.filter((ctx) => ctx.machineId === machine.id);
-        const tests = machineLots.map((ctx) => ({
-          id: ctx.test.id.toString(),
-          name: ctx.test.testName,
-          category: ctx.test.testType ?? 'General',
-          code: ctx.test.id.toString(),
-          unit: 'unit',
-          lowRange: ctx.lot.lowerControlLimit ?? 0,
-          highRange: ctx.lot.upperControlLimit ?? 0,
-          lotId: ctx.lot.id,
-          lotNumber: ctx.lot.lotNumber,
-          mean: ctx.lot.mean ?? 0,
-          standardDeviation: ctx.lot.standardDeviation ?? 0,
-        }));
+        
+        const tests = machineTestsData.flatMap((test) => {
+          const testLots = machineLots.filter(ctx => ctx.test.id === test.id);
+          if (testLots.length > 0) {
+            return testLots.map(ctx => ({
+              id: ctx.test.id.toString(),
+              name: ctx.test.testName,
+              category: ctx.test.testType ?? 'General',
+              code: ctx.test.id.toString(),
+              unit: 'unit',
+              lowRange: ctx.lot.lowerControlLimit ?? 0,
+              highRange: ctx.lot.upperControlLimit ?? 0,
+              lotId: ctx.lot.id,
+              level: ctx.lot.level ?? 1,
+              lotNumber: ctx.lot.lotNumber,
+              mean: ctx.lot.mean ?? 0,
+              standardDeviation: ctx.lot.standardDeviation ?? 0,
+            }));
+          } else {
+            return [{
+              id: test.id.toString(),
+              name: test.testName,
+              category: test.testType ?? 'General',
+              code: test.id.toString(),
+              unit: 'unit',
+              lowRange: 0,
+              highRange: 0,
+              lotId: -1,
+              level: 1,
+              lotNumber: 'No Lot',
+              mean: 0,
+              standardDeviation: 1,
+            }];
+          }
+        });
 
         return {
           ...machine,

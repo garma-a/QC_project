@@ -149,6 +149,7 @@ export interface CreateQcTestDto {
 export interface ControlLotResponseDto {
   id: number;
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number | null;
@@ -197,6 +198,7 @@ export interface ControlLotDeactivateResponseDto {
 export interface ControlLotInResultDto {
   id: number;
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number | null;
