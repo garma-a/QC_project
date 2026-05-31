@@ -24,7 +24,8 @@ export class ControlLotsRepository {
         .where(
           and(
             eq(controlLots.testId, testId),
-            eq(controlLots.isActive, true)
+            eq(controlLots.isActive, true),
+            eq(controlLots.level, data.level ?? 1)
           )
         );
 
