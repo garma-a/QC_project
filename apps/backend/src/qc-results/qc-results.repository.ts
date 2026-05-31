@@ -42,34 +42,35 @@ export class QcResultsRepository {
       comments?: string;
     }[],
   ) {
-    return await this.databaseService.db.transaction(async (tx) => {
-      // 1. Insert the Run
-      const [run] = await tx
-        .insert(qcRuns)
-        .values({
-          machineId,
-          performedBy: userId,
-        })
-        .returning();
+    // Note: neon-http does not support interactive transactions.
+    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
+    
+    // 1. Insert the Run
+    const [run] = await this.databaseService.db
+      .insert(qcRuns)
+      .values({
+        machineId,
+        performedBy: userId,
+      })
+      .returning();
 
-      // 2. Insert all results tied to this Run
-      const insertedResults = await tx
-        .insert(qcResults)
-        .values(
-          results.map((r) => ({
-            runId: run.id,
-            lotId: r.lotId,
-            measuredValue: r.measuredValue,
-            zScore: r.zScore,
-            status: r.status,
-            violatedRule: r.violatedRule ?? undefined,
-            comments: r.comments,
-          })),
-        )
-        .returning();
+    // 2. Insert all results tied to this Run
+    const insertedResults = await this.databaseService.db
+      .insert(qcResults)
+      .values(
+        results.map((r) => ({
+          runId: run.id,
+          lotId: r.lotId,
+          measuredValue: r.measuredValue,
+          zScore: r.zScore,
+          status: r.status,
+          violatedRule: r.violatedRule ?? undefined,
+          comments: r.comments,
+        })),
+      )
+      .returning();
 
-      return { run, results: insertedResults };
-    });
+    return { run, results: insertedResults };
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
