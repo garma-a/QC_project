@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
@@ -16,6 +16,18 @@ export class QcResultsRepository {
       .where(eq(controlLots.id, lotId))
       .limit(1);
     return lot;
+  }
+
+  async getActiveLotsByTestId(testId: number) {
+    return this.databaseService.db
+      .select({ id: controlLots.id, lotNumber: controlLots.lotNumber })
+      .from(controlLots)
+      .where(
+        and(
+          eq(controlLots.testId, testId),
+          eq(controlLots.isActive, true)
+        )
+      );
   }
 
   async getSectionIdByLotId(lotId: number) {

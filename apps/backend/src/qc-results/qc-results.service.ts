@@ -33,11 +33,40 @@ export class QcResultsService {
   ) { }
 
   async create(createQcResultDto: CreateQcResultDto, userId: number) {
+    if (!createQcResultDto.results || createQcResultDto.results.length === 0) {
+      throw new BadRequestException('A QC run must contain at least one result');
+    }
+
     const evaluatedResults: EvaluatedResultItem[] = [];
 
     // Cache to avoid duplicate database lookups between passes
     const lotMap = new Map<number, typeof controlLots.$inferSelect>();
     const currentZScoreMap = new Map<number, number>();
+
+    // 0. PRE-VALIDATION: Check that the run contains ALL active lots for the test
+    const firstLot = await this.qcResultsRepository.getLotById(createQcResultDto.results[0].lotId);
+    if (!firstLot) throw new NotFoundException(`Control lot ${createQcResultDto.results[0].lotId} not found`);
+    const testId = firstLot.testId;
+
+    const activeLots = await this.qcResultsRepository.getActiveLotsByTestId(testId);
+    
+    // Ensure every active lot was submitted
+    for (const activeLot of activeLots) {
+      if (!createQcResultDto.results.some((r) => r.lotId === activeLot.id)) {
+        throw new BadRequestException(
+          `Incomplete QC Run: Missing result for active lot ${activeLot.lotNumber} (ID: ${activeLot.id}). All active lots must be run together.`
+        );
+      }
+    }
+
+    // Ensure no submitted result belongs to a DIFFERENT test
+    for (const resultItem of createQcResultDto.results) {
+      if (!activeLots.some((l) => l.id === resultItem.lotId)) {
+        throw new BadRequestException(
+          `Invalid QC Run: Lot ${resultItem.lotId} does not belong to the active lots for test ID ${testId}.`
+        );
+      }
+    }
 
     // 1. FIRST PASS: Validate statistics and compute current Z-scores for ALL items.
     //    We must do this before any rule evaluation so that the complete run context
