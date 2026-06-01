@@ -1,70 +1,95 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { createQcTest } from '@/lib/actions';
-import type { MachineResponseDto } from '@/lib/types/api';
-import { Plus, Heart, X } from 'lucide-react';
+import { createMachine, updateMachine } from '@/lib/actions';
+import type { SectionResponseDto, MachineResponseDto } from '@/lib/types/api';
+import { Plus, Heart, X, Edit2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-interface CreateQcTestDialogProps {
-  machines: MachineResponseDto[];
+interface MachineFormDialogProps {
+  mode: 'create' | 'edit';
+  initialData?: MachineResponseDto;
+  sections: SectionResponseDto[];
 }
 
-export function CreateQcTestDialog({ machines }: CreateQcTestDialogProps) {
+export function MachineFormDialog({ mode, initialData, sections }: MachineFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [testName, setTestName] = useState('');
-  const [testType, setTestType] = useState('');
-  const [machineId, setMachineId] = useState<string>('');
+  
+  // Managing sectionId via state since Select requires controlled state to easily extract value
+  const [sectionId, setSectionId] = useState<string>(initialData?.sectionId.toString() || '');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (!testName) {
-      setError('Test Name is required.');
-      return;
-    }
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const hospCode = formData.get('hospCode') as string;
 
-    if (!machineId) {
-      setError('Machine is required.');
+    if (!name || !sectionId) {
+      setError('Machine Name and Section are required.');
       return;
     }
 
     const payload = {
-      testName,
-      testType: testType || undefined,
-      machineId: Number(machineId),
+      name,
+      hospCode: hospCode || undefined,
+      sectionId: Number(sectionId),
     };
 
     startTransition(async () => {
-      const result = await createQcTest(payload);
+      let result;
+      if (mode === 'create') {
+        result = await createMachine(payload);
+      } else {
+        result = await updateMachine(initialData!.id, payload);
+      }
+
       if (result?.error) {
         setError(result.error);
       } else {
-        setTestName('');
-        setTestType('');
-        setMachineId('');
         setOpen(false);
+        // Reset state for next open if creating
+        if (mode === 'create') setSectionId('');
       }
     });
   }
 
   const resetFormFields = () => {
-    setTestName('');
-    setTestType('');
-    setMachineId('');
+    if (mode === 'create') {
+      setSectionId('');
+    } else {
+      setSectionId(initialData?.sectionId.toString() || '');
+    }
+  };
+
+  const handleOpenClick = () => {
+    setOpen(true);
+    resetFormFields();
   };
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
-      >
-        <Plus size={20} />
-        Create QC Test
-      </button>
+      {mode === 'create' ? (
+        <button 
+          onClick={handleOpenClick}
+          className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
+        >
+          <Plus size={20} />
+          Add Machine
+        </button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          onClick={handleOpenClick}
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+      )}
 
       {open && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -72,7 +97,9 @@ export function CreateQcTestDialog({ machines }: CreateQcTestDialogProps) {
             <div className="flex items-center justify-between p-5 sm:p-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 sticky top-0 bg-white dark:bg-[#1e1e1e] z-10">
               <div className="flex items-center gap-3">
                 <Heart size={24} className="text-[#c41e3a] dark:text-[#e84855]" fill="currentColor" />
-                <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">Create QC Test</h2>
+                <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">
+                  {mode === 'create' ? 'Add Machine' : 'Edit Machine'}
+                </h2>
               </div>
               <button
                 type="button"
@@ -90,48 +117,48 @@ export function CreateQcTestDialog({ machines }: CreateQcTestDialogProps) {
             <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-6">
               {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">{error}</div>}
 
-              {/* Test Name - Required */}
+              {/* Machine Name - Required */}
               <div>
-                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Test Name *</label>
+                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Machine Name *</label>
                 <input
-                  id="testName"
+                  id="name"
+                  name="name"
                   type="text"
-                  placeholder="e.g. Hemoglobin Test"
-                  value={testName}
-                  onChange={(e) => setTestName(e.target.value)}
+                  placeholder="e.g. Sysmex XN-1000"
+                  defaultValue={initialData?.name}
                   required
                   minLength={2}
                   className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
 
-              {/* Test Type - Optional */}
+              {/* Hospital Code - Optional */}
               <div>
-                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Test Type <span className="font-normal text-gray-400">(Optional)</span></label>
+                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Hospital Code <span className="font-normal text-gray-400">(Optional)</span></label>
                 <input
-                  id="testType"
+                  id="hospCode"
+                  name="hospCode"
                   type="text"
-                  placeholder="e.g. Quantitative, Qualitative"
-                  value={testType}
-                  onChange={(e) => setTestType(e.target.value)}
+                  placeholder="e.g. LAB-HEM-01"
+                  defaultValue={initialData?.hospCode || ''}
                   className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>
 
-              {/* Machine - Required */}
+              {/* Section - Required */}
               <div>
-                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Machine *</label>
+                <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Section *</label>
                 <select
-                  id="machine"
-                  value={machineId}
-                  onChange={(e) => setMachineId(e.target.value)}
+                  id="section"
+                  value={sectionId}
+                  onChange={(e) => setSectionId(e.target.value)}
                   required
                   className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
                 >
-                  <option value="">Select a machine</option>
-                  {machines.map((machine) => (
-                    <option key={machine.id} value={machine.id.toString()}>
-                      {machine.name}
+                  <option value="">Select a section</option>
+                  {sections.map((section) => (
+                    <option key={section.id} value={section.id.toString()}>
+                      {section.name}
                     </option>
                   ))}
                 </select>
@@ -152,10 +179,10 @@ export function CreateQcTestDialog({ machines }: CreateQcTestDialogProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending || !machineId || !testName}
+                  disabled={isPending || !sectionId}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50 disabled:opacity-50"
                 >
-                  {isPending ? 'Creating...' : 'Create Test'}
+                  {isPending ? 'Saving...' : 'Save Machine'}
                 </button>
               </div>
             </form>

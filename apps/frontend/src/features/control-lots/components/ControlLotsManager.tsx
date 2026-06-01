@@ -1,7 +1,7 @@
 'use client';
 
 import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
-import { CreateControlLotDialog } from './CreateControlLotDialog';
+import { ControlLotFormDialog } from './ControlLotFormDialog';
 import { ControlLotsTable } from './ControlLotsTable';
 
 interface ControlLotsManagerProps {
@@ -15,7 +15,7 @@ export function ControlLotsManager({ initialLots, availableTests }: ControlLotsM
       {/* Header row — button right, matches QC Management layout exactly */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4">
         <div className="flex-1" />
-        <CreateControlLotDialog availableTests={availableTests} initialLots={initialLots} />
+        <ControlLotFormDialog mode="create" availableTests={availableTests} initialLots={initialLots} />
       </div>
 
       {/* Decorative gradient line — identical to QC Management page */}

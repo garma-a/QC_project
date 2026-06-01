@@ -22,8 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { deleteMachine } from '@/lib/actions';
-import { CreateMachineDialog } from './CreateMachineDialog';
-import { EditMachineDialog } from './EditMachineDialog';
+import { MachineFormDialog } from './MachineFormDialog';
 import type { MachineResponseDto, SectionResponseDto } from '@/lib/types/api';
 
 interface MachinesTableProps {
@@ -102,7 +101,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
     <div className="space-y-4">
       {/* Header section with Create Dialog aligned right */}
       <div className="flex items-center justify-end">
-        <CreateMachineDialog sections={sections} />
+        <MachineFormDialog mode="create" sections={sections} />
       </div>
 
       <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 shadow-lg overflow-hidden">
@@ -138,7 +137,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
                     {formatLastRun(machine.lastRunAt as unknown)}
                   </TableCell>
                   <TableCell className="text-sm py-4 pr-6 text-right flex items-center justify-end gap-2">
-                    <EditMachineDialog machine={machine} sections={sections} />
+                    <MachineFormDialog mode="edit" initialData={machine} sections={sections} />
                     <Button
                       variant="ghost"
                       size="sm"

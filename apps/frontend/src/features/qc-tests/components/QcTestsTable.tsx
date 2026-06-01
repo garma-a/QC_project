@@ -12,8 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
-import { CreateQcTestDialog } from './CreateQcTestDialog';
-import { EditQcTestDialog } from './EditQcTestDialog';
+import { QcTestFormDialog } from './QcTestFormDialog';
 
 interface QcTestsTableProps {
   machines: MachineResponseDto[];
@@ -49,7 +48,7 @@ export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {
           />
         </div>
         <div className="flex-shrink-0 w-full sm:w-auto">
-          <CreateQcTestDialog machines={machines} />
+          <QcTestFormDialog mode="create" machines={machines} />
         </div>
       </div>
 
@@ -80,7 +79,7 @@ export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {
                   <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{test.testType || '-'}</TableCell>
                   <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getMachineName(test.machineId)}</TableCell>
                   <TableCell className="flex items-center justify-end gap-2 text-sm py-4 pr-6 text-right">
-                    <EditQcTestDialog machines={machines} test={test} />
+                    <QcTestFormDialog mode="edit" initialData={test} machines={machines} />
                     <Button
                       variant="ghost"
                       size="sm"

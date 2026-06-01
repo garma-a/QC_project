@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 
 import { Trash2, Search, AlertTriangle } from 'lucide-react';
 import { deactivateControlLot } from '@/lib/actions';
-import { EditControlLotDialog } from './EditControlLotDialog';
+import { ControlLotFormDialog } from './ControlLotFormDialog';
 import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
 
 interface ControlLotsTableProps {
@@ -320,7 +320,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
                   </TableCell>
                   <TableCell className="text-sm py-4">{getStatusBadge(lot.isActive)}</TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-2 text-sm py-4 pr-6">
-                    <EditControlLotDialog lot={lot} availableTests={availableTests} />
+                    <ControlLotFormDialog mode="edit" initialData={lot} availableTests={availableTests} />
                     <Button
                       variant="ghost"
                       size="sm"
