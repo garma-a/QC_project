@@ -116,29 +116,33 @@ export class QcResultsService {
     );
 
     // 4. FOURTH PASS: Fire alerts for any WARNING or FAIL statuses
-    for (let i = 0; i < evaluatedResults.length; i++) {
-      const e = evaluatedResults[i];
-      const savedResult = savedRunData.results[i];
+    try {
+      for (let i = 0; i < evaluatedResults.length; i++) {
+        const e = evaluatedResults[i];
+        const savedResult = savedRunData.results[i];
 
-      if (e.status === QcStatus.WARNING || e.status === QcStatus.FAIL) {
-        const absZScore = Number(Math.abs(e.zScore).toFixed(2));
-        const alertPriority = e.status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
+        if (e.status === QcStatus.WARNING || e.status === QcStatus.FAIL) {
+          const absZScore = Number(Math.abs(e.zScore).toFixed(2));
+          const alertPriority = e.status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
 
-        const sectionId = await this.qcResultsRepository.getSectionIdByLotId(e.resultItem.lotId);
-        const sectionUserIds = sectionId ? await this.usersRepository.getUserIdsBySectionId(sectionId) : [];
+          const sectionId = await this.qcResultsRepository.getSectionIdByLotId(e.resultItem.lotId);
+          const sectionUserIds = sectionId ? await this.usersRepository.getUserIdsBySectionId(sectionId) : [];
 
-        await this.alertsService.createForUsers(
-          {
-            resultId: savedResult.id,
-            type: 'QC_DEVIATION',
-            priority: alertPriority,
-            message: `QC result for lot ${e.lot.lotNumber} is ${e.status} (|Z|=${absZScore}).`,
-            ruleViolated: e.violatedRule ?? undefined,
-            suggestedSolution: e.suggestedSolution,
-          },
-          sectionUserIds,
-        );
+          await this.alertsService.createForUsers(
+            {
+              resultId: savedResult.id,
+              type: 'QC_DEVIATION',
+              priority: alertPriority,
+              message: `QC result for lot ${e.lot.lotNumber} is ${e.status} (|Z|=${absZScore}).`,
+              ruleViolated: e.violatedRule ?? undefined,
+              suggestedSolution: e.suggestedSolution,
+            },
+            sectionUserIds,
+          );
+        }
       }
+    } catch (error) {
+      console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
     }
 
     return savedRunData;

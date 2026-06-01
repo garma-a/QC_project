@@ -56,23 +56,29 @@ export class QcResultsRepository {
       })
       .returning();
 
-    // 2. Insert all results tied to this Run
-    const insertedResults = await this.databaseService.db
-      .insert(qcResults)
-      .values(
-        results.map((r) => ({
-          runId: run.id,
-          lotId: r.lotId,
-          measuredValue: r.measuredValue,
-          zScore: r.zScore,
-          status: r.status,
-          violatedRule: r.violatedRule ?? undefined,
-          comments: r.comments,
-        })),
-      )
-      .returning();
+    try {
+      // 2. Insert all results tied to this Run
+      const insertedResults = await this.databaseService.db
+        .insert(qcResults)
+        .values(
+          results.map((r) => ({
+            runId: run.id,
+            lotId: r.lotId,
+            measuredValue: r.measuredValue,
+            zScore: r.zScore,
+            status: r.status,
+            violatedRule: r.violatedRule ?? undefined,
+            comments: r.comments,
+          })),
+        )
+        .returning();
 
-    return { run, results: insertedResults };
+      return { run, results: insertedResults };
+    } catch (error) {
+      // Manual compensation: delete the orphaned run if results fail to insert
+      await this.databaseService.db.delete(qcRuns).where(eq(qcRuns.id, run.id));
+      throw error;
+    }
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
