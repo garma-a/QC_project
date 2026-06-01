@@ -108,7 +108,7 @@ export function evaluateWestgardRules(
     const z = zScores[0]; // current point
 
     // 1₃s — single point > ±3 SD → random error, reject immediately
-    if (Math.abs(z) >= 3) {
+    if (Math.abs(z) > 3) {
         return {
             status: 'FAIL',
             violatedRule: '1_3s',
