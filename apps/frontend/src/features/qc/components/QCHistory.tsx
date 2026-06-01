@@ -102,7 +102,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
       violations: sortedTests
         .filter(t => t.violatedRule)
         .map(t => ({
-          severity: t.status === 'error' ? 'reject' : 'warning',
+          severity: t.status === 'FAIL' ? 'reject' : 'warning',
           rule: t.violatedRule!,
           description: `${t.violatedRule} Violation`,
           message: `Violated on ${t.date}`,
@@ -116,7 +116,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
         minus3s: mean - 3 * stdDev,
       },
       pointsWithStatus: sortedTests.map(t => ({
-        status: t.status === 'error' ? 'reject' : t.status,
+        status: t.status === 'FAIL' ? 'reject' : t.status,
         date: t.date.split(' ')[0] || t.date,
         value: t.numericResult || 0,
         zScore: t.zScore,
@@ -309,7 +309,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
                                   Z: {point.zScore.toFixed(2)}
                                 </span>
-                                {point.status !== 'normal' && (
+                                {point.status !== 'PASS' && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     point.status === 'reject' 
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -353,7 +353,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-3 mb-3">
-                        {qc.status === 'pass' ? (
+                        {qc.status === 'PASS' ? (
                           <div className="p-1.5 bg-[#10b981]/10 dark:bg-[#10b981]/20 rounded-lg flex-shrink-0">
                             <CheckCircle className="text-[#10b981]" size={18} />
                           </div>
