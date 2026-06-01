@@ -12,7 +12,7 @@ import type {
   CreateQcTestDto,
   QcTestResponseDto,
   CreateQcResultDto,
-  QcResultResponseDto,
+  QcRunResponseDto,
   CreateMachineDto,
   MachineResponseDto,
   CreateControlLotDto,
@@ -194,7 +194,7 @@ export async function createQcTest(payload: CreateQcTestDto) {
 
 export async function submitQcResult(payload: CreateQcResultDto) {
   try {
-    const result = await api.post<QcResultResponseDto>(
+    const result = await api.post<QcRunResponseDto>(
       '/api/v1/qc-results',
       payload,
     );

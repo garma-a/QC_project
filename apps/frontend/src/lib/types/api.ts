@@ -228,11 +228,41 @@ export interface QcResultResponseDto {
   violatedRule: string | null;
 }
 
-export interface CreateQcResultDto {
-  measuredValue: number;
+export interface QcResultItemDto {
   lotId: number;
+  measuredValue: number;
   comments?: string;
 }
+
+export interface CreateQcResultDto {
+  machineId: number;
+  results: QcResultItemDto[];
+}
+
+export interface QcRunDto {
+  id: number;
+  machineId: number;
+  testId: number;
+  performedBy: number;
+  runDate: string;
+}
+
+export interface QcRunResultResponseDto {
+  id: number;
+  measuredValue: number;
+  zScore: number;
+  violatedRule: string | null;
+  status: QcResultStatus;
+  comments?: string | null;
+  runId: number;
+  lotId: number;
+}
+
+export interface QcRunResponseDto {
+  run: QcRunDto;
+  results: QcRunResultResponseDto[];
+}
+
 
 export interface UpdateQcResultDto {
   comments?: string;
