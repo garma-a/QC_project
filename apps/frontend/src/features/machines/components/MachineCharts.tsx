@@ -204,24 +204,67 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
   const activeTest = availableTests.find((test) => test.testId === urlTestId) ?? availableTests[0];
 
+  const [mode, setMode] = useState<'live' | 'archive'>('live');
+
+  // Date range state (Archive Mode) - default to 30 days ago to today
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+
   const [activeLotId, setActiveLotId] = useState<number | null>(null);
-  const [showInactiveLots, setShowInactiveLots] = useState(false);
+  const [archiveLotId, setArchiveLotId] = useState<number | null>(null);
+
+  // Archive Mode: lots that were active or had results within the selected date range
+  const archivedLots = useMemo(() => {
+    if (!activeTest) return [];
+    const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+    const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+
+    return activeTest.lots.filter(lot => {
+      const hasResultsInRange = qcHistory.some(
+        r => r.lotId === lot.lotId && 
+             new Date(r.testDate).getTime() >= start && 
+             new Date(r.testDate).getTime() <= end
+      );
+      return hasResultsInRange || lot.isActive; // include it if it's currently active as a fallback
+    });
+  }, [activeTest, startDate, endDate, qcHistory]);
 
   const visibleLots = useMemo(() => {
     if (!activeTest) return [];
-    return activeTest.lots.filter(l => showInactiveLots || l.isActive);
-  }, [activeTest, showInactiveLots]);
+    return activeTest.lots.filter(l => l.isActive);
+  }, [activeTest]);
 
-  // Sync activeLotId when activeTest or visibleLots changes
+  // Sync activeLotId when activeTest or visibleLots changes (Live Mode)
   useEffect(() => {
-    if (visibleLots.length > 0) {
-      if (!visibleLots.find((l) => l.lotId === activeLotId)) {
-        setActiveLotId(visibleLots[0].lotId);
+    if (mode === 'live') {
+      if (visibleLots.length > 0) {
+        if (!visibleLots.find((l) => l.lotId === activeLotId)) {
+          setActiveLotId(visibleLots[0].lotId);
+        }
+      } else {
+        setActiveLotId(null);
       }
-    } else {
-      setActiveLotId(null);
     }
-  }, [visibleLots, activeLotId]);
+  }, [visibleLots, activeLotId, mode]);
+
+  // Sync archiveLotId when archivedLots changes (Archive Mode)
+  useEffect(() => {
+    if (mode === 'archive') {
+      if (archivedLots.length > 0) {
+        if (!archivedLots.find((l) => l.lotId === archiveLotId)) {
+          setArchiveLotId(archivedLots[0].lotId);
+        }
+      } else {
+        setArchiveLotId(null);
+      }
+    }
+  }, [archivedLots, archiveLotId, mode]);
 
   const handleTestChange = (newTestId: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -230,18 +273,36 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
     const test = availableTests.find(t => t.testId === newTestId);
     if (test && test.lots.length > 0) {
-      const activeLots = test.lots.filter(l => showInactiveLots || l.isActive);
+      const activeLots = test.lots.filter(l => l.isActive);
       setActiveLotId(activeLots.length > 0 ? activeLots[0].lotId : test.lots[0].lotId);
+      setArchiveLotId(test.lots[0].lotId);
     }
   };
 
-  const activeLot = activeTest?.lots.find(l => l.lotId === activeLotId) ?? visibleLots[0] ?? activeTest?.lots[0];
+  const activeLot = useMemo(() => {
+    if (!activeTest) return null;
+    if (mode === 'live') {
+      return activeTest.lots.find(l => l.lotId === activeLotId) ?? activeTest.lots.find(l => l.isActive) ?? activeTest.lots[0];
+    } else {
+      return activeTest.lots.find(l => l.lotId === archiveLotId) ?? archivedLots[0] ?? activeTest.lots[0];
+    }
+  }, [mode, activeTest, activeLotId, archiveLotId, archivedLots]);
 
   const qcData = useMemo(() => {
     if (!activeLot) return [];
 
-    return qcHistory
-      .filter((entry) => entry.lotId === activeLot.lotId)
+    let filtered = qcHistory.filter((entry) => entry.lotId === activeLot.lotId);
+
+    if (mode === 'archive') {
+      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+      filtered = filtered.filter(entry => {
+        const t = new Date(entry.testDate).getTime();
+        return t >= start && t <= end;
+      });
+    }
+
+    return filtered
       .slice()
       .sort((a, b) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
       .map((entry) => ({
@@ -252,7 +313,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         violatedRule: entry.violatedRule,
         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
-  }, [activeLot, qcHistory]);
+  }, [activeLot, qcHistory, mode, startDate, endDate]);
 
   const westgardAnalysis = useMemo(() => {
     const mean = activeLot?.mean ?? 0;
@@ -338,10 +399,34 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             ))}
           </select>
         </div>
+
+        {/* Mode Switcher Segmented Toggle */}
+        <div className="flex bg-gray-100 dark:bg-[#2a2a2a] p-1 rounded-xl border border-gray-200 dark:border-gray-700 ml-auto self-end">
+          <button
+            onClick={() => setMode('live')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              mode === 'live'
+                ? 'bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Live Operations
+          </button>
+          <button
+            onClick={() => setMode('archive')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              mode === 'archive'
+                ? 'bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Historical Archive
+          </button>
+        </div>
       </div>
 
-      {/* Level Tabs */}
-      {visibleLots.length > 0 && (
+      {/* Live Mode Level Tabs */}
+      {mode === 'live' && visibleLots.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6 relative z-10">
           {visibleLots.map((lot) => {
             const isActive = activeLotId === lot.lotId;
@@ -355,26 +440,52 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
                     : 'bg-transparent border-[#b8860b] dark:border-[#ffd700] text-[#b8860b] dark:text-[#ffd700] hover:bg-[#b8860b]/10 dark:hover:bg-[#ffd700]/10'
                 }`}
               >
-                Level {lot.level} {!lot.isActive && "(Inactive)"} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
+                Level {lot.level} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Show Inactive Toggle (only if there are inactive lots) */}
-      {activeTest?.lots.some(l => !l.isActive) && (
-        <div className="flex items-center gap-2 mb-6">
-          <input
-            type="checkbox"
-            id="showInactiveLots"
-            checked={showInactiveLots}
-            onChange={(e) => setShowInactiveLots(e.target.checked)}
-            className="rounded text-[#c41e3a] focus:ring-[#c41e3a]"
-          />
-          <label htmlFor="showInactiveLots" className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-            Show Historical / Inactive Lots
-          </label>
+      {/* Archive Mode Filters Card */}
+      {mode === 'archive' && (
+        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#b8860b]/20 dark:border-[#ffd700]/30 p-4 mb-6 shadow-md flex flex-wrap gap-4 items-center relative z-10 animate-fadeIn">
+          <div className="w-48">
+            <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Start Date</label>
+            <input
+              type="date"
+              className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="w-48">
+            <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">End Date</label>
+            <input
+              type="date"
+              className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <div className="w-64">
+            <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Archive Lot Dropdown</label>
+            <select
+              className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
+              value={archiveLotId ?? ''}
+              onChange={(e) => setArchiveLotId(Number(e.target.value))}
+              disabled={archivedLots.length === 0}
+            >
+              {archivedLots.map((lot) => (
+                <option key={lot.lotId} value={lot.lotId}>
+                  Level {lot.level} - {lot.lotNumber} {!lot.isActive && "(Inactive)"}
+                </option>
+              ))}
+              {archivedLots.length === 0 && (
+                <option value="">No lots active in selected dates</option>
+              )}
+            </select>
+          </div>
         </div>
       )}
 
@@ -390,7 +501,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
               <div>
                 <h3 className="text-gray-900 dark:text-white font-bold text-lg">Westgard QC Chart</h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.testName ?? 'Unknown'} (Level {activeLot?.level ?? 1})
+                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.testName ?? 'Unknown'} | Lot: {activeLot?.lotNumber ?? 'N/A'} (Level {activeLot?.level ?? 1}) {mode === 'archive' && '[Archived]'}
                 </p>
               </div>
             </div>
