@@ -119,7 +119,11 @@ export class QcResultsService {
     try {
       for (let i = 0; i < evaluatedResults.length; i++) {
         const e = evaluatedResults[i];
-        const savedResult = savedRunData.results[i];
+        // Ensure we grab the exact inserted result by lotId, because PostgreSQL's INSERT...RETURNING 
+        // does not guarantee the returned array is in the same order as the inserted array!
+        const savedResult = savedRunData.results.find(r => r.lotId === e.resultItem.lotId);
+
+        if (!savedResult) continue; // Safety check
 
         if (e.status === QcStatus.WARNING || e.status === QcStatus.FAIL) {
           const absZScore = Number(Math.abs(e.zScore).toFixed(2));
