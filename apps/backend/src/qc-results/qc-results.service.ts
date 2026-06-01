@@ -7,12 +7,12 @@ import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { QcResultsRepository } from './qc-results.repository';
 import { QcStatus } from './qc-results.types';
-import { AlertsService } from '../alerts/alerts.service';
-import { AlertPriority } from '../alerts/alerts.types';
-import { UsersRepository } from '../users/users.repository';
+import { AlertsService } from '@/alerts/alerts.service';
+import { AlertPriority } from '@/alerts/alerts.types';
+import { UsersRepository } from '@/users/users.repository';
 import { evaluateWestgardRules, WESTGARD_HISTORY_SIZE, RunResultItem } from './westgard.utils';
 import { QcResultItemDto } from './dto/create-qc-result.dto';
-import { controlLots } from '../drizzle/schema';
+import { controlLots } from '@/drizzle/schema';
 
 /** Typed shape of a fully evaluated result item before persisting */
 interface EvaluatedResultItem {

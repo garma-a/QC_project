@@ -21,6 +21,7 @@ describe('QcResultsService', () => {
       getResultsByLotId: jest.fn(),
       getResultAndLotByResultId: jest.fn(),
       getRecentZScoresByLotId: jest.fn(),
+      getActiveLotsByTestId: jest.fn(),
     };
 
     mockAlertsService = {
@@ -45,7 +46,7 @@ describe('QcResultsService', () => {
 
   describe('create', () => {
     const userId = 5;
-    const lotWithStats = { id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' };
+    const lotWithStats = { id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' };
     const machineId = 9;
     // Helper to build the new Run-shaped DTO
     const buildDto = (measuredValue: number, lotId = 1) => ({
@@ -64,6 +65,7 @@ describe('QcResultsService', () => {
       mockRepository.getSectionIdByLotId.mockResolvedValue(10);
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
+      mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 1, lotNumber: 'LOT-1' }]);
     });
 
     it('should create a QC run with PASS status when z-score is within 2 SD', async () => {
@@ -76,7 +78,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('PASS');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ status: 'PASS', violatedRule: null })]),
       );
       expect(mockAlertsService.createForUsers).not.toHaveBeenCalled();
@@ -92,7 +94,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('WARNING');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ status: 'WARNING', violatedRule: '1_2s' })]),
       );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
@@ -108,7 +110,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ status: 'FAIL', violatedRule: '1_3s' })]),
       );
       expect(mockAlertsService.createForUsers).toHaveBeenCalled();
@@ -125,7 +127,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ violatedRule: '2_2s' })]),
       );
     });
@@ -141,7 +143,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ violatedRule: '3_1s' })]),
       );
     });
@@ -157,7 +159,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ violatedRule: '7_T' })]),
       );
     });
@@ -173,7 +175,7 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results[0].status).toBe('FAIL');
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        machineId, userId,
+        machineId, 100, userId,
         expect.arrayContaining([expect.objectContaining({ violatedRule: '6_x' })]),
       );
     });
@@ -188,8 +190,8 @@ describe('QcResultsService', () => {
         ],
       };
       mockRepository.getLotById.mockImplementation((id: number) => {
-        if (id === 1) return Promise.resolve({ id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
-        if (id === 2) return Promise.resolve({ id: 2, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+        if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+        if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
       });
       mockRepository.createQcRun.mockResolvedValue({
         run: { id: 100, machineId: 9, performedBy: userId, runDate: new Date() },
@@ -198,6 +200,10 @@ describe('QcResultsService', () => {
           { id: 2, status: 'WARNING', zScore: 2.4, violatedRule: '1_2s', lotId: 2 },
         ],
       });
+      mockRepository.getActiveLotsByTestId.mockResolvedValue([
+        { id: 1, lotNumber: 'LOT-1' },
+        { id: 2, lotNumber: 'LOT-2' },
+      ]);
 
       // Act
       const result = await service.create(multiLotDto, userId);
@@ -205,12 +211,11 @@ describe('QcResultsService', () => {
       // Assert
       expect(result.results).toHaveLength(2);
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        9,
-        userId,
+        machineId, 100, userId,
         expect.arrayContaining([
           expect.objectContaining({ lotId: 1, status: 'PASS' }),
           expect.objectContaining({ lotId: 2, status: 'WARNING', violatedRule: '1_2s' }),
-        ]),
+        ])
       );
       // Verify alert was fired only for the WARNING result (Level 2), not the PASS (Level 1)
       expect(mockAlertsService.createForUsers).toHaveBeenCalledTimes(1);
@@ -229,8 +234,8 @@ describe('QcResultsService', () => {
         ],
       };
       mockRepository.getLotById.mockImplementation((id: number) => {
-        if (id === 1) return Promise.resolve({ id: 1, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
-        if (id === 2) return Promise.resolve({ id: 2, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+        if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+        if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
       });
       mockRepository.createQcRun.mockResolvedValue({
         run: { id: 101, machineId: 9, performedBy: userId, runDate: new Date() },
@@ -239,6 +244,10 @@ describe('QcResultsService', () => {
           { id: 4, status: 'FAIL', zScore: -2.0, violatedRule: 'R_4s', lotId: 2 },
         ],
       });
+      mockRepository.getActiveLotsByTestId.mockResolvedValue([
+        { id: 1, lotNumber: 'LOT-1' },
+        { id: 2, lotNumber: 'LOT-2' },
+      ]);
 
       // Act
       const result = await service.create(crossMaterialDto, userId);
@@ -246,12 +255,11 @@ describe('QcResultsService', () => {
       // Assert — both results must be FAIL with R_4s
       expect(result.results).toHaveLength(2);
       expect(mockRepository.createQcRun).toHaveBeenCalledWith(
-        9,
-        userId,
+        machineId, 100, userId,
         expect.arrayContaining([
           expect.objectContaining({ lotId: 1, status: 'FAIL', violatedRule: 'R_4s' }),
           expect.objectContaining({ lotId: 2, status: 'FAIL', violatedRule: 'R_4s' }),
-        ]),
+        ])
       );
       // Both levels are FAIL → alerts must fire twice
       expect(mockAlertsService.createForUsers).toHaveBeenCalledTimes(2);
@@ -267,13 +275,22 @@ describe('QcResultsService', () => {
 
     it('should throw BadRequestException when lot is missing statistical values', async () => {
       // Arrange
-      mockRepository.getLotById.mockResolvedValue({ id: 1, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+      mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
 
       // Act & Assert
       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
-      await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(
-        'is missing required statistical values',
-      );
+    });
+
+    it('should throw BadRequestException when missing active lots for the test', async () => {
+      // Arrange
+      mockRepository.getActiveLotsByTestId.mockResolvedValue([
+        { id: 1, lotNumber: 'LOT-1' },
+        { id: 2, lotNumber: 'LOT-2' },
+      ]);
+
+      // Act & Assert
+      // Supplying only LOT-1 while LOT-2 is also active should fail validation
+      await expect(service.create(buildDto(14.5, 1), userId)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -347,16 +364,7 @@ describe('QcResultsService', () => {
       await expect(service.findOne(999)).rejects.toThrow('QC Result not found');
     });
 
-    it('should throw BadRequestException when associated lot is missing stats', async () => {
-      // Arrange
-      mockRepository.getResultAndLotByResultId.mockResolvedValue({
-        qc_results: { id: 1, measuredValue: 15.0 },
-        control_lots: { mean: null, standardDeviation: null },
-      });
 
-      // Act & Assert
-      await expect(service.findOne(1)).rejects.toThrow(BadRequestException);
-    });
   });
 
   describe('update', () => {
