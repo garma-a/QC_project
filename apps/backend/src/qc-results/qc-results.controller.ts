@@ -44,10 +44,10 @@ export class QcResultsController {
   @ApiOperation({
     summary: 'Submit a new QC result',
     description:
-      'Records a new quality control measurement for a specific control lot. ' +
-      'The system automatically evaluates the result against the Core 5 Westgard Rules ' +
-      '(1_3s, 2_2s, R_4s, 4_1s, 10_x) and the 1_2s warning rule using historical data ' +
-      'to assign a PASS, WARNING, or FAIL status.',
+      'Records a new quality control run containing results for all active control lots for a test. ' +
+      'The system automatically evaluates the run against Multi-Lot Westgard Rules (cross-material R_4s, 2_2s) ' +
+      'and Single-Lot historical rules (1_3s, 2_2s, R_4s, 4_1s, 10_x) to assign a PASS, WARNING, or FAIL status ' +
+      'to each result. All active control lots for the test MUST be submitted together in the same run.',
   })
   @ApiResponse({
     status: 201,
