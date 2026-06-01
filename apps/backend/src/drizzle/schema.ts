@@ -108,6 +108,9 @@ export const qcRuns = pgTable('qc_runs', {
   machineId: integer('machine_id')
     .references(() => machines.id)
     .notNull(),
+  testId: integer('test_id')
+    .references(() => qcTests.id)
+    .notNull(),
   performedBy: integer('performed_by')
     .references(() => users.id)
     .notNull(),
@@ -210,6 +213,10 @@ export const qcRunsRelations = relations(qcRuns, ({ one, many }) => ({
   machine: one(machines, {
     fields: [qcRuns.machineId],
     references: [machines.id],
+  }),
+  qcTest: one(qcTests, {
+    fields: [qcRuns.testId],
+    references: [qcTests.id],
   }),
   performedBy: one(users, {
     fields: [qcRuns.performedBy],

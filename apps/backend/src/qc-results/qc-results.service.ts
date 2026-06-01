@@ -103,6 +103,7 @@ export class QcResultsService {
     // 3. THIRD PASS: Persist the entire RUN and all RESULTS atomically
     const savedRunData = await this.qcResultsRepository.createQcRun(
       createQcResultDto.machineId,
+      evaluatedResults[0].lot.testId, // All lots in the run belong to the same test
       userId,
       evaluatedResults.map((e) => ({
         lotId: e.resultItem.lotId,

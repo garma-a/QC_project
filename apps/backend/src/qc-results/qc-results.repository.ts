@@ -32,6 +32,7 @@ export class QcResultsRepository {
 
   async createQcRun(
     machineId: number,
+    testId: number,
     userId: number,
     results: {
       lotId: number;
@@ -50,6 +51,7 @@ export class QcResultsRepository {
       .insert(qcRuns)
       .values({
         machineId,
+        testId,
         performedBy: userId,
       })
       .returning();
@@ -107,11 +109,13 @@ export class QcResultsRepository {
         runId: qcResults.runId,
         lotId: qcResults.lotId,
         testDate: qcRuns.runDate,
+        performedBy: qcRuns.performedBy,
       })
       .from(qcResults)
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcRuns.runDate));
+      .orderBy(desc(qcRuns.runDate))
+      .limit(30);
 
     return results;
   }

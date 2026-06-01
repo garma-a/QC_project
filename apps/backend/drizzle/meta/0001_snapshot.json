@@ -1,5 +1,5 @@
 {
-  "id": "1e13c6dd-fc6b-4156-8db2-a91921a147f9",
+  "id": "fd657b84-3a60-455e-8c5c-0d0581f4395b",
   "prevId": "597a55f4-82d0-4908-a7a9-c770164063b5",
   "version": "7",
   "dialect": "postgresql",
@@ -386,6 +386,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "test_id": {
+          "name": "test_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "performed_by": {
           "name": "performed_by",
           "type": "integer",
@@ -408,6 +414,19 @@
           "tableTo": "machines",
           "columnsFrom": [
             "machine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "qc_runs_test_id_qc_tests_id_fk": {
+          "name": "qc_runs_test_id_qc_tests_id_fk",
+          "tableFrom": "qc_runs",
+          "tableTo": "qc_tests",
+          "columnsFrom": [
+            "test_id"
           ],
           "columnsTo": [
             "id"
