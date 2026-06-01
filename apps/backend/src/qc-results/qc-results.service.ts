@@ -182,15 +182,6 @@ export class QcResultsService {
 
     if (!result) throw new NotFoundException('QC Result not found');
 
-    if (
-      result.control_lots!.mean === null ||
-      result.control_lots!.standardDeviation === null
-    ) {
-      throw new BadRequestException(
-        'Associated control lot is missing statistical data',
-      );
-    }
-
     return {
       ...result,
       zScore: result.qc_results!.zScore,
