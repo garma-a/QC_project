@@ -37,6 +37,7 @@ export default function QCPage() {
     machineId: entry.machineId.toString(),
     testName: entry.testName,
     date: entry.date,
+    rawDate: (entry as any).rawDate || entry.date,
     performedBy: 'User ' + entry.performedBy, // Pending backend performedBy resolution
     numericResult: entry.measuredValue,
     result: entry.measuredValue.toString(),

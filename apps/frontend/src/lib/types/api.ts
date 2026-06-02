@@ -173,6 +173,7 @@ export interface ControlLotResponseDto {
 
 export interface CreateControlLotDto {
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number;
@@ -185,6 +186,7 @@ export interface CreateControlLotDto {
 }
 
 export interface UpdateControlLotDto {
+  level?: number;
   expirationDate?: string;
   targetValue?: number;
   mean?: number;

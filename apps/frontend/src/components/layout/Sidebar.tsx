@@ -36,11 +36,9 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
   const router = useRouter();
 
 const menuItems = [
-  { href: "/dashboard",    label: "Dashboard",        icon: LayoutDashboard },
   { href: "/monitor",      label: "Monitor Machines",  icon: Activity },
   { href: "/qc",           label: "QC Management",    icon: Clipboard },
   { href: "/qc-tests",     label: "QC Tests",         icon: TestTube },
-  { href: "/control-lots", label: "Control Lots",     icon: Database },
   { href: "/machines",     label: "Machines",         icon: Server },
   { href: "/alerts",       label: "Alerts",           icon: AlertCircle },
 ];

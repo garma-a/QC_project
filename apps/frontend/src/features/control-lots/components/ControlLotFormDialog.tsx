@@ -39,8 +39,8 @@ export function ControlLotFormDialog({ mode, initialData, availableTests, initia
     e.preventDefault();
     setError(null);
 
-    if (!formData.testId || !formData.lotNumber || !formData.expirationDate) {
-      setError('Please fill in all required fields: QC Test, Lot Number, and Expiration Date.');
+    if (!formData.testId || !formData.level || !formData.lotNumber || !formData.expirationDate) {
+      setError('Please fill in all required fields: QC Test, Level, Lot Number, and Expiration Date.');
       return;
     }
 
@@ -175,6 +175,23 @@ export function ControlLotFormDialog({ mode, initialData, availableTests, initia
                 {availableTests.map((test) => (
                   <option key={test.id} value={test.id.toString()}>{test.testName}</option>
                 ))}
+              </select>
+            </div>
+
+            {/* Level - Required */}
+            <div>
+              <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Level *</label>
+              <select
+                id="level-select"
+                value={formData.level}
+                onChange={(e) => handleChange('level', e.target.value)}
+                required
+                className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
+              >
+                <option value="">Select Level</option>
+                <option value="1">Level 1</option>
+                <option value="2">Level 2</option>
+                <option value="3">Level 3</option>
               </select>
             </div>
 

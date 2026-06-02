@@ -4,6 +4,7 @@ import type { ControlLotResponseDto, CreateControlLotDto } from '@/lib/types/api
 export function useControlLotForm(initialData?: ControlLotResponseDto) {
   const [formData, setFormData] = useState({
     testId: initialData?.testId.toString() || '',
+    level: initialData?.level?.toString() || '',
     lotNumber: initialData?.lotNumber || '',
     expirationDate: initialData?.expirationDate 
       ? new Date(initialData.expirationDate).toISOString().split('T')[0] 
@@ -39,6 +40,7 @@ export function useControlLotForm(initialData?: ControlLotResponseDto) {
   const resetFormFields = () => {
     setFormData({
       testId: '',
+      level: '',
       lotNumber: '',
       expirationDate: '',
       targetValue: '',
@@ -53,6 +55,7 @@ export function useControlLotForm(initialData?: ControlLotResponseDto) {
 
   const getPayload = (): CreateControlLotDto => ({
     testId: parseInt(formData.testId),
+    level: parseInt(formData.level),
     lotNumber: formData.lotNumber,
     expirationDate: formData.expirationDate,
     targetValue: formData.targetValue ? parseFloat(formData.targetValue) : undefined,
