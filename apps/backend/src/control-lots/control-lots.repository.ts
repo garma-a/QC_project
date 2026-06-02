@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 
 @Injectable()
 export class ControlLotsRepository {
@@ -38,13 +38,7 @@ export class ControlLotsRepository {
       await this.databaseService.db
         .update(controlLots)
         .set({ isActive: false })
-        .where(
-          and(
-            eq(controlLots.testId, testId),
-            eq(controlLots.isActive, true),
-            eq(controlLots.level, data.level ?? 1),
-          ),
-        );
+        .where(inArray(controlLots.id, deactivatedIds));
     }
 
     // 3. Insert the new lot — compensate on failure
