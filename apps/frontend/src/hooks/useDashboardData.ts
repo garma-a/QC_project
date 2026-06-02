@@ -78,7 +78,8 @@ export function useDashboardData() {
                   token
                 );
                 return { machineId: machine.id, tests };
-              } catch {
+              } catch (err) {
+                console.error(`Failed to fetch tests for machine ${machine.id}:`, err);
                 return { machineId: machine.id, tests: [] as QcTestResponseDto[] };
               }
             })
@@ -109,7 +110,8 @@ export function useDashboardData() {
               );
               const results = Array.isArray(response.results) ? response.results : [];
               return { ctx, results };
-            } catch {
+            } catch (err) {
+              console.error(`Failed to fetch QC results for lot ${ctx.lot.id}:`, err);
               return { ctx, results: [] as QcResultResponseDto[] };
             }
           })
