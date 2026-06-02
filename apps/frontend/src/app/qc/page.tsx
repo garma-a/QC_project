@@ -56,7 +56,7 @@ export default function QCPage() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c41e3a] dark:border-[#e84855]"></div>
       </div>
     }>
-      <QCHistoryInteractive 
+      <QCHistoryInteractive
         machines={machinesForQc}
         categories={data.categories}
         qcHistory={qcHistoryForInteractive}

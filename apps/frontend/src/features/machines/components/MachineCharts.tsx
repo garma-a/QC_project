@@ -17,8 +17,24 @@ import {
 } from 'recharts';
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
-import { getPointColor, formatWestgardStats } from '@/utils/westgardRules';
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+
+const getPointColor = (status: string, isDark: boolean) => {
+  if (status === 'reject') return isDark ? '#e84855' : '#c41e3a';
+  if (status === 'warning') return isDark ? '#ffd700' : '#b8860b';
+  return isDark ? '#4ade80' : '#22c55e';
+};
+
+const formatWestgardStats = (stats: any, decimals: number = 3) => ({
+  'Mean': stats.mean.toFixed(decimals),
+  'SD': stats.stdDev.toFixed(decimals),
+  '+3s': stats.plus3s.toFixed(decimals),
+  '+2s': stats.plus2s.toFixed(decimals),
+  '+1s': stats.plus1s.toFixed(decimals),
+  '-1s': stats.minus1s.toFixed(decimals),
+  '-2s': stats.minus2s.toFixed(decimals),
+  '-3s': stats.minus3s.toFixed(decimals),
+});
 
 interface MachineChartsProps {
   machine?: MachineForCharts;
