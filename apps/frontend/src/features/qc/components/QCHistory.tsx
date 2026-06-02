@@ -383,7 +383,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
                                   Z: {point.zScore.toFixed(2)}
                                 </span>
-                                {point.status !== 'PASS' && (
+                                {point.status !== 'normal' && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     point.status === 'reject'
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
