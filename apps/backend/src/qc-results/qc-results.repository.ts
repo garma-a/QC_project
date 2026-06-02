@@ -161,4 +161,13 @@ export class QcResultsRepository {
     return rows.map(r => r.zScore);
   }
 
+  async getMachineIdByTestId(testId: number): Promise<number | undefined> {
+    const [row] = await this.databaseService.db
+      .select({ machineId: qcTests.machineId })
+      .from(qcTests)
+      .where(eq(qcTests.id, testId))
+      .limit(1);
+    return row?.machineId;
+  }
+
 }

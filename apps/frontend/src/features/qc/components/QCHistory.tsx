@@ -128,14 +128,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
     const sortedTests = group.tests
       .filter((t: QcHistoryType) => t.numericResult !== undefined)
       .sort((a: QcHistoryType, b: QcHistoryType) => {
-        const aTime = Date.parse(a.date);
-        const bTime = Date.parse(b.date);
-
-        if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
-          return aTime - bTime;
-        }
-
-        return a.date.localeCompare(b.date);
+        return a.rawDate.localeCompare(b.rawDate);
       })
       .slice(-7);
     
@@ -162,7 +155,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
         minus3s: mean - 3 * stdDev,
       },
       pointsWithStatus: sortedTests.map(t => ({
-        status: t.status === 'FAIL' ? 'reject' : t.status,
+        status: t.status === 'FAIL' ? 'reject' : t.status === 'WARNING' ? 'warning' : 'normal',
         date: t.date.split(' ')[0] || t.date,
         value: t.numericResult || 0,
         zScore: t.zScore,
@@ -383,7 +376,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
                                   Z: {point.zScore.toFixed(2)}
                                 </span>
-                                {point.status !== 'PASS' && (
+                                {point.status !== 'normal' && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     point.status === 'reject'
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'

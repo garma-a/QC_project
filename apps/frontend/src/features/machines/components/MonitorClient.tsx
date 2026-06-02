@@ -46,7 +46,8 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
   const searchParams = useSearchParams();
 
   const selectedMachineId = searchParams.get('machineId');
-  const activeTab = (searchParams.get('tab') as 'overview' | 'charts') || 'overview';
+  const tabParam = searchParams.get('tab');
+  const activeTab: 'overview' | 'charts' = tabParam === 'charts' ? 'charts' : 'overview';
 
   const setUrlParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());

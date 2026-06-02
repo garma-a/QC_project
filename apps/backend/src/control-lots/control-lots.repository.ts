@@ -17,27 +17,54 @@ export class ControlLotsRepository {
 
   async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
     // Note: neon-http does not support interactive transactions.
-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
-    
-    // 1. Deactivate existing active lots for this test
-    await this.databaseService.db
-      .update(controlLots)
-      .set({ isActive: false })
+    // We use manual compensation to undo partial changes on failure.
+
+    // 1. Identify the active lots that will be deactivated
+    const lotsToDeactivate = await this.databaseService.db
+      .select({ id: controlLots.id })
+      .from(controlLots)
       .where(
         and(
           eq(controlLots.testId, testId),
           eq(controlLots.isActive, true),
-          eq(controlLots.level, data.level ?? 1)
-        )
+          eq(controlLots.level, data.level ?? 1),
+        ),
       );
 
-    // 2. Create the new lot
-    const [newLot] = await this.databaseService.db
-      .insert(controlLots)
-      .values(data)
-      .returning();
+    const deactivatedIds = lotsToDeactivate.map((l) => l.id);
 
-    return newLot;
+    // 2. Deactivate existing active lots for this test + level
+    if (deactivatedIds.length > 0) {
+      await this.databaseService.db
+        .update(controlLots)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(controlLots.testId, testId),
+            eq(controlLots.isActive, true),
+            eq(controlLots.level, data.level ?? 1),
+          ),
+        );
+    }
+
+    // 3. Insert the new lot — compensate on failure
+    try {
+      const [newLot] = await this.databaseService.db
+        .insert(controlLots)
+        .values(data)
+        .returning();
+
+      return newLot;
+    } catch (error) {
+      // Compensation: reactivate the exact lots we just deactivated
+      for (const lotId of deactivatedIds) {
+        await this.databaseService.db
+          .update(controlLots)
+          .set({ isActive: true })
+          .where(eq(controlLots.id, lotId));
+      }
+      throw error;
+    }
   }
 
   async findAll() {

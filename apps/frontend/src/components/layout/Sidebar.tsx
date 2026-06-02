@@ -3,7 +3,6 @@
 import {
   Activity,
   Clipboard,
-  LayoutDashboard,
   X,
   Moon,
   Sun,
@@ -11,7 +10,6 @@ import {
   LogOut,
   Heart,
   AlertCircle,
-  Database,
   TestTube,
   Server,
 } from "lucide-react";

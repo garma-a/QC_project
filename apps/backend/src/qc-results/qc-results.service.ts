@@ -68,6 +68,14 @@ export class QcResultsService {
       }
     }
 
+    // Validate that the submitted machineId matches the machine that owns this test
+    const actualMachineId = await this.qcResultsRepository.getMachineIdByTestId(testId);
+    if (actualMachineId !== createQcResultDto.machineId) {
+      throw new BadRequestException(
+        `Machine ID mismatch: the submitted machineId (${createQcResultDto.machineId}) does not match the machine (${actualMachineId}) that owns test ID ${testId}.`,
+      );
+    }
+
     // 1. FIRST PASS: Validate statistics and compute current Z-scores for ALL items.
     //    We must do this before any rule evaluation so that the complete run context
     //    exists before Level 1 is checked — otherwise Level 1 is evaluated blind to
