@@ -1,7 +1,21 @@
 "use client";
 
-import { useState } from 'react';
-import { CheckCircle, AlertCircle, Calendar, User, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, XCircle } from 'lucide-react';
+import { useEffect, useState, useTransition } from 'react';
+import {
+  CheckCircle,
+  AlertCircle,
+  Calendar,
+  User,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  XCircle,
+  Edit2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { updateQcResult } from '@/lib/actions';
 
 type MachineType = { id: string; name: string; category: string; model?: string };
 type CategoryType = { id: string; name: string };
@@ -10,6 +24,7 @@ type QcHistoryType = {
   machineId: string;
   testName: string;
   date: string;
+  rawDate: string;
   performedBy: string;
   numericResult?: number;
   result: string;
@@ -42,24 +57,55 @@ type TestGroupAnalysis = {
 
 interface QCHistoryProps {
   searchTerm: string;
+  selectedDay: string;
+  selectedMonth: string;
+  selectedYear: string;
   qcHistory: QcHistoryType[];
   machines: MachineType[];
   categories: CategoryType[];
 }
 
-export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHistoryProps) {
+export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear, qcHistory, machines, categories }: QCHistoryProps) {
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
-  
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState('');
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [isSavingNote, startNoteTransition] = useTransition();
+  const [localNotes, setLocalNotes] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    setLocalNotes(
+      qcHistory.reduce((acc, qc) => {
+        acc[qc.id] = qc.notes ?? null;
+        return acc;
+      }, {} as Record<string, string | null>)
+    );
+  }, [qcHistory]);
+
   const filteredHistory = qcHistory.filter(qc => {
     const machine = machines.find(m => m.id === qc.machineId);
     const searchLower = searchTerm.toLowerCase();
-    
-    return (
+    const parsedDate = new Date(qc.rawDate);
+
+    const matchesDay =
+      selectedDay === 'all' ||
+      (!Number.isNaN(parsedDate.getTime()) && parsedDate.getDate().toString() === selectedDay);
+
+    const matchesMonth =
+      selectedMonth === 'all' ||
+      (!Number.isNaN(parsedDate.getTime()) && (parsedDate.getMonth() + 1).toString() === selectedMonth);
+
+    const matchesYear =
+      selectedYear === 'all' ||
+      (!Number.isNaN(parsedDate.getTime()) && parsedDate.getFullYear().toString() === selectedYear);
+
+    const matchesSearch =
       qc.testName.toLowerCase().includes(searchLower) ||
       qc.date.toLowerCase().includes(searchLower) ||
       qc.performedBy.toLowerCase().includes(searchLower) ||
-      machine?.name.toLowerCase().includes(searchLower)
-    );
+      machine?.name.toLowerCase().includes(searchLower);
+
+    return matchesDay && matchesMonth && matchesYear && Boolean(matchesSearch);
   });
 
   // Group by test name for Westgard analysis
@@ -148,6 +194,36 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
     setExpandedTest(expandedTest === testKey ? null : testKey);
   };
 
+  const startEditingNote = (qc: QcHistoryType) => {
+    setEditingNoteId(qc.id);
+    setDraftNote(localNotes[qc.id] ?? '');
+    setNoteError(null);
+  };
+
+  const cancelEditingNote = () => {
+    setEditingNoteId(null);
+    setDraftNote('');
+    setNoteError(null);
+  };
+
+  const saveNote = (qcId: string) => {
+    setNoteError(null);
+
+    startNoteTransition(async () => {
+      const result = await updateQcResult(Number(qcId), { comments: draftNote });
+      if (result?.error) {
+        setNoteError(result.error);
+        return;
+      }
+
+      setLocalNotes((current) => ({
+        ...current,
+        [qcId]: draftNote,
+      }));
+      cancelEditingNote();
+    });
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Westgard Analysis Summary */}
@@ -171,17 +247,16 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
               const isExpanded = expandedTest === group.key;
 
               return (
-                <div 
+                <div
                   key={group.key}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    hasRejects 
-                      ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700' 
+                  className={`p-4 rounded-xl border-2 transition-all ${hasRejects
+                      ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
                       : hasWarnings
-                      ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
-                      : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-                  }`}
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
+                        : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                    }`}
                 >
-                  <div 
+                  <div
                     className="flex items-start justify-between cursor-pointer"
                     onClick={() => toggleExpand(group.key)}
                   >
@@ -196,7 +271,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 dark:text-white">{group.testName}</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{machine?.name}</p>
-                        
+
                         <div className="mt-2 flex flex-wrap gap-2 text-xs">
                           <div className="px-2 py-1 bg-white dark:bg-[#1e1e1e] rounded">
                             <span className="text-gray-600 dark:text-gray-400">Mean: </span>
@@ -264,7 +339,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                         <div className="space-y-2">
                           <h5 className="font-semibold text-gray-900 dark:text-white text-sm">Rule Violations:</h5>
                           {group.analysis.violations.map((violation, idx: number) => (
-                            <div 
+                            <div
                               key={idx}
                               className="p-3 bg-white dark:bg-[#1e1e1e] rounded-lg"
                             >
@@ -284,19 +359,18 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                         <h5 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">Last 7 Days:</h5>
                         <div className="space-y-1">
                           {group.analysis.pointsWithStatus.map((point, idx: number) => (
-                            <div 
+                            <div
                               key={idx}
                               className="flex items-center justify-between p-2 bg-white dark:bg-[#1e1e1e] rounded"
                             >
                               <div className="flex items-center gap-2">
-                                <div 
-                                  className={`w-3 h-3 rounded-full ${
-                                    point.status === 'reject'
+                                <div
+                                  className={`w-3 h-3 rounded-full ${point.status === 'reject'
                                       ? 'bg-[#c41e3a] dark:bg-[#e84855]'
                                       : point.status === 'warning'
-                                      ? 'bg-[#b8860b] dark:bg-[#ffd700]'
-                                      : 'bg-[#22c55e] dark:bg-[#4ade80]'
-                                  }`}
+                                        ? 'bg-[#b8860b] dark:bg-[#ffd700]'
+                                        : 'bg-[#22c55e] dark:bg-[#4ade80]'
+                                    }`}
                                 />
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
                                   {point.date}
@@ -311,10 +385,10 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                                 </span>
                                 {point.status !== 'PASS' && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
-                                    point.status === 'reject' 
+                                    point.status === 'reject'
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                                       : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                                  }`}>
+                                    }`}>
                                     {point.violations.join(', ')}
                                   </span>
                                 )}
@@ -347,7 +421,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
             {tests.map((qc: QcHistoryType) => {
               const machine = machines.find((m: MachineType) => m.id === qc.machineId);
               const category = categories.find((c: CategoryType) => c.id === machine?.category);
-              
+
               return (
                 <div key={qc.id} className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl hover:bg-[#fef3e2] dark:hover:bg-[#333333] transition-colors border border-[#c41e3a]/10 dark:border-[#e84855]/20">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -367,7 +441,7 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                           <p className="text-gray-600 dark:text-gray-400 text-sm break-words">{machine?.name} • {category?.name}</p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pl-10">
                         <div className="bg-white dark:bg-[#1e1e1e] p-3 rounded-lg border border-[#c41e3a]/10 dark:border-[#e84855]/20">
                           <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Result</p>
@@ -390,11 +464,66 @@ export function QCHistory({ searchTerm, qcHistory, machines, categories }: QCHis
                     </div>
                   </div>
 
-                  {qc.notes && (
-                    <div className="mt-3 pt-3 border-t border-[#c41e3a]/10 dark:border-[#e84855]/20 pl-10">
-                      <p className="text-gray-600 dark:text-gray-400 text-sm break-words italic">{qc.notes}</p>
-                    </div>
-                  )}
+                  <div className="mt-3 pt-3 border-t border-[#c41e3a]/10 dark:border-[#e84855]/20 pl-10">
+                    {editingNoteId === qc.id ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={draftNote}
+                          onChange={(e) => setDraftNote(e.target.value)}
+                          placeholder="Add a note about this QC result"
+                          className="min-h-24 bg-white dark:bg-[#1e1e1e]"
+                        />
+                        {noteError && <p className="text-sm text-red-500">{noteError}</p>}
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelEditingNote}
+                            disabled={isSavingNote}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => saveNote(qc.id)}
+                            disabled={isSavingNote}
+                          >
+                            {isSavingNote ? 'Saving...' : 'Save'}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          {localNotes[qc.id] ? (
+                            <p className="text-gray-600 dark:text-gray-400 text-sm break-words italic">
+                              {localNotes[qc.id]}
+                            </p>
+                          ) : (
+                            <p className="text-gray-500 dark:text-gray-500 text-sm">No notes added yet.</p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => startEditingNote(qc)}
+                        >
+                          {localNotes[qc.id] ? (
+                            <>
+                              <Edit2 size={16} className="mr-2" />
+                              Edit
+                            </>
+                          ) : (
+                            'Add Note'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}

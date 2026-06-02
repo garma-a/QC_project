@@ -11,6 +11,7 @@ type QcHistoryType = {
   machineId: string;
   testName: string;
   date: string;
+  rawDate: string;
   performedBy: string;
   numericResult?: number;
   result: string;
@@ -23,17 +24,48 @@ type QcHistoryType = {
   lotSd: number;
 };
 
-export function QCHistoryInteractive({ 
-  qcHistory, 
-  machines, 
-  categories 
-}: { 
-  qcHistory: QcHistoryType[], 
-  machines: { id: string; category: string; name: string; model: string }[], 
-  categories: { id: string; name: string }[] 
+export function QCHistoryInteractive({
+  qcHistory,
+  machines,
+  categories
+}: {
+  qcHistory: QcHistoryType[],
+  machines: { id: string; category: string; name: string; model: string }[],
+  categories: { id: string; name: string }[]
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDay, setSelectedDay] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
+
+  const years = Array.from(
+    new Set(
+      qcHistory
+        .map((item) => {
+          const parsed = new Date(item.rawDate);
+          return Number.isNaN(parsed.getTime()) ? null : parsed.getFullYear();
+        })
+        .filter((year): year is number => year !== null),
+    ),
+  ).sort((a, b) => b - a);
+
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
 
   return (
     <>
@@ -71,20 +103,59 @@ export function QCHistoryInteractive({
         </div>
       </div>
 
+      {/* Date Filters */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <select
+          value={selectedDay}
+          onChange={(e) => setSelectedDay(e.target.value)}
+          className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
+        >
+          <option value="all">All Days</option>
+          {days.map((day) => (
+            <option key={day} value={day}>{day}</option>
+          ))}
+        </select>
+
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
+        >
+          <option value="all">All Months</option>
+          {months.map((month) => (
+            <option key={month.value} value={month.value}>{month.label}</option>
+          ))}
+        </select>
+
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+          className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
+        >
+          <option value="all">All Years</option>
+          {years.map((year) => (
+            <option key={year} value={year.toString()}>{year}</option>
+          ))}
+        </select>
+      </div>
+
       {/* QC History */}
-      <QCHistory 
-        searchTerm={searchTerm} 
-        qcHistory={qcHistory} 
-        machines={machines} 
-        categories={categories} 
+      <QCHistory
+        searchTerm={searchTerm}
+        selectedDay={selectedDay}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        qcHistory={qcHistory}
+        machines={machines}
+        categories={categories}
       />
 
       {/* Create QC Test Modal */}
       {showCreateForm && (
-        <CreateQCTest 
-          onClose={() => setShowCreateForm(false)} 
-          machines={machines} 
-          categories={categories} 
+        <CreateQCTest
+          onClose={() => setShowCreateForm(false)}
+          machines={machines}
+          categories={categories}
         />
       )}
     </>

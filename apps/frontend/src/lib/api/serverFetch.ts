@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -57,6 +58,13 @@ export async function serverFetch<T>(
   });
 
   if (!res.ok) {
+    // Check for 401 BEFORE entering any try/catch block.
+    // Next.js redirect() works by throwing a special NEXT_REDIRECT error,
+    // which would be silently swallowed if called inside a catch block.
+    if (res.status === 401) {
+      redirect('/login');
+    }
+
     let errorMessage = `HTTP error! status: ${res.status}`;
     let details: string[] = [];
 

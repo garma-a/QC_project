@@ -187,12 +187,12 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         <div>
 
         {/* Machine Header */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg myc-pattern relative">
+        <div className="w-full bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 px-5 py-3 sm:px-6 sm:py-4 mb-6 shadow-lg myc-pattern relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
           
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3 relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
-              <h1 className="text-gray-900 dark:text-white mb-2 break-words font-bold">{machine.name}</h1>
+              <h1 className="text-gray-900 dark:text-white mb-1 break-words font-bold">{machine.name}</h1>
               <p className="text-gray-600 dark:text-gray-400">{machine.hospCode}</p>
             </div>
             <div className={`px-4 py-2 rounded-xl font-semibold whitespace-nowrap self-start border-2 ${
@@ -204,7 +204,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 pt-3 border-t-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 relative z-10">
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Section ID</p>
               <p className="text-gray-900 dark:text-white font-medium capitalize">{machine.sectionId}</p>
@@ -219,16 +219,6 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
             </div>
           </div>
         </div>
-
-        {/* Available Tests (Placeholder until Control Lots are wired) */}
-        {machine.tests && machine.tests.length > 0 && (
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg">
-            <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Available Tests ({machine.tests.length})</h2>
-            <div className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 text-gray-600 dark:text-gray-400 text-sm">
-               Test details will be loaded from real control lots.
-            </div>
-          </div>
-        )}
 
         {/* Current Status */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
@@ -276,6 +266,16 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
              </p>
            </div>
         </div>
+
+        {/* Available Tests (Placeholder until Control Lots are wired) */}
+        {machine.tests && machine.tests.length > 0 && (
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg">
+            <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Available Tests ({machine.tests.length})</h2>
+            <div className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 text-gray-600 dark:text-gray-400 text-sm">
+               Test details will be loaded from real control lots.
+            </div>
+          </div>
+        )}
 
         {/* QC History */}
         <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg">
