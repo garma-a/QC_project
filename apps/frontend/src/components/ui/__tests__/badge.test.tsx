@@ -17,11 +17,11 @@ describe('Badge component', () => {
     rerender(<Badge variant="destructive">Destructive</Badge>);
     expect(screen.getByText('Destructive')).toHaveClass('bg-destructive');
 
-    rerender(<Badge variant="success">Success</Badge>);
-    expect(screen.getByText('Success')).toHaveClass('bg-green-500');
+    rerender(<Badge variant="outline">Outline</Badge>);
+    expect(screen.getByText('Outline')).toHaveClass('border-border');
 
-    rerender(<Badge variant="warning">Warning</Badge>);
-    expect(screen.getByText('Warning')).toHaveClass('bg-amber-500');
+    rerender(<Badge variant="ghost">Ghost</Badge>);
+    expect(screen.getByText('Ghost')).toHaveClass('[a&]:hover:bg-accent');
   });
 
   it('applies custom className', () => {

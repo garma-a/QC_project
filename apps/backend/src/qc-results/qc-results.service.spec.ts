@@ -62,6 +62,7 @@ describe('QcResultsService', () => {
     beforeEach(() => {
       // Arrange - common setup
       mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.getLotTestMachineByLotId.mockResolvedValue({ qc_tests: { machineId: 9 } });
       mockRepository.getSectionIdByLotId.mockResolvedValue(10);
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
