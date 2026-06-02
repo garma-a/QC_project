@@ -7,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../select';
-import React from 'react';
 
 describe('Select component', () => {
   it('renders trigger and placeholder correctly', () => {

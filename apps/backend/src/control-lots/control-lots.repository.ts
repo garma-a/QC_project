@@ -51,11 +51,11 @@ export class ControlLotsRepository {
       return newLot;
     } catch (error) {
       // Compensation: reactivate the exact lots we just deactivated
-      for (const lotId of deactivatedIds) {
+      if (deactivatedIds.length > 0) {
         await this.databaseService.db
           .update(controlLots)
           .set({ isActive: true })
-          .where(eq(controlLots.id, lotId));
+          .where(inArray(controlLots.id, deactivatedIds));
       }
       throw error;
     }

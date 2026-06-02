@@ -8,8 +8,17 @@ CREATE TABLE "qc_runs" (
 --> statement-breakpoint
 ALTER TABLE "qc_results" DROP CONSTRAINT "qc_results_performed_by_users_id_fk";
 --> statement-breakpoint
-ALTER TABLE "qc_results" ADD COLUMN "z_score" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "qc_results" ALTER COLUMN "z_score" DROP DEFAULT;--> statement-breakpoint
+ALTER TABLE "qc_results" ADD COLUMN "z_score" double precision;--> statement-breakpoint
+-- Backfill z_score mathematically
+DO $$
+BEGIN
+  UPDATE "qc_results" qr
+  SET "z_score" = (qr."measured_value" - cl."mean") / cl."standard_deviation"
+  FROM "control_lots" cl
+  WHERE qr."lot_id" = cl."id"
+    AND qr."z_score" IS NULL;
+END $$;--> statement-breakpoint
+ALTER TABLE "qc_results" ALTER COLUMN "z_score" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "qc_results" ADD COLUMN "violated_rule" varchar(50);--> statement-breakpoint
 ALTER TABLE "control_lots" ADD COLUMN "level" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
 ALTER TABLE "qc_results" ADD COLUMN "run_id" integer;--> statement-breakpoint
