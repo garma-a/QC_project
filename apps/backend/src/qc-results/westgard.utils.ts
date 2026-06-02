@@ -108,7 +108,7 @@ export function evaluateWestgardRules(
     const z = zScores[0]; // current point
 
     // 1₃s — single point > ±3 SD → random error, reject immediately
-    if (Math.abs(z) > 3) {
+    if (Math.abs(z) >= 3) {
         return {
             status: 'FAIL',
             violatedRule: '1_3s',
@@ -140,6 +140,18 @@ export function evaluateWestgardRules(
         }
     }
 
+    // 4₁s — four consecutive on same side, all > ±1 SD
+    if (zScores.length >= 4) {
+        const last4 = zScores.slice(0, 4);
+        if (last4.every(z => z >= 1) || last4.every(z => z <= -1)) {
+            return {
+                status: 'FAIL',
+                violatedRule: '4_1s',
+                suggestedSolution: 'Systematic drift over 4 runs. Inspect reagent stability, temperature, and calibration status.',
+            };
+        }
+    }
+
     // 2 of 3_2s — 2 out of 3 consecutive points > ±2 SD on the same side
     if (zScores.length >= 3) {
         const last3 = zScores.slice(0, 3);
@@ -159,18 +171,6 @@ export function evaluateWestgardRules(
                 status: 'FAIL',
                 violatedRule: '3_1s',
                 suggestedSolution: '3 consecutive points exceeded 1 SD. Shift in the mean.',
-            };
-        }
-    }
-
-    // 4₁s — four consecutive on same side, all > ±1 SD
-    if (zScores.length >= 4) {
-        const last4 = zScores.slice(0, 4);
-        if (last4.every(z => z >= 1) || last4.every(z => z <= -1)) {
-            return {
-                status: 'FAIL',
-                violatedRule: '4_1s',
-                suggestedSolution: 'Systematic drift over 4 runs. Inspect reagent stability, temperature, and calibration status.',
             };
         }
     }
