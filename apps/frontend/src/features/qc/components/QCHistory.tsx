@@ -161,13 +161,18 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
         minus2s: mean - 2 * stdDev,
         minus3s: mean - 3 * stdDev,
       },
-      pointsWithStatus: sortedTests.map(t => ({
-        status: t.status === 'FAIL' ? 'reject' : t.status,
-        date: t.date.split(' ')[0] || t.date,
-        value: t.numericResult || 0,
-        zScore: t.zScore,
-        violations: t.violatedRule ? [t.violatedRule] : [],
-      })),
+      pointsWithStatus: sortedTests.map((t) => {
+        const status =
+          t.status === 'FAIL' ? 'reject' : t.status === 'WARNING' ? 'warning' : 'normal';
+
+        return {
+          status,
+          date: t.date.split(' ')[0] || t.date,
+          value: t.numericResult || 0,
+          zScore: t.zScore,
+          violations: t.violatedRule ? [t.violatedRule] : [],
+        };
+      }),
     };
 
     return {
