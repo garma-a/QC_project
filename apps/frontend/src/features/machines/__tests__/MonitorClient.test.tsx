@@ -4,11 +4,15 @@ import { MonitorClient } from '../components/MonitorClient';
 
 // Mock router
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
+let currentSearchParams = new URLSearchParams('');
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => currentSearchParams,
 }));
 
 // Mock machine charts component since we only want to test MonitorClient data handling
@@ -19,6 +23,7 @@ vi.mock('@/features/machines/components/MachineCharts', () => ({
 describe('MonitorClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentSearchParams = new URLSearchParams('');
   });
 
   it('renders empty state gracefully when machines list is empty (fetch failed/no data)', () => {
@@ -54,6 +59,9 @@ describe('MonitorClient', () => {
   });
 
   it('shows detailed machine view and handles missing qcHistory safely', () => {
+    // Mock URL params to simulate machine selected
+    currentSearchParams = new URLSearchParams('?machineId=1');
+    
     const machine = {
       id: 1,
       name: 'Test Machine',
@@ -69,25 +77,20 @@ describe('MonitorClient', () => {
 
     render(<MonitorClient machines={[machine]} categories={[{ id: '1', name: 'Cat' }]} qcHistory={[]} />);
     
-    // Click machine card to select it
-    fireEvent.click(screen.getByText('Test Machine'));
-    
-    // It should render the detailed view
+    // It should render the detailed view directly
     expect(screen.getByText('No QC history found for this machine.')).toBeInTheDocument();
     expect(screen.getByText('Tests Today')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
   it('renders Analytics tab and delegates to MachineCharts', () => {
+    // Mock URL params to simulate machine and tab selected
+    currentSearchParams = new URLSearchParams('?machineId=1&tab=charts');
+    
     const machine = {
       id: 1, name: 'Analytics Machine', hospCode: 'H-03', sectionId: 1, currentStatus: 'IDLE' as const, isActive: true, createdAt: '', updatedAt: ''
     };
     render(<MonitorClient machines={[machine]} categories={[{id: '1', name: 'Cat'}]} qcHistory={[]} />);
-    
-    fireEvent.click(screen.getByText('Analytics Machine')); // Select
-    
-    // Switch tab
-    fireEvent.click(screen.getByText('Analytics'));
     
     // The mock component should render
     expect(screen.getByTestId('machine-charts-mock')).toBeInTheDocument();

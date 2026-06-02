@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
 import { MachineCharts } from '@/features/machines/components/MachineCharts';
 import { LogoCompact } from '@/components/layout/Logo';
@@ -43,6 +43,7 @@ type MonitorClientProps = {
 
 export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const selectedMachineId = searchParams.get('machineId');
@@ -57,7 +58,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         params.set(key, value);
       }
     }
-    router.replace(`?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const machine = machines.find(m => m.id.toString() === selectedMachineId);
@@ -146,6 +147,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <button 
+            type="button"
             onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium cursor-pointer"
           >
@@ -161,6 +163,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       {/* Tabs */}
       <div className="flex gap-2 sm:gap-4 mb-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30">
         <button
+          type="button"
           onClick={() => setUrlParams({ tab: 'overview' })}
           className={`pb-3 px-4 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'overview'
@@ -171,6 +174,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
           Overview
         </button>
         <button
+          type="button"
           onClick={() => setUrlParams({ tab: 'charts' })}
           className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'charts'

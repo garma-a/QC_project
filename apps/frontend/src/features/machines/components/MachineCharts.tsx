@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   CartesianGrid,
   Cell,
@@ -215,6 +215,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   }, [machine, qcHistory]);
 
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlTestId = searchParams.get('testId');
 
@@ -285,7 +286,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   const handleTestChange = (newTestId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('testId', newTestId);
-    router.replace(`?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
 
     const test = availableTests.find(t => t.testId === newTestId);
     if (test && test.lots.length > 0) {
@@ -419,6 +420,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         {/* Mode Switcher Segmented Toggle */}
         <div className="flex bg-gray-100 dark:bg-[#2a2a2a] p-1 rounded-xl border border-gray-200 dark:border-gray-700 ml-auto self-end">
           <button
+            type="button"
             onClick={() => setMode('live')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               mode === 'live'
@@ -429,6 +431,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             Live Operations
           </button>
           <button
+            type="button"
             onClick={() => setMode('archive')}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               mode === 'archive'
@@ -448,6 +451,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             const isActive = activeLotId === lot.lotId;
             return (
               <button
+                type="button"
                 key={lot.lotId}
                 onClick={() => setActiveLotId(lot.lotId)}
                 className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-200 border-2 ${

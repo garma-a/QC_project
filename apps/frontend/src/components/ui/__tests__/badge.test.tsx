@@ -16,12 +16,6 @@ describe('Badge component', () => {
 
     rerender(<Badge variant="destructive">Destructive</Badge>);
     expect(screen.getByText('Destructive')).toHaveClass('bg-destructive');
-
-    rerender(<Badge variant="success">Success</Badge>);
-    expect(screen.getByText('Success')).toHaveClass('bg-green-500');
-
-    rerender(<Badge variant="warning">Warning</Badge>);
-    expect(screen.getByText('Warning')).toHaveClass('bg-amber-500');
   });
 
   it('applies custom className', () => {

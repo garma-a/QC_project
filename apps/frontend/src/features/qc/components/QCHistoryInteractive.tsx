@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
-import { CreateQCTest } from '@/features/qc/components/CreateQCTest';
+import { RecordQcResult } from '@/features/qc/components/RecordQcResult';
 import { QCHistory } from '@/features/qc/components/QCHistory';
 import { LogoCompact } from '@/components/layout/Logo';
 
@@ -30,7 +30,24 @@ export function QCHistoryInteractive({
   categories
 }: {
   qcHistory: QcHistoryType[],
-  machines: { id: string; category: string; name: string; model: string }[],
+  machines: { 
+    id: string; category: string; name: string; model: string;
+    tests: {
+      id: string;
+      name: string;
+      category: string;
+      code: string;
+      unit: string;
+      lowRange: number;
+      highRange: number;
+      lotId: number;
+      level: number;
+      lotNumber: string;
+      isActive: boolean;
+      mean: number;
+      standardDeviation: number;
+    }[];
+  }[],
   categories: { id: string; name: string }[]
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -81,7 +98,7 @@ export function QCHistoryInteractive({
           className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 whitespace-nowrap font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
         >
           <Plus size={20} />
-          <span className="hidden sm:inline">Create New QC Test</span>
+          <span className="hidden sm:inline">Record QC Result</span>
           <span className="sm:hidden">New Test</span>
         </button>
       </div>
@@ -152,7 +169,7 @@ export function QCHistoryInteractive({
 
       {/* Create QC Test Modal */}
       {showCreateForm && (
-        <CreateQCTest
+        <RecordQcResult
           onClose={() => setShowCreateForm(false)}
           machines={machines}
           categories={categories}

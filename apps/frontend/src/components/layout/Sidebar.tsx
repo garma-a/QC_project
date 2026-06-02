@@ -36,11 +36,12 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
   const router = useRouter();
 
 const menuItems = [
-  { href: "/monitor",      label: "Monitor Machines",  icon: Activity },
-  { href: "/qc",           label: "QC Management",    icon: Clipboard },
-  { href: "/qc-tests",     label: "QC Tests",         icon: TestTube },
-  { href: "/machines",     label: "Machines",         icon: Server },
-  { href: "/alerts",       label: "Alerts",           icon: AlertCircle },
+  { href: "/monitor",      label: "Live Dashboard",       icon: Activity },
+  { href: "/qc",           label: "QC Results History",   icon: Clipboard },
+  { href: "/qc-tests",     label: "QC Test Types",        icon: TestTube },
+  { href: "/control-lots", label: "Control Lots",         icon: Database },
+  { href: "/machines",     label: "Equipment Directory",  icon: Server },
+  { href: "/alerts",       label: "Alerts",               icon: AlertCircle },
 ];
 
   // Add User Management for admins only

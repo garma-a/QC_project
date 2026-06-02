@@ -30,6 +30,7 @@ export default function QCPage() {
     name: m.name,
     category: m.sectionId.toString(),
     model: m.hospCode ?? '',
+    tests: m.tests ?? [],
   }));
 
   const qcHistoryForInteractive = data.qcHistory.map(entry => ({
