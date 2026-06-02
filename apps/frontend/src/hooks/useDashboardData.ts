@@ -207,7 +207,7 @@ export function useDashboardData() {
 
   return {
     data,
-    isLoading,
-    error: error?.message || null,
+    isLoading: isLoading || !token,
+    error: token ? error?.message || null : null,
   };
 }
