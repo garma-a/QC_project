@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
   CartesianGrid,
@@ -154,6 +154,269 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
   );
 }
 
+function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testName, theme }: any) {
+  const qcData = useMemo(() => {
+    let filtered = qcHistory.filter((entry: any) => entry.lotId === lot.lotId);
+
+    if (mode === 'archive') {
+      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+      filtered = filtered.filter((entry: any) => {
+        const t = new Date(entry.testDate).getTime();
+        return t >= start && t <= end;
+      });
+    }
+
+    return filtered
+      .slice()
+      .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
+      .map((entry: any) => ({
+        date: new Date(entry.testDate).toLocaleString(),
+        value: entry.measuredValue,
+        testName: entry.testName,
+        zScore: entry.zScore,
+        violatedRule: entry.violatedRule,
+        status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
+      }));
+  }, [lot, qcHistory, mode, startDate, endDate]);
+
+  const westgardAnalysis = useMemo(() => {
+    const mean = lot?.mean ?? 0;
+    const stdDev = lot?.standardDeviation ?? 1;
+
+    return {
+      violations: qcData
+        .filter((t: any) => t.violatedRule)
+        .map((t: any) => ({
+          severity: t.status === 'reject' ? 'reject' : 'warning',
+          rule: t.violatedRule!,
+          description: `${t.violatedRule} Violation`,
+          message: `Violated on ${t.date}`,
+        })),
+      stats: {
+        mean,
+        stdDev,
+        plus3s: mean + 3 * stdDev,
+        plus2s: mean + 2 * stdDev,
+        plus1s: mean + 1 * stdDev,
+        minus1s: mean - 1 * stdDev,
+        minus2s: mean - 2 * stdDev,
+        minus3s: mean - 3 * stdDev,
+      },
+      pointsWithStatus: qcData.map((t: any) => ({
+        status: t.status as 'normal' | 'warning' | 'reject',
+        date: t.date,
+        value: t.value,
+        zScore: t.zScore,
+        violations: t.violatedRule ? [t.violatedRule] : [],
+      })),
+    };
+  }, [qcData, lot]);
+
+  const isDark = theme === 'dark';
+  const gridColor = isDark ? '#2a2a2a' : '#fef3e2';
+  const textColor = isDark ? '#a0a0a0' : '#666666';
+  const tooltipBorder = isDark ? '#e84855' : '#c41e3a';
+  const secondaryGold = isDark ? '#ffd700' : '#b8860b';
+  const successGreen = isDark ? '#4ade80' : '#22c55e';
+  const warningYellow = isDark ? '#ffd700' : '#b8860b';
+  const rejectRed = isDark ? '#e84855' : '#c41e3a';
+
+  const chartData: ChartDataPoint[] = westgardAnalysis.pointsWithStatus.map((point) => ({
+    date: point.date,
+    value: point.value,
+    mean: westgardAnalysis.stats.mean,
+    plus1s: westgardAnalysis.stats.plus1s,
+    plus2s: westgardAnalysis.stats.plus2s,
+    plus3s: westgardAnalysis.stats.plus3s,
+    minus1s: westgardAnalysis.stats.minus1s,
+    minus2s: westgardAnalysis.stats.minus2s,
+    minus3s: westgardAnalysis.stats.minus3s,
+    status: point.status,
+    zScore: point.zScore,
+    violations: point.violations.join(', '),
+    fill: getPointColor(point.status, isDark),
+  }));
+
+  if (chartData.length === 0) {
+    return (
+      <div className="p-8 text-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
+        <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-2">Level {lot.level} (Lot: {lot.lotNumber})</h3>
+        <p className="text-gray-500 dark:text-gray-400">No data available for this lot in the selected range.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg myc-pattern relative mb-8">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#b8860b]/10 dark:bg-[#ffd700]/20 rounded-lg">
+            <TrendingUp className="text-[#b8860b] dark:text-[#ffd700]" size={24} />
+          </div>
+          <div>
+            <h3 className="text-gray-900 dark:text-white font-bold text-lg">
+              Level {lot.level} Control Lot (Lot: {lot.lotNumber}) {mode === 'archive' && '[Archived]'}
+            </h3>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Machine: {machineName} | Test: {testName}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 text-xs">
+          <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-lg">
+            <CheckCircle2 size={14} className="text-green-500" />
+            <span className="text-green-700 dark:text-green-400">
+              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'normal').length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 rounded-lg">
+            <AlertTriangle size={14} className="text-yellow-500" />
+            <span className="text-yellow-700 dark:text-yellow-400">
+              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'warning').length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 px-2 py-1 bg-red-500/10 rounded-lg">
+            <XCircle size={14} className="text-red-500" />
+            <span className="text-red-700 dark:text-red-400">
+              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'reject').length}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-4 relative z-10">
+        {Object.entries(formatWestgardStats(westgardAnalysis.stats, 3)).map(([key, value]) => (
+          <div key={key} className="text-center">
+            <p className="text-xs text-gray-600 dark:text-gray-400">{key}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ width: '100%', height: '500px' }} className="relative z-10">
+        <ResponsiveContainer width="100%" height={500}>
+          <ComposedChart data={chartData} margin={{ top: 20, right: 50, left: 10, bottom: 80 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={true} horizontal={true} />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 10, fill: textColor }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              stroke={gridColor}
+              type="category"
+              allowDuplicatedCategory={false}
+              interval={0}
+            />
+            <YAxis
+              tick={{ fontSize: 12, fill: textColor, fontWeight: 'bold' }}
+              stroke={gridColor}
+              domain={[
+                (dataMin: number) => Math.min(westgardAnalysis.stats.mean - (westgardAnalysis.stats.stdDev * 3.5), dataMin),
+                (dataMax: number) => Math.max(westgardAnalysis.stats.mean + (westgardAnalysis.stats.stdDev * 3.5), dataMax)
+              ]}
+              ticks={[
+                westgardAnalysis.stats.minus3s,
+                westgardAnalysis.stats.minus2s,
+                westgardAnalysis.stats.minus1s,
+                westgardAnalysis.stats.mean,
+                westgardAnalysis.stats.plus1s,
+                westgardAnalysis.stats.plus2s,
+                westgardAnalysis.stats.plus3s
+              ]}
+              tickFormatter={(value) => {
+                if (Math.abs(value - westgardAnalysis.stats.mean) < 0.001) return 'Mean';
+                if (Math.abs(value - westgardAnalysis.stats.plus1s) < 0.001) return '+1s';
+                if (Math.abs(value - westgardAnalysis.stats.plus2s) < 0.001) return '+2s';
+                if (Math.abs(value - westgardAnalysis.stats.plus3s) < 0.001) return '+3s';
+                if (Math.abs(value - westgardAnalysis.stats.minus1s) < 0.001) return '-1s';
+                if (Math.abs(value - westgardAnalysis.stats.minus2s) < 0.001) return '-2s';
+                if (Math.abs(value - westgardAnalysis.stats.minus3s) < 0.001) return '-3s';
+                return value.toFixed(2);
+              }}
+              width={60}
+            />
+            <Tooltip
+              content={<WestgardTooltip tooltipBorder={tooltipBorder} />}
+              cursor={{ strokeDasharray: '3 3' }}
+            />
+
+            <ReferenceLine y={westgardAnalysis.stats.plus3s} stroke={rejectRed} strokeWidth={2} />
+            <ReferenceLine y={westgardAnalysis.stats.plus2s} stroke={warningYellow} strokeDasharray="5 5" strokeWidth={2} />
+            <ReferenceLine y={westgardAnalysis.stats.plus1s} stroke={successGreen} strokeDasharray="3 3" strokeWidth={1} />
+            <ReferenceLine y={westgardAnalysis.stats.mean} stroke={textColor} strokeWidth={2} />
+            <ReferenceLine y={westgardAnalysis.stats.minus1s} stroke={successGreen} strokeDasharray="3 3" strokeWidth={1} />
+            <ReferenceLine y={westgardAnalysis.stats.minus2s} stroke={warningYellow} strokeDasharray="5 5" strokeWidth={2} />
+            <ReferenceLine y={westgardAnalysis.stats.minus3s} stroke={rejectRed} strokeWidth={2} />
+
+            <Line
+              dataKey="value"
+              stroke={secondaryGold}
+              strokeWidth={2}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+
+            <Scatter
+              data={chartData}
+              dataKey="value"
+              shape="circle"
+              isAnimationActive={false}
+            >
+              {chartData.map((point, index) => (
+                <Cell
+                  key={`${point.date}-${index}`}
+                  fill={point.fill}
+                  stroke={isDark ? '#000' : '#fff'}
+                  strokeWidth={1.5}
+                />
+              ))}
+            </Scatter>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {westgardAnalysis.violations.length > 0 ? (
+        <div className="mt-4 space-y-2 relative z-10">
+          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Westgard Rule Violations:</h4>
+          {westgardAnalysis.violations.map((violation, index) => (
+            <div
+              key={index}
+              className={`p-3 rounded-lg border-2 ${violation.severity === 'reject'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
+                }`}
+            >
+              <div className="flex items-start gap-2">
+                {violation.severity === 'reject' ? (
+                  <XCircle size={18} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle size={18} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                    {violation.rule} - {violation.description}
+                  </p>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">{violation.message}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 flex items-center gap-2">
+          <CheckCircle2 size={20} className="text-green-600 dark:text-green-400" />
+          <p className="text-sm font-medium text-green-800 dark:text-green-300">No Westgard rule violations detected.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   const { theme } = useTheme();
 
@@ -206,7 +469,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
       }
     }
 
-    // Sort lots by level within each test
     for (const test of testMap.values()) {
       test.lots.sort((a, b) => a.level - b.level);
     }
@@ -223,7 +485,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
   const [mode, setMode] = useState<'live' | 'archive'>('live');
 
-  // Date range state (Archive Mode) - default to 30 days ago to today
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -233,10 +494,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
     return new Date().toISOString().split('T')[0];
   });
 
-  const [activeLotId, setActiveLotId] = useState<number | null>(null);
-  const [archiveLotId, setArchiveLotId] = useState<number | null>(null);
-
-  // Archive Mode: lots that were active or had results within the selected date range
   const archivedLots = useMemo(() => {
     if (!activeTest) return [];
     const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
@@ -248,7 +505,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
              new Date(r.testDate).getTime() >= start && 
              new Date(r.testDate).getTime() <= end
       );
-      return hasResultsInRange || lot.isActive; // include it if it's currently active as a fallback
+      return hasResultsInRange || lot.isActive;
     });
   }, [activeTest, startDate, endDate, qcHistory]);
 
@@ -257,146 +514,16 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
     return activeTest.lots.filter(l => l.isActive);
   }, [activeTest]);
 
-  // Sync activeLotId when activeTest or visibleLots changes (Live Mode)
-  useEffect(() => {
-    if (mode === 'live') {
-      if (visibleLots.length > 0) {
-        if (!visibleLots.find((l) => l.lotId === activeLotId)) {
-          setActiveLotId(visibleLots[0].lotId);
-        }
-      } else {
-        setActiveLotId(null);
-      }
-    }
-  }, [visibleLots, activeLotId, mode]);
-
-  // Sync archiveLotId when archivedLots changes (Archive Mode)
-  useEffect(() => {
-    if (mode === 'archive') {
-      if (archivedLots.length > 0) {
-        if (!archivedLots.find((l) => l.lotId === archiveLotId)) {
-          setArchiveLotId(archivedLots[0].lotId);
-        }
-      } else {
-        setArchiveLotId(null);
-      }
-    }
-  }, [archivedLots, archiveLotId, mode]);
-
   const handleTestChange = (newTestId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('testId', newTestId);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-
-    const test = availableTests.find(t => t.testId === newTestId);
-    if (test && test.lots.length > 0) {
-      const activeLots = test.lots.filter(l => l.isActive);
-      setActiveLotId(activeLots.length > 0 ? activeLots[0].lotId : test.lots[0].lotId);
-      setArchiveLotId(test.lots[0].lotId);
-    }
   };
 
-  const activeLot = useMemo(() => {
-    if (!activeTest) return null;
-    if (mode === 'live') {
-      return activeTest.lots.find(l => l.lotId === activeLotId) ?? activeTest.lots.find(l => l.isActive) ?? activeTest.lots[0];
-    } else {
-      return activeTest.lots.find(l => l.lotId === archiveLotId) ?? archivedLots[0] ?? activeTest.lots[0];
-    }
-  }, [mode, activeTest, activeLotId, archiveLotId, archivedLots]);
-
-  const qcData = useMemo(() => {
-    if (!activeLot) return [];
-
-    let filtered = qcHistory.filter((entry) => entry.lotId === activeLot.lotId);
-
-    if (mode === 'archive') {
-      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
-      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
-      filtered = filtered.filter(entry => {
-        const t = new Date(entry.testDate).getTime();
-        return t >= start && t <= end;
-      });
-    }
-
-    return filtered
-      .slice()
-      .sort((a, b) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
-      .map((entry) => ({
-        date: new Date(entry.testDate).toLocaleString(),
-        value: entry.measuredValue,
-        testName: entry.testName,
-        zScore: entry.zScore,
-        violatedRule: entry.violatedRule,
-        status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
-      }));
-  }, [activeLot, qcHistory, mode, startDate, endDate]);
-
-  const westgardAnalysis = useMemo(() => {
-    const mean = activeLot?.mean ?? 0;
-    const stdDev = activeLot?.standardDeviation ?? 1;
-
-    return {
-      violations: qcData
-        .filter(t => t.violatedRule)
-        .map(t => ({
-          severity: t.status === 'reject' ? 'reject' : 'warning',
-          rule: t.violatedRule!,
-          description: `${t.violatedRule} Violation`,
-          message: `Violated on ${t.date}`,
-        })),
-      stats: {
-        mean,
-        stdDev,
-        plus3s: mean + 3 * stdDev,
-        plus2s: mean + 2 * stdDev,
-        plus1s: mean + 1 * stdDev,
-        minus1s: mean - 1 * stdDev,
-        minus2s: mean - 2 * stdDev,
-        minus3s: mean - 3 * stdDev,
-      },
-      pointsWithStatus: qcData.map(t => ({
-        status: t.status as 'normal' | 'warning' | 'reject',
-        date: t.date,
-        value: t.value,
-        zScore: t.zScore,
-        violations: t.violatedRule ? [t.violatedRule] : [],
-      })),
-    };
-  }, [qcData, activeLot]);
-
-  // Magdi Yacoub Theme Colors
-  const isDark = theme === 'dark';
-  const gridColor = isDark ? '#2a2a2a' : '#fef3e2';
-  const textColor = isDark ? '#a0a0a0' : '#666666';
-  const tooltipBorder = isDark ? '#e84855' : '#c41e3a';
-
-  // Magdi Yacoub Brand Colors
-  const secondaryGold = isDark ? '#ffd700' : '#b8860b';
-  const successGreen = isDark ? '#4ade80' : '#22c55e';
-  const warningYellow = isDark ? '#ffd700' : '#b8860b';
-  const rejectRed = isDark ? '#e84855' : '#c41e3a';
-
-  // Prepare chart data
-  const chartData: ChartDataPoint[] = westgardAnalysis.pointsWithStatus.map((point) => ({
-    date: point.date,
-    value: point.value,
-    mean: westgardAnalysis.stats.mean,
-    plus1s: westgardAnalysis.stats.plus1s,
-    plus2s: westgardAnalysis.stats.plus2s,
-    plus3s: westgardAnalysis.stats.plus3s,
-    minus1s: westgardAnalysis.stats.minus1s,
-    minus2s: westgardAnalysis.stats.minus2s,
-    minus3s: westgardAnalysis.stats.minus3s,
-    status: point.status,
-    zScore: point.zScore,
-    violations: point.violations.join(', '),
-    fill: getPointColor(point.status, isDark),
-  }));
+  const lotsToRender = mode === 'live' ? visibleLots : archivedLots;
 
   return (
     <div className="space-y-6">
-      {/* Controls */}
       <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-4 shadow-lg flex flex-wrap gap-4 items-center">
         <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold">
           <Filter size={20} />
@@ -417,7 +544,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
           </select>
         </div>
 
-        {/* Mode Switcher Segmented Toggle */}
         <div className="flex bg-gray-100 dark:bg-[#2a2a2a] p-1 rounded-xl border border-gray-200 dark:border-gray-700 ml-auto self-end">
           <button
             type="button"
@@ -444,30 +570,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
         </div>
       </div>
 
-      {/* Live Mode Level Tabs */}
-      {mode === 'live' && visibleLots.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6 relative z-10">
-          {visibleLots.map((lot) => {
-            const isActive = activeLotId === lot.lotId;
-            return (
-              <button
-                type="button"
-                key={lot.lotId}
-                onClick={() => setActiveLotId(lot.lotId)}
-                className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-200 border-2 ${
-                  isActive
-                    ? 'bg-[#b8860b] dark:bg-[#ffd700] text-white border-transparent shadow-md'
-                    : 'bg-transparent border-[#b8860b] dark:border-[#ffd700] text-[#b8860b] dark:text-[#ffd700] hover:bg-[#b8860b]/10 dark:hover:bg-[#ffd700]/10'
-                }`}
-              >
-                Level {lot.level} <span className="opacity-75 font-normal text-sm ml-1">({lot.lotNumber})</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Archive Mode Filters Card */}
       {mode === 'archive' && (
         <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#b8860b]/20 dark:border-[#ffd700]/30 p-4 mb-6 shadow-md flex flex-wrap gap-4 items-center relative z-10 animate-fadeIn">
           <div className="w-48">
@@ -488,199 +590,23 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
-          <div className="w-64">
-            <label className="text-xs text-gray-500 dark:text-gray-400 ml-1 mb-1 block">Archive Lot Dropdown</label>
-            <select
-              className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white"
-              value={archiveLotId ?? ''}
-              onChange={(e) => setArchiveLotId(Number(e.target.value))}
-              disabled={archivedLots.length === 0}
-            >
-              {archivedLots.map((lot) => (
-                <option key={lot.lotId} value={lot.lotId}>
-                  Level {lot.level} - {lot.lotNumber} {!lot.isActive && "(Inactive)"}
-                </option>
-              ))}
-              {archivedLots.length === 0 && (
-                <option value="">No lots active in selected dates</option>
-              )}
-            </select>
-          </div>
         </div>
       )}
 
-      {/* Westgard QC Chart */}
-      {chartData.length > 0 ? (
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg myc-pattern relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#b8860b]/10 dark:bg-[#ffd700]/20 rounded-lg">
-                <TrendingUp className="text-[#b8860b] dark:text-[#ffd700]" size={24} />
-              </div>
-              <div>
-                <h3 className="text-gray-900 dark:text-white font-bold text-lg">Westgard QC Chart</h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Machine: {machine?.name ?? 'Unknown'} | Test: {activeTest?.testName ?? 'Unknown'} | Lot: {activeLot?.lotNumber ?? 'N/A'} (Level {activeLot?.level ?? 1}) {mode === 'archive' && '[Archived]'}
-                </p>
-              </div>
-            </div>
-
-            {/* Violation Summary */}
-            <div className="flex gap-2 text-xs">
-              <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-lg">
-                <CheckCircle2 size={14} className="text-green-500" />
-                <span className="text-green-700 dark:text-green-400">
-                  {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'normal').length}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 rounded-lg">
-                <AlertTriangle size={14} className="text-yellow-500" />
-                <span className="text-yellow-700 dark:text-yellow-400">
-                  {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'warning').length}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-red-500/10 rounded-lg">
-                <XCircle size={14} className="text-red-500" />
-                <span className="text-red-700 dark:text-red-400">
-                  {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'reject').length}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Westgard Statistics */}
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-4 relative z-10">
-            {Object.entries(formatWestgardStats(westgardAnalysis.stats, 3)).map(([key, value]) => (
-              <div key={key} className="text-center">
-                <p className="text-xs text-gray-600 dark:text-gray-400">{key}</p>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ width: '100%', height: '500px' }} className="relative z-10">
-            <ResponsiveContainer width="100%" height={500}>
-              <ComposedChart data={chartData} margin={{ top: 20, right: 50, left: 10, bottom: 80 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={true} horizontal={true} />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 10, fill: textColor }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  stroke={gridColor}
-                  type="category"
-                  allowDuplicatedCategory={false}
-                  interval={0}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: textColor, fontWeight: 'bold' }}
-                  stroke={gridColor}
-                  domain={[
-                    (dataMin: number) => Math.min(westgardAnalysis.stats.mean - (westgardAnalysis.stats.stdDev * 3.5), dataMin),
-                    (dataMax: number) => Math.max(westgardAnalysis.stats.mean + (westgardAnalysis.stats.stdDev * 3.5), dataMax)
-                  ]}
-                  ticks={[
-                    westgardAnalysis.stats.minus3s,
-                    westgardAnalysis.stats.minus2s,
-                    westgardAnalysis.stats.minus1s,
-                    westgardAnalysis.stats.mean,
-                    westgardAnalysis.stats.plus1s,
-                    westgardAnalysis.stats.plus2s,
-                    westgardAnalysis.stats.plus3s
-                  ]}
-                  tickFormatter={(value) => {
-                    if (Math.abs(value - westgardAnalysis.stats.mean) < 0.001) return 'Mean';
-                    if (Math.abs(value - westgardAnalysis.stats.plus1s) < 0.001) return '+1s';
-                    if (Math.abs(value - westgardAnalysis.stats.plus2s) < 0.001) return '+2s';
-                    if (Math.abs(value - westgardAnalysis.stats.plus3s) < 0.001) return '+3s';
-                    if (Math.abs(value - westgardAnalysis.stats.minus1s) < 0.001) return '-1s';
-                    if (Math.abs(value - westgardAnalysis.stats.minus2s) < 0.001) return '-2s';
-                    if (Math.abs(value - westgardAnalysis.stats.minus3s) < 0.001) return '-3s';
-                    return value.toFixed(2);
-                  }}
-                  width={60}
-                />
-                <Tooltip
-                  content={<WestgardTooltip tooltipBorder={tooltipBorder} />}
-                  cursor={{ strokeDasharray: '3 3' }}
-                />
-
-                {/* Control Limit Lines */}
-                <ReferenceLine y={westgardAnalysis.stats.plus3s} stroke={rejectRed} strokeWidth={2} />
-                <ReferenceLine y={westgardAnalysis.stats.plus2s} stroke={warningYellow} strokeDasharray="5 5" strokeWidth={2} />
-                <ReferenceLine y={westgardAnalysis.stats.plus1s} stroke={successGreen} strokeDasharray="3 3" strokeWidth={1} />
-                <ReferenceLine y={westgardAnalysis.stats.mean} stroke={textColor} strokeWidth={2} />
-                <ReferenceLine y={westgardAnalysis.stats.minus1s} stroke={successGreen} strokeDasharray="3 3" strokeWidth={1} />
-                <ReferenceLine y={westgardAnalysis.stats.minus2s} stroke={warningYellow} strokeDasharray="5 5" strokeWidth={2} />
-                <ReferenceLine y={westgardAnalysis.stats.minus3s} stroke={rejectRed} strokeWidth={2} />
-
-                {/* Connect points with a line */}
-                <Line
-                  dataKey="value"
-                  stroke={secondaryGold}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={false}
-                  isAnimationActive={false}
-                />
-
-                {/* Data Points */}
-                <Scatter
-                  data={chartData}
-                  dataKey="value"
-                  shape="circle"
-                  isAnimationActive={false}
-                >
-                  {chartData.map((point, index) => (
-                    <Cell
-                      key={`${point.date}-${index}`}
-                      fill={point.fill}
-                      stroke={isDark ? '#000' : '#fff'}
-                      strokeWidth={1.5}
-                    />
-                  ))}
-                </Scatter>
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Violations List */}
-          {westgardAnalysis.violations.length > 0 ? (
-            <div className="mt-4 space-y-2 relative z-10">
-              <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Westgard Rule Violations:</h4>
-              {westgardAnalysis.violations.map((violation, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg border-2 ${violation.severity === 'reject'
-                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                    : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
-                    }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {violation.severity === 'reject' ? (
-                      <XCircle size={18} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertTriangle size={18} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-white">
-                        {violation.rule} - {violation.description}
-                      </p>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">{violation.message}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 flex items-center gap-2">
-              <CheckCircle2 size={20} className="text-green-600 dark:text-green-400" />
-              <p className="text-sm font-medium text-green-800 dark:text-green-300">No Westgard rule violations detected.</p>
-            </div>
-          )}
-        </div>
+      {lotsToRender.length > 0 ? (
+        lotsToRender.map((lot) => (
+          <LotChart 
+            key={lot.lotId}
+            lot={lot}
+            qcHistory={qcHistory}
+            mode={mode}
+            startDate={startDate}
+            endDate={endDate}
+            machineName={machine?.name ?? 'Unknown'}
+            testName={activeTest?.testName ?? 'Unknown'}
+            theme={theme}
+          />
+        ))
       ) : (
         <div className="p-12 text-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">No data available for the selected machine and test.</p>
