@@ -72,8 +72,8 @@ describe('useAlerts hook', () => {
     // Mock mutation response
     (clientFetch as any).mockResolvedValue([{ userId: '1', resolved: true }]);
 
-    await result.current.markResolved(1, { notes: 'Resolved it' });
+    await result.current.markResolved(1, { resolutionNote: 'Resolved it' });
 
-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/alerts/mark-resolved/1', { method: 'PATCH', body: JSON.stringify({ notes: 'Resolved it' }) }, 'valid-token');
+    expect(clientFetch).toHaveBeenCalledWith('/api/v1/alerts/mark-resolved/1', { method: 'PATCH', body: JSON.stringify({ resolutionNote: 'Resolved it' }) }, 'valid-token');
   });
 });

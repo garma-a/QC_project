@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -50,12 +51,30 @@ export interface DashboardData {
 
 export function useDashboardData() {
   const token = useAuthStore((s) => s.accessToken);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated && !token) {
+      window.location.href = '/login';
+    }
+  }, [isHydrated, token]);
 
   const { data, isLoading, error } = useQuery<DashboardData>({
     queryKey: ['monitor-dashboard', token],
     queryFn: async ({ signal }) => {
-      const fetchedMachines = await clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token);
-      
+      const [fetchedMachines, allLots, allTests, allResultsResponse] = await Promise.all([
+        clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
+        clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
+        clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
+        clientFetch<{ results: QcResultResponseDto[] }>('/api/v1/qc-results', { signal }, token).catch(() => ({ results: [] })),
+      ]);
+
+      const allResults = Array.isArray(allResultsResponse.results) ? allResultsResponse.results : [];
+
       let categories: { id: string; name: string }[] = [];
       let qcHistory: MonitorResultEntry[] = [];
       let machines: DashboardData['machines'] = [];
@@ -67,78 +86,41 @@ export function useDashboardData() {
           name: `Section ${sid}`,
         }));
 
-        const [allLots, testsByMachine] = await Promise.all([
-          clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
-          Promise.all(
-            fetchedMachines.map(async (machine) => {
-              try {
-                const tests = await clientFetch<QcTestResponseDto[]>(
-                  `/api/v1/qc-tests/machine/${machine.id}`,
-                  { signal },
-                  token
-                );
-                return { machineId: machine.id, tests };
-              } catch (err) {
-                console.error(`Failed to fetch tests for machine ${machine.id}:`, err);
-                return { machineId: machine.id, tests: [] as QcTestResponseDto[] };
-              }
-            })
-          ),
-        ]);
-
-        const testById = new Map<number, { machineId: number; test: QcTestResponseDto }>();
-        for (const machineTests of testsByMachine) {
-          for (const test of machineTests.tests) {
-            testById.set(test.id, { machineId: machineTests.machineId, test });
-          }
+        const testById = new Map<number, QcTestResponseDto>();
+        for (const test of allTests) {
+          testById.set(test.id, test);
         }
 
         const lotsWithContext = allLots
           .map((lot) => {
-            const testContext = testById.get(lot.testId);
-            return testContext ? { lot, ...testContext } : null;
+            const test = testById.get(lot.testId);
+            return test ? { lot, machineId: test.machineId, test } : null;
           })
           .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
 
-        const lotResults = await Promise.all(
-          lotsWithContext.map(async (ctx) => {
-            try {
-              const response = await clientFetch<QcResultsWithLotResponseDto>(
-                `/api/v1/qc-results?lotId=${ctx.lot.id}`,
-                { signal },
-                token
-              );
-              const results = Array.isArray(response.results) ? response.results : [];
-              return { ctx, results };
-            } catch (err) {
-              console.error(`Failed to fetch QC results for lot ${ctx.lot.id}:`, err);
-              return { ctx, results: [] as QcResultResponseDto[] };
-            }
-          })
-        );
+        qcHistory = allResults.map((result) => {
+          const ctx = lotsWithContext.find((c) => c.lot.id === result.lotId);
+          if (!ctx) return null;
 
-        qcHistory = lotResults.flatMap(({ ctx, results }) =>
-          results.map((result) => {
-            const dateObj = new Date(result.testDate);
-            const dateStr = !Number.isNaN(dateObj.getTime())
-              ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-              : 'N/A N/A';
+          const dateObj = new Date(result.testDate);
+          const dateStr = !Number.isNaN(dateObj.getTime())
+            ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : 'N/A N/A';
 
-            return {
-              ...result,
-              machineId: ctx.machineId,
-              testId: ctx.test.id,
-              testName: ctx.test.testName,
-              lotId: ctx.lot.id,
-              level: ctx.lot.level ?? 1,
-              lotNumber: ctx.lot.lotNumber,
-              lotMean: ctx.lot.mean ?? 0,
-              lotSd: ctx.lot.standardDeviation ?? 1,
-              expectedRange: `${ctx.lot.lowerControlLimit ?? 0} - ${ctx.lot.upperControlLimit ?? 0}`,
-              date: dateStr,
-            };
-          })
-        );
+          return {
+            ...result,
+            machineId: ctx.machineId,
+            testId: ctx.test.id,
+            testName: ctx.test.testName,
+            lotId: ctx.lot.id,
+            level: ctx.lot.level ?? 1,
+            lotNumber: ctx.lot.lotNumber,
+            lotMean: ctx.lot.mean ?? 0,
+            lotSd: ctx.lot.standardDeviation ?? 1,
+            expectedRange: `${ctx.lot.lowerControlLimit ?? 0} - ${ctx.lot.upperControlLimit ?? 0}`,
+            date: dateStr,
+          };
+        }).filter((entry): entry is MonitorResultEntry => entry !== null);
 
         machines = fetchedMachines.map((machine) => {
           const machineResults = qcHistory
@@ -146,13 +128,13 @@ export function useDashboardData() {
             .sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime());
           const latestResult = machineResults[0];
 
-          const machineTestsData = testsByMachine.find(t => t.machineId === machine.id)?.tests || [];
+          const machineTestsData = allTests.filter((t) => t.machineId === machine.id);
           const machineLots = lotsWithContext.filter((ctx) => ctx.machineId === machine.id);
-          
+
           const tests = machineTestsData.flatMap((test) => {
-            const testLots = machineLots.filter(ctx => ctx.test.id === test.id);
+            const testLots = machineLots.filter((ctx) => ctx.test.id === test.id);
             if (testLots.length > 0) {
-              return testLots.map(ctx => ({
+              return testLots.map((ctx) => ({
                 id: ctx.test.id.toString(),
                 name: ctx.test.testName,
                 category: ctx.test.testType ?? 'General',
@@ -191,9 +173,9 @@ export function useDashboardData() {
             testsToday: machineResults.length,
             lastQC: latestResult
               ? {
-                  date: new Date(latestResult.testDate).toLocaleString(),
-                  status: latestResult.status === 'PASS' ? 'pass' : latestResult.status === 'WARNING' ? 'warning' : 'error',
-                }
+                date: new Date(latestResult.testDate).toLocaleString(),
+                status: latestResult.status === 'PASS' ? 'pass' : latestResult.status === 'WARNING' ? 'warning' : 'error',
+              }
               : { date: 'N/A', status: 'pass' },
             tests,
           };

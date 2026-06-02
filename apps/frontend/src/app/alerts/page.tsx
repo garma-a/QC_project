@@ -219,6 +219,7 @@ export default function AlertsPage() {
                     )}
                   </div>
 
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => handleMarkSeen(alert.id)}

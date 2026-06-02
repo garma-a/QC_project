@@ -23,7 +23,13 @@ export default async function DashboardPage() {
         name: `Section ${sid}`,
       }));
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (
+      (err instanceof Error && err.message.includes('NEXT_REDIRECT')) ||
+      (err && typeof err.digest === 'string' && err.digest.includes('NEXT_REDIRECT'))
+    ) {
+      throw err;
+    }
     console.error("Failed to fetch machines via Server Component:", err);
   }
 

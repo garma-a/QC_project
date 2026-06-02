@@ -3,7 +3,7 @@ import { useAuthStore } from '../useAuthStore';
 import type { UserResponseDto } from '@/lib/types/api';
 
 const mockUser: UserResponseDto = {
-  id: 'user-123',
+  id: 123,
   firstName: 'Test',
   lastName: 'User',
   email: 'test@example.com',

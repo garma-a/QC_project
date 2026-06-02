@@ -222,7 +222,7 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
   const warningYellow = isDark ? '#ffd700' : '#b8860b';
   const rejectRed = isDark ? '#e84855' : '#c41e3a';
 
-  const chartData: ChartDataPoint[] = westgardAnalysis.pointsWithStatus.map((point) => ({
+  const chartData: ChartDataPoint[] = westgardAnalysis.pointsWithStatus.map((point: any) => ({
     date: point.date,
     value: point.value,
     mean: westgardAnalysis.stats.mean,
@@ -269,19 +269,19 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
           <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 rounded-lg">
             <CheckCircle2 size={14} className="text-green-500" />
             <span className="text-green-700 dark:text-green-400">
-              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'normal').length}
+              {westgardAnalysis.pointsWithStatus.filter((p: any) => p.status === 'normal').length}
             </span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 rounded-lg">
             <AlertTriangle size={14} className="text-yellow-500" />
             <span className="text-yellow-700 dark:text-yellow-400">
-              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'warning').length}
+              {westgardAnalysis.pointsWithStatus.filter((p: any) => p.status === 'warning').length}
             </span>
           </div>
           <div className="flex items-center gap-1 px-2 py-1 bg-red-500/10 rounded-lg">
             <XCircle size={14} className="text-red-500" />
             <span className="text-red-700 dark:text-red-400">
-              {westgardAnalysis.pointsWithStatus.filter(p => p.status === 'reject').length}
+              {westgardAnalysis.pointsWithStatus.filter((p: any) => p.status === 'reject').length}
             </span>
           </div>
         </div>
@@ -383,7 +383,7 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
       {westgardAnalysis.violations.length > 0 ? (
         <div className="mt-4 space-y-2 relative z-10">
           <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Westgard Rule Violations:</h4>
-          {westgardAnalysis.violations.map((violation, index) => (
+          {westgardAnalysis.violations.map((violation: any, index: number) => (
             <div
               key={index}
               className={`p-3 rounded-lg border-2 ${violation.severity === 'reject'

@@ -190,29 +190,34 @@ export class QcResultsService {
     return savedRunData;
   }
 
-  async findAll(lotId: number) {
-    const lot = await this.qcResultsRepository.getLotById(lotId);
-    if (!lot) throw new NotFoundException('Control lot not found');
+  async findAll(lotId?: number) {
+    if (lotId) {
+      const lot = await this.qcResultsRepository.getLotById(lotId);
+      if (!lot) throw new NotFoundException('Control lot not found');
 
-    const lotContext =
-      await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-    const results = await this.qcResultsRepository.getResultsByLotId(lotId);
+      const lotContext =
+        await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
+      const results = await this.qcResultsRepository.getResultsByLotId(lotId);
 
-    return {
-      lot: {
-        id: lot.id,
-        lotNumber: lot.lotNumber,
-        mean: lot.mean,
-        standardDeviation: lot.standardDeviation,
-        upperControlLimit: lot.upperControlLimit,
-        lowerControlLimit: lot.lowerControlLimit,
-        upperWarningLimit: lot.upperWarningLimit,
-        lowerWarningLimit: lot.lowerWarningLimit,
-        testName: lotContext?.qc_tests?.testName ?? 'Unknown Test',
-        machineName: lotContext?.machines?.name ?? 'Unknown Machine',
-      },
-      results,
-    };
+      return {
+        lot: {
+          id: lot.id,
+          lotNumber: lot.lotNumber,
+          mean: lot.mean,
+          standardDeviation: lot.standardDeviation,
+          upperControlLimit: lot.upperControlLimit,
+          lowerControlLimit: lot.lowerControlLimit,
+          upperWarningLimit: lot.upperWarningLimit,
+          lowerWarningLimit: lot.lowerWarningLimit,
+          testName: lotContext?.qc_tests?.testName ?? 'Unknown Test',
+          machineName: lotContext?.machines?.name ?? 'Unknown Machine',
+        },
+        results,
+      };
+    } else {
+      const results = await this.qcResultsRepository.getRecentResultsAll();
+      return { lot: null, results };
+    }
   }
 
   async findOne(id: number) {

@@ -138,6 +138,34 @@ export class QcResultsRepository {
     return results;
   }
 
+  async getRecentResultsAll() {
+    const { sql } = require('drizzle-orm');
+    const query = sql`
+      SELECT 
+        r.id as id,
+        r."measured_value" as "measuredValue",
+        r.z_score as "zScore",
+        r.violated_rule as "violatedRule",
+        r.status as status,
+        r.comments as comments,
+        r.run_id as "runId",
+        r.lot_id as "lotId",
+        run.run_date as "testDate",
+        run.performed_by as "performedBy"
+      FROM (
+        SELECT 
+          id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id,
+          ROW_NUMBER() OVER(PARTITION BY lot_id ORDER BY id DESC) as rn
+        FROM qc_results
+      ) r
+      JOIN qc_runs run ON r.run_id = run.id
+      WHERE r.rn <= 30
+      ORDER BY run.run_date DESC
+    `;
+    const result: any = await this.databaseService.db.execute(query);
+    return result.rows || result;
+  }
+
   async getResultAndLotByResultId(resultId: number) {
     const [result] = await this.databaseService.db
       .select()

@@ -81,21 +81,19 @@ export class QcResultsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all QC results for a specific lot',
-    description:
-      'Returns a comprehensive object containing the control lot parameters (mean, SD, limits, test name, machine name) alongside an array of all historical QC results for that lot, ordered by date descending. This data is used to render the Levey-Jennings chart.',
+    summary: 'Get QC results',
+    description: 'If lotId is provided, returns the control lot parameters and an array of all historical QC results for that lot. If not provided, returns all recent QC results.',
   })
   @ApiQuery({
     name: 'lotId',
-    required: true,
-    description: 'The ID of the control lot to fetch results for',
+    required: false,
+    description: 'The ID of the control lot to fetch results for (optional)',
     type: Number,
     example: 1,
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Returns the control lot parameters and an array of all associated results.',
+    description: 'Returns the results.',
     type: QcResultsWithLotResponseDto,
   })
   @ApiResponse({
@@ -108,8 +106,9 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
-  findAll(@Query('lotId', ParseIntPipe) lotId: number) {
-    return this.qcResultsService.findAll(lotId);
+  findAll(@Query('lotId') lotId?: string) {
+    const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
+    return this.qcResultsService.findAll(parsedLotId);
   }
 
   @Get(':id')
