@@ -11,6 +11,8 @@ import {
   qcResults,
   qcRuns,
   usersToSections,
+  alerts,
+  usersToAlerts,
 } from '@/drizzle/schema';
 
 // Standard Normal variate using Box-Muller transform.
@@ -188,9 +190,42 @@ async function bootstrap() {
             ...r,
             runId: insertedRuns[i].id,
           }));
-          await db.insert(qcResults).values(finalResultRows);
+          const insertedResults = await db.insert(qcResults).values(finalResultRows).returning();
 
           totalResultsInserted += finalResultRows.length;
+
+          // Generate Alerts for anomalies
+          const anomalies = insertedResults.filter(r => r.status === 'FAIL' || r.status === 'WARNING');
+          if (anomalies.length > 0) {
+            const alertRows = anomalies.map(anomaly => ({
+              type: 'QC_DEVIATION',
+              priority: (anomaly.status === 'FAIL' ? 'HIGH' : 'MEDIUM') as 'HIGH' | 'MEDIUM' | 'LOW',
+              message: `QC result for lot ${lot.lotNumber} is ${anomaly.status} (|Z|=${Math.abs(anomaly.zScore).toFixed(2)}).`,
+              ruleViolated: anomaly.violatedRule,
+              suggestedSolution: anomaly.status === 'FAIL' ? 'Recalibrate instrument immediately and rerun QC.' : 'Monitor next run closely.',
+              resultId: anomaly.id,
+              createdAt: runRows.find(r => r.id === anomaly.runId)?.runDate ?? new Date(),
+            }));
+            const insertedAlerts = await db.insert(alerts).values(alertRows).returning();
+            
+            // Assign alerts to users (simplification: assign to adminUser, or random users)
+            const usersToAlertsRows: any[] = [];
+            for (const alert of insertedAlerts) {
+              for (const user of allUsers) {
+                // only assign to 3 random users so it's not overwhelming, but definitely admin
+                if (user.role === 'ADMIN' || Math.random() > 0.5) {
+                  usersToAlertsRows.push({
+                    userId: user.id,
+                    alertId: alert.id,
+                    status: 'UNSEEN',
+                  });
+                }
+              }
+            }
+            if (usersToAlertsRows.length > 0) {
+              await db.insert(usersToAlerts).values(usersToAlertsRows);
+            }
+          }
         }
       }
     }

@@ -284,7 +284,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         {/* QC History */}
         <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg">
           <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Quality Control History</h2>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             {history.map((qc) => (
               <div key={qc.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#2a2a2a] border border-[#c41e3a]/10 dark:border-[#e84855]/20 group hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/40 transition-colors">
                 <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${

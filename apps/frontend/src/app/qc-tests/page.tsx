@@ -5,7 +5,7 @@ import { QcTestsManager } from '@/features/qc-tests/components/QcTestsManager';
 export default async function QcTestsPage() {
   const [machines, allTests] = await Promise.all([
     api.get<MachineResponseDto[]>('/api/v1/machines'),
-    api.get<QcTestResponseDto[]>('/api/v1/qc-tests').catch(() => [] as QcTestResponseDto[]),
+    api.get<QcTestResponseDto[]>('/api/v1/qc-tests'),
   ]);
 
   return (

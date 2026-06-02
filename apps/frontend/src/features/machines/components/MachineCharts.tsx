@@ -296,7 +296,7 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
         ))}
       </div>
 
-      <div style={{ width: '100%', height: '500px' }} className="relative z-10">
+      <div style={{ width: '100%', height: '500px' }} className="relative z-10 min-w-0">
         <ResponsiveContainer width="100%" height={500}>
           <ComposedChart data={chartData} margin={{ top: 20, right: 50, left: 10, bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={true} horizontal={true} />

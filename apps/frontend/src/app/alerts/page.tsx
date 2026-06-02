@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Eye, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, RefreshCw, BarChart3 } from "lucide-react";
 import { useAlerts } from "@/hooks/useAlerts";
 import type { AlertPriority, UserAlertStatus } from "@/lib/types/api";
+import Link from "next/link";
 
 const PRIORITY_STYLES: Record<AlertPriority, string> = {
   HIGH: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
@@ -218,16 +219,27 @@ export default function AlertsPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleMarkSeen(alert.id)}
-                      disabled={busy || status !== "UNSEEN"}
-                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Seen
-                    </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => handleMarkSeen(alert.id)}
+                        disabled={busy || status !== "UNSEEN"}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Seen
+                      </button>
+                      
+                      {alert.machineId && alert.testId && (
+                        <Link
+                          href={`/monitor?machineId=${alert.machineId}&tab=charts&testId=${alert.testId}`}
+                          className="inline-flex items-center justify-center gap-1 rounded-md border border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                          Go to Graph
+                        </Link>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
                       <input
                         value={noteByAlertId[alert.id] ?? ""}
                         onChange={(e) =>

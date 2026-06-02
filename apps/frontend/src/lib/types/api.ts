@@ -319,6 +319,8 @@ export interface AlertResponseDto {
   ruleViolated?: string | null;
   suggestedSolution?: string | null;
   resultId: number;
+  machineId?: number;
+  testId?: number;
   createdAt?: string | null;
   status: UserAlertStatus;
   seenAt?: string | null;

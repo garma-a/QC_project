@@ -115,7 +115,7 @@ const menuItems = [
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#c41e3a]/20 hover:[&::-webkit-scrollbar-thumb]:bg-[#c41e3a]/50 dark:[&::-webkit-scrollbar-thumb]:bg-[#e84855]/20 dark:hover:[&::-webkit-scrollbar-thumb]:bg-[#e84855]/50 [&::-webkit-scrollbar-thumb]:rounded-full px-4 py-6 space-y-2">
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = isPathActive(item.href);
