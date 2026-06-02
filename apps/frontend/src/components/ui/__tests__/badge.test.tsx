@@ -1,0 +1,31 @@
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { Badge } from '../badge';
+
+describe('Badge component', () => {
+  it('renders correctly', () => {
+    render(<Badge>Test Badge</Badge>);
+    const badge = screen.getByText('Test Badge');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-primary');
+  });
+
+  it('applies the correct variant classes', () => {
+    const { rerender } = render(<Badge variant="secondary">Secondary</Badge>);
+    expect(screen.getByText('Secondary')).toHaveClass('bg-secondary');
+
+    rerender(<Badge variant="destructive">Destructive</Badge>);
+    expect(screen.getByText('Destructive')).toHaveClass('bg-destructive');
+
+    rerender(<Badge variant="success">Success</Badge>);
+    expect(screen.getByText('Success')).toHaveClass('bg-green-500');
+
+    rerender(<Badge variant="warning">Warning</Badge>);
+    expect(screen.getByText('Warning')).toHaveClass('bg-amber-500');
+  });
+
+  it('applies custom className', () => {
+    render(<Badge className="custom-class">Badge</Badge>);
+    expect(screen.getByText('Badge')).toHaveClass('custom-class');
+  });
+});
