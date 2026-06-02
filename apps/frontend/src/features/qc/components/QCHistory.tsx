@@ -131,7 +131,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
         return a.rawDate.localeCompare(b.rawDate);
       })
       .slice(-7);
-    
+
     const firstTest = sortedTests[0];
     const mean = firstTest?.lotMean ?? 0;
     const stdDev = firstTest?.lotSd ?? 1;
@@ -243,10 +243,10 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
                 <div
                   key={group.key}
                   className={`p-4 rounded-xl border-2 transition-all ${hasRejects
-                      ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                      : hasWarnings
-                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
-                        : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                    : hasWarnings
+                      ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700'
+                      : 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
                     }`}
                 >
                   <div
@@ -359,10 +359,10 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
                               <div className="flex items-center gap-2">
                                 <div
                                   className={`w-3 h-3 rounded-full ${point.status === 'reject'
-                                      ? 'bg-[#c41e3a] dark:bg-[#e84855]'
-                                      : point.status === 'warning'
-                                        ? 'bg-[#b8860b] dark:bg-[#ffd700]'
-                                        : 'bg-[#22c55e] dark:bg-[#4ade80]'
+                                    ? 'bg-[#c41e3a] dark:bg-[#e84855]'
+                                    : point.status === 'warning'
+                                      ? 'bg-[#b8860b] dark:bg-[#ffd700]'
+                                      : 'bg-[#22c55e] dark:bg-[#4ade80]'
                                     }`}
                                 />
                                 <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -377,8 +377,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
                                   Z: {point.zScore.toFixed(2)}
                                 </span>
                                 {point.status !== 'normal' && (
-                                  <span className={`text-xs px-2 py-0.5 rounded ${
-                                    point.status === 'reject'
+                                  <span className={`text-xs px-2 py-0.5 rounded ${point.status === 'reject'
                                       ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                                       : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                                     }`}>

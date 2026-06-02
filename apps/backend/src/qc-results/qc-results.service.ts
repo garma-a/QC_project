@@ -48,8 +48,17 @@ export class QcResultsService {
     if (!firstLot) throw new NotFoundException(`Control lot ${createQcResultDto.results[0].lotId} not found`);
     const testId = firstLot.testId;
 
+    // Validate that the run's machineId matches the machine owning this QC test
+    const lotContext = await this.qcResultsRepository.getLotTestMachineByLotId(firstLot.id);
+    const expectedMachineId = lotContext?.qc_tests?.machineId;
+    if (!expectedMachineId) throw new NotFoundException(`QC test for lot ${firstLot.id} not found`);
+    if (createQcResultDto.machineId !== expectedMachineId) {
+      throw new BadRequestException(
+        `Invalid QC Run: machineId ${createQcResultDto.machineId} does not match QC test machine ${expectedMachineId}.`,
+      );
+    }
+
     const activeLots = await this.qcResultsRepository.getActiveLotsByTestId(testId);
-    
     // Ensure every active lot was submitted
     for (const activeLot of activeLots) {
       if (!createQcResultDto.results.some((r) => r.lotId === activeLot.id)) {
