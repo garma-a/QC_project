@@ -31,7 +31,7 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
     error: rawError,
     refetch,
   } = useQuery({
-    queryKey: ['qc-results', lotId, token],
+    queryKey: ['qc-results', lotId],
     queryFn: ({ signal }) =>
       clientFetch<QcResultsWithLotResponseDto>(
         `/api/v1/qc-results?lotId=${lotId}`,
@@ -41,6 +41,7 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
     // Do not fire the request at all when no lot is selected.
     // This also resets the loading/error states cleanly.
     enabled: lotId !== null && !!token,
+    placeholderData: (prev) => prev,
   });
 
   return {

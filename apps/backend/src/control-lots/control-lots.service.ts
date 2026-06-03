@@ -45,8 +45,8 @@ export class ControlLotsService {
     return this.computeAgeFlags(newLot);
   }
 
-  async findAll() {
-    const lots = await this.controlLotsRepository.findAll();
+  async findAll(limit?: number, offset?: number) {
+    const lots = await this.controlLotsRepository.findAll(limit, offset);
     return lots.map((lot) => this.computeAgeFlags(lot));
   }
 

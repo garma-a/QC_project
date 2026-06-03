@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Activity,
   Clipboard,
   LayoutDashboard,
   X,
@@ -36,7 +35,7 @@ export function Sidebar({ isOpen = false, onClose = () => { } }: SidebarProps) {
   const router = useRouter();
 
 const menuItems = [
-  { href: "/monitor",      label: "Live Dashboard",       icon: Activity },
+  { href: "/dashboard",    label: "Dashboard",            icon: LayoutDashboard },
   { href: "/qc",           label: "QC Results History",   icon: Clipboard },
   { href: "/qc-tests",     label: "QC Test Types",        icon: TestTube },
   { href: "/control-lots", label: "Control Lots",         icon: Database },
@@ -125,13 +124,23 @@ const menuItems = [
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${isActive
-                  ? "bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-lg shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:text-[#c41e3a] dark:hover:text-[#e84855]"
+                className={`group relative w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 font-bold overflow-hidden ${isActive
+                  ? "bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 ring-1 ring-white/20 scale-[1.02]"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-transparent dark:hover:from-red-900/10 hover:text-[#c41e3a] dark:hover:text-[#e84855] hover:scale-[1.01]"
                   }`}
               >
-                <Icon size={20} />
-                <span>{item.label}</span>
+                {/* Active Indicator Line */}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#ffd700] rounded-r-full shadow-[0_0_10px_#ffd700]" />
+                )}
+                
+                {/* Shine effect for active state */}
+                {isActive && (
+                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_forwards]" />
+                )}
+
+                <Icon size={20} className={`relative z-10 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                <span className="relative z-10">{item.label}</span>
               </Link>
             );
           })}

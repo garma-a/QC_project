@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -51,8 +52,14 @@ export class AlertsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
-  async findAll(@CurrentUser('userId') userId: number) {
-    return await this.alertsService.findAllByUser(userId);
+  async findAll(
+    @CurrentUser('userId') userId: number,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return await this.alertsService.findAllByUser(userId, parsedLimit, parsedOffset);
   }
 
   @Patch('/mark-seen/:id')

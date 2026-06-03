@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2, Search, AlertTriangle } from 'lucide-react';
 import { deactivateControlLot } from '@/lib/actions';
 import { ControlLotFormDialog } from './ControlLotFormDialog';
+import { useControlLots } from '@/hooks/useControlLots';
 import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
 
 interface ControlLotsTableProps {
@@ -33,6 +34,8 @@ interface ControlLotsTableProps {
 }
 
 export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTableProps) {
+  const { lots: fetchedLots, fetchNextPage, hasNextPage, isFetchingNextPage } = useControlLots();
+  const displayLots = fetchedLots.length > 0 ? fetchedLots : initialLots;
   const [isMounted, setIsMounted] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lotToDeactivate, setLotToDeactivate] = useState<ControlLotResponseDto | null>(null);
@@ -143,7 +146,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
     now.setHours(0, 0, 0, 0);
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
-    return initialLots.filter((lot) => {
+    return displayLots.filter((lot) => {
       // 1. Search by lot number (case-insensitive)
       if (search.trim() && !lot.lotNumber.toLowerCase().includes(search.trim().toLowerCase())) {
         return false;
@@ -167,9 +170,9 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
 
       return true;
     });
-  }, [initialLots, search, statusFilter, expiringOnly]);
+  }, [displayLots, search, statusFilter, expiringOnly]);
 
-  const expiredLotsCount = initialLots.filter((lot) => {
+  const expiredLotsCount = displayLots.filter((lot) => {
     if (!lot.isActive || !lot.expirationDate) return false;
     try {
       const expiry = new Date(lot.expirationDate);
@@ -275,7 +278,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
             {filteredLots.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-muted-foreground text-sm py-4">
-                  {initialLots.length === 0
+                  {displayLots.length === 0
                     ? 'No control lots found. Click "Add Control Lot" to create one.'
                     : 'No lots match the current filters.'}
                 </TableCell>
@@ -333,6 +336,29 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
                   </TableCell>
                 </TableRow>
               ))
+            )}
+            {hasNextPage && (
+              <TableRow>
+                <TableCell colSpan={8} className="py-4 text-center text-sm text-gray-500">
+                  <div
+                    ref={(node) => {
+                      if (!node) return;
+                      const observer = new IntersectionObserver(
+                        (entries) => {
+                          if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                            fetchNextPage();
+                          }
+                        },
+                        { threshold: 0.1 }
+                      );
+                      observer.observe(node);
+                      return () => observer.disconnect();
+                    }}
+                  >
+                    {isFetchingNextPage ? 'Loading more...' : 'Scroll for more'}
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

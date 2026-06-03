@@ -63,8 +63,8 @@ export function useDashboardData() {
     }
   }, [isHydrated, token]);
 
-  const { data, isLoading, error } = useQuery<DashboardData>({
-    queryKey: ['monitor-dashboard', token],
+  const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
+    queryKey: ['dashboard-data'],
     queryFn: async ({ signal }) => {
       const [fetchedMachines, allLots, allTests, allResultsResponse] = await Promise.all([
         clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
@@ -185,11 +185,14 @@ export function useDashboardData() {
       return { machines, categories, qcHistory };
     },
     enabled: !!token,
+    placeholderData: (prev) => prev,
+    refetchInterval: 30_000,
   });
 
   return {
     data,
     isLoading: isLoading || !token,
+    isFetching,
     error: token ? error?.message || null : null,
   };
 }

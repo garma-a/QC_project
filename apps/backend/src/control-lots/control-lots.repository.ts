@@ -40,8 +40,15 @@ export class ControlLotsRepository {
     return newLot;
   }
 
-  async findAll() {
-    return await this.databaseService.db.select().from(controlLots);
+  async findAll(limit?: number, offset?: number) {
+    let query = this.databaseService.db.select().from(controlLots);
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return await query;
   }
 
   async findById(id: number) {

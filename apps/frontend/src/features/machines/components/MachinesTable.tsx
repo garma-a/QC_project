@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { deleteMachine } from '@/lib/actions';
+import { useMachines } from '@/hooks/useMachines';
 import { MachineFormDialog } from './MachineFormDialog';
 import type { MachineResponseDto, SectionResponseDto } from '@/lib/types/api';
 
@@ -31,6 +32,8 @@ interface MachinesTableProps {
 }
 
 export function MachinesTable({ initialMachines, sections }: MachinesTableProps) {
+  const { machines: fetchedMachines, fetchNextPage, hasNextPage, isFetchingNextPage } = useMachines();
+  const displayMachines = fetchedMachines.length > 0 ? fetchedMachines : initialMachines;
   const [isMounted, setIsMounted] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [machineToDelete, setMachineToDelete] = useState<MachineResponseDto | null>(null);
@@ -117,14 +120,14 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!initialMachines || initialMachines.length === 0 ? (
+            {!displayMachines || displayMachines.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-sm py-4">
                   No machines found. Click &quot;Add Machine&quot; to create one.
                 </TableCell>
               </TableRow>
             ) : (
-              initialMachines.map((machine) => (
+              displayMachines.map((machine) => (
                 <TableRow
                   key={machine.id}
                   className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
@@ -150,6 +153,29 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
                   </TableCell>
                 </TableRow>
               ))
+            )}
+            {hasNextPage && (
+              <TableRow>
+                <TableCell colSpan={6} className="py-4 text-center text-sm text-gray-500">
+                  <div
+                    ref={(node) => {
+                      if (!node) return;
+                      const observer = new IntersectionObserver(
+                        (entries) => {
+                          if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                            fetchNextPage();
+                          }
+                        },
+                        { threshold: 0.1 }
+                      );
+                      observer.observe(node);
+                      return () => observer.disconnect();
+                    }}
+                  >
+                    {isFetchingNextPage ? 'Loading more...' : 'Scroll for more'}
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

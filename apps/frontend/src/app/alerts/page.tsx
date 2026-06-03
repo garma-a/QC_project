@@ -38,7 +38,7 @@ function formatRelativeTime(dateString?: string | null) {
 }
 
 export default function AlertsPage() {
-  const { alerts, loading, error, refetch, markSeen, markResolved } = useAlerts(15000);
+  const { alerts, loading, error, refetch, markSeen, markResolved, fetchNextPage, hasNextPage, isFetchingNextPage } = useAlerts(15000);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [noteByAlertId, setNoteByAlertId] = useState<Record<number, string>>({});
@@ -232,7 +232,7 @@ export default function AlertsPage() {
                       
                       {alert.machineId && alert.testId && (
                         <Link
-                          href={`/monitor?machineId=${alert.machineId}&tab=charts&testId=${alert.testId}`}
+                          href={`/dashboard?machineId=${alert.machineId}&tab=charts&testId=${alert.testId}`}
                           className="inline-flex items-center justify-center gap-1 rounded-md border border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 px-3 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                         >
                           <BarChart3 className="h-4 w-4" />
@@ -266,6 +266,26 @@ export default function AlertsPage() {
               </div>
             );
           })}
+          {hasNextPage && (
+            <div
+              className="py-4 text-center text-sm text-gray-500"
+              ref={(node) => {
+                if (!node) return;
+                const observer = new IntersectionObserver(
+                  (entries) => {
+                    if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                      fetchNextPage();
+                    }
+                  },
+                  { threshold: 0.1 }
+                );
+                observer.observe(node);
+                return () => observer.disconnect();
+              }}
+            >
+              {isFetchingNextPage ? 'Loading more alerts...' : 'Scroll for more'}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -103,8 +104,14 @@ export class QcTestsController {
     description: 'Machine not found.',
     type: NotFoundResponseDto,
   })
-  async findByMachine(@Param('machineId', ParseIntPipe) machineId: number) {
-    return this.qcTestsService.getTestsByMachine(machineId);
+  async findByMachine(
+    @Param('machineId', ParseIntPipe) machineId: number,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcTestsService.getTestsByMachine(machineId, parsedLimit, parsedOffset);
   }
 
   @Get()
@@ -122,8 +129,13 @@ export class QcTestsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
-  async findAll() {
-    return this.qcTestsService.getAll();
+  async findAll(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcTestsService.getAll(parsedLimit, parsedOffset);
   }
 
   @Patch(':id')

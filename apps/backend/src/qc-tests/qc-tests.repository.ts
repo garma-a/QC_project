@@ -27,11 +27,18 @@ export class QcTestsRepository {
     return newTest;
   }
 
-  async getTestsByMachine(machineId: number) {
-    return await this.databaseService.db
+  async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
+    let query = this.databaseService.db
       .select()
       .from(qcTests)
       .where(eq(qcTests.machineId, machineId));
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return query;
   }
 
   async getQcTestById(testId: number) {
@@ -51,8 +58,15 @@ export class QcTestsRepository {
       .returning();
     return updated;
   }
-  async getAllTests() {
-    return this.databaseService.db.select().from(qcTests);
+  async getAllTests(limit?: number, offset?: number) {
+    let query = this.databaseService.db.select().from(qcTests);
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return query;
   }
 
 

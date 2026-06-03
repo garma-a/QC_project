@@ -167,7 +167,6 @@ export async function createMachine(payload: CreateMachineDto) {
     await api.post<MachineResponseDto>('/api/v1/machines', payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
-    revalidatePath('/monitor');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -182,7 +181,6 @@ export async function updateMachine(machineId: number, payload: UpdateMachineDto
     await api.patch<MachineResponseDto>(`/api/v1/machines/${machineId}`, payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
-    revalidatePath('/monitor');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -196,7 +194,6 @@ export async function deleteMachine(machineId: number) {
     await api.delete(`/api/v1/machines/${machineId}`);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
-    revalidatePath('/monitor');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -247,7 +244,7 @@ export async function submitQcResult(payload: CreateQcResultDto) {
       payload,
     );
     revalidatePath('/qc');
-    revalidatePath('/monitor');
+    revalidatePath('/dashboard');
     return { success: true, data: result };
   } catch (error: unknown) {
     return {
@@ -281,7 +278,7 @@ export async function createControlLot(payload: CreateControlLotDto) {
     );
     revalidatePath('/control-lots');
     revalidatePath('/qc');
-    revalidatePath('/monitor');
+    revalidatePath('/dashboard');
     revalidatePath('/machines');
     return { success: true, data: lot };
   } catch (error: unknown) {
@@ -302,7 +299,7 @@ export async function updateControlLot(lotId: number, payload: UpdateControlLotD
     );
     revalidatePath('/control-lots');
     revalidatePath('/qc');
-    revalidatePath('/monitor');
+    revalidatePath('/dashboard');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
@@ -316,7 +313,7 @@ export async function deactivateControlLot(lotId: number) {
     await api.delete(`/api/v1/control-lots/${lotId}`);
     revalidatePath('/control-lots');
     revalidatePath('/qc');
-    revalidatePath('/monitor');
+    revalidatePath('/dashboard');
     return { success: true };
   } catch (error: unknown) {
     return {

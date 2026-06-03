@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight, RefreshCw } from 'lucide-react';
 import { MachineCharts } from '@/features/machines/components/MachineCharts';
-import { LogoCompact } from '@/components/layout/Logo';
 
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
@@ -39,9 +38,10 @@ type MonitorClientProps = {
   })[];
   categories: { id: string; name: string }[];
   qcHistory: MonitorResultEntry[];
+  isFetching?: boolean;
 };
 
-export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
+export function MonitorClient({ machines, categories, qcHistory, isFetching = false }: MonitorClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -72,9 +72,12 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between gap-3 mb-6">
           <div />
-          <div className="lg:hidden">
-            <LogoCompact />
-          </div>
+          {isFetching && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Refreshing…</span>
+            </div>
+          )}
         </div>
 
         {/* Decorative line */}
@@ -144,21 +147,24 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <button 
-            type="button"
-            onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium cursor-pointer"
-          >
-            <ArrowLeft size={20} />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium cursor-pointer"
+            >
+              <ArrowLeft size={20} />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          </div>
+          {isFetching && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Refreshing…</span>
+            </div>
+          )}
         </div>
-        <div className="lg:hidden">
-          <LogoCompact />
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 sm:gap-4 mb-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30">

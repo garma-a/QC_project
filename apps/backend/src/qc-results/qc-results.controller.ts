@@ -106,9 +106,15 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
-  findAll(@Query('lotId') lotId?: string) {
+  findAll(
+    @Query('lotId') lotId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId);
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcResultsService.findAll(parsedLotId, parsedLimit, parsedOffset);
   }
 
   @Get(':id')

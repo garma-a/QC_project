@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
 import { useState } from 'react';
+import { useQcTests } from '@/hooks/useQcTests';
 import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
 import { QcTestFormDialog } from './QcTestFormDialog';
 
@@ -20,6 +21,9 @@ interface QcTestsTableProps {
 }
 
 export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {
+  // We call useQcTests() with no arguments (undefined) to fetch all tests
+  const { tests: fetchedTests, fetchNextPage, hasNextPage, isFetchingNextPage } = useQcTests();
+  const displayTests = fetchedTests.length > 0 ? fetchedTests : allTests;
   // Helper to find machine name by machineId
   const getMachineName = (machineId: number): string => {
     const machine = machines.find((m) => m.id === machineId);
@@ -28,7 +32,7 @@ export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTests = allTests.filter((test) => {
+  const filteredTests = displayTests.filter((test) => {
     const machineName = getMachineName(test.machineId).toLowerCase();
     const query = searchQuery.toLowerCase();
     return test.testName.toLowerCase().includes(query) || machineName.includes(query);
@@ -92,6 +96,29 @@ export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {
                   </TableCell>
                 </TableRow>
               ))
+            )}
+            {hasNextPage && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-4 text-center text-sm text-gray-500">
+                  <div
+                    ref={(node) => {
+                      if (!node) return;
+                      const observer = new IntersectionObserver(
+                        (entries) => {
+                          if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                            fetchNextPage();
+                          }
+                        },
+                        { threshold: 0.1 }
+                      );
+                      observer.observe(node);
+                      return () => observer.disconnect();
+                    }}
+                  >
+                    {isFetchingNextPage ? 'Loading more...' : 'Scroll for more'}
+                  </div>
+                </TableCell>
+              </TableRow>
             )}
           </TableBody>
         </Table>

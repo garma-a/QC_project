@@ -166,6 +166,29 @@ export class QcResultsRepository {
     return result.rows || result;
   }
 
+  async getPaginatedResults(limit: number, offset: number) {
+    const results = await this.databaseService.db
+      .select({
+        id: qcResults.id,
+        measuredValue: qcResults.measuredValue,
+        zScore: qcResults.zScore,
+        violatedRule: qcResults.violatedRule,
+        status: qcResults.status,
+        comments: qcResults.comments,
+        runId: qcResults.runId,
+        lotId: qcResults.lotId,
+        testDate: qcRuns.runDate,
+        performedBy: qcRuns.performedBy,
+      })
+      .from(qcResults)
+      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
+      .orderBy(desc(qcRuns.runDate))
+      .limit(limit)
+      .offset(offset);
+
+    return results;
+  }
+
   async getResultAndLotByResultId(resultId: number) {
     const [result] = await this.databaseService.db
       .select()

@@ -39,7 +39,7 @@ describe('Sidebar component routing and data management', () => {
     useAuthStore.getState().setAuth({ id: '1', role: 'TECHNICIAN' } as any, 'token');
     render(<Sidebar isOpen={true} onClose={vi.fn()} />);
     
-    expect(screen.getByTestId('link-/monitor')).toBeInTheDocument();
+    expect(screen.getByTestId('link-/dashboard')).toBeInTheDocument();
     expect(screen.getByTestId('link-/qc')).toBeInTheDocument();
     expect(screen.getByTestId('link-/machines')).toBeInTheDocument();
     expect(screen.queryByTestId('link-/users')).not.toBeInTheDocument();
@@ -57,10 +57,10 @@ describe('Sidebar component routing and data management', () => {
     const onCloseMock = vi.fn();
     render(<Sidebar isOpen={true} onClose={onCloseMock} />);
     
-    const monitorLink = screen.getByTestId('link-/monitor');
-    expect(monitorLink).toHaveAttribute('href', '/monitor');
+    const dashboardLink = screen.getByTestId('link-/dashboard');
+    expect(dashboardLink).toHaveAttribute('href', '/dashboard');
     
-    fireEvent.click(monitorLink);
+    fireEvent.click(dashboardLink);
     // Should call onClose to close sidebar on mobile
     expect(onCloseMock).toHaveBeenCalled();
   });

@@ -15,8 +15,15 @@ export class MachinesRepository {
     return newMachine;
   }
 
-  async findAll() {
-    return await this.databaseService.db.select().from(machines);
+  async findAll(limit?: number, offset?: number) {
+    let query = this.databaseService.db.select().from(machines);
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return await query;
   }
 
   async findById(id: number) {

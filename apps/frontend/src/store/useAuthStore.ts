@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UserResponseDto, Role } from '@/lib/types/api';
+import { getQueryClient } from '@/lib/query/queryClient';
 
 interface AuthState {
   /** The currently authenticated user */
@@ -43,14 +44,22 @@ export const useAuthStore = create<AuthState>()(
           isAdmin: user.role === 'ADMIN',
         }),
 
-      clearAuth: () =>
+      clearAuth: () => {
+        // Clear React Query cache so stale authenticated data doesn't
+        // persist after logout (important since token is no longer in queryKeys)
+        try {
+          getQueryClient().clear();
+        } catch {
+          // QueryClient may not be initialized in SSR
+        }
         set({
           currentUser: null,
           accessToken: null,
           role: null,
           sectionIds: [],
           isAdmin: false,
-        }),
+        });
+      },
 
       setUser: (user) =>
         set({

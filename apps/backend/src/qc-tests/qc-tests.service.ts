@@ -18,14 +18,14 @@ export class QcTestsService {
     return newTest;
   }
 
-  async getTestsByMachine(machineId: number) {
+  async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
     const machine = await this.qcTestsRepository.getMachineById(machineId);
 
     if (!machine) {
       throw new NotFoundException(`Machine #${machineId} not found`);
     }
 
-    return await this.qcTestsRepository.getTestsByMachine(machineId);
+    return await this.qcTestsRepository.getTestsByMachine(machineId, limit, offset);
   }
 
   async update(testId: number, updateQcTestDto: UpdateQcTestDto) {
@@ -46,7 +46,7 @@ export class QcTestsService {
     return this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
   }
 
-  async getAll() {
-    return this.qcTestsRepository.getAllTests();
+  async getAll(limit?: number, offset?: number) {
+    return this.qcTestsRepository.getAllTests(limit, offset);
   }
 }

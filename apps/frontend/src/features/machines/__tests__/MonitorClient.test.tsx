@@ -13,6 +13,7 @@ vi.mock('next/navigation', () => ({
     replace: mockReplace,
   }),
   useSearchParams: () => currentSearchParams,
+  usePathname: () => '/dashboard',
 }));
 
 // Mock machine charts component since we only want to test MonitorClient data handling
