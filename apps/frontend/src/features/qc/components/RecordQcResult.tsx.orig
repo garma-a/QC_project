@@ -2,60 +2,82 @@
 
 import { useState } from 'react';
 import { X, Heart } from 'lucide-react';
-import { useQCStore, QCFormState } from '@/store/useQCStore';
-import { createQcTest } from '@/lib/actions';
-import { CreateQcTestDto } from '@/lib/types/api';
+import { submitQcResult } from '@/lib/actions';
+import { CreateQcResultDto } from '@/lib/types/api';
 
-interface CreateQCTestProps {
+interface RecordQcResultProps {
   onClose: () => void;
-  machines: { id: string; name: string; category: string; model: string }[];
+  machines: {
+    id: string;
+    name: string;
+    category: string;
+    model: string;
+    tests: {
+      id: string;
+      name: string;
+      category: string;
+      code: string;
+      unit: string;
+      lowRange: number;
+      highRange: number;
+      lotId: number;
+      level: number;
+      lotNumber: string;
+      isActive: boolean;
+      mean: number;
+      standardDeviation: number;
+    }[];
+  }[];
   categories: { id: string; name: string }[];
 }
 
-export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProps) {
+export function RecordQcResult({ onClose, machines, categories }: RecordQcResultProps) {
   const [isPending, setIsPending] = useState(false);
-  const selectedCategory = useQCStore((state: QCFormState) => state.selectedCategory);
-  const selectedMachine = useQCStore((state: QCFormState) => state.selectedMachine);
-  const testName = useQCStore((state: QCFormState) => state.testName);
-  const result = useQCStore((state: QCFormState) => state.result);
-  const expectedRange = useQCStore((state: QCFormState) => state.expectedRange);
-  const notes = useQCStore((state: QCFormState) => state.notes);
-  const setSelectedCategory = useQCStore((state: QCFormState) => state.setSelectedCategory);
-  const setSelectedMachine = useQCStore((state: QCFormState) => state.setSelectedMachine);
-  const setTestName = useQCStore((state: QCFormState) => state.setTestName);
-  const setResult = useQCStore((state: QCFormState) => state.setResult);
-  const setExpectedRange = useQCStore((state: QCFormState) => state.setExpectedRange);
-  const setNotes = useQCStore((state: QCFormState) => state.setNotes);
-  const resetForm = useQCStore((state: QCFormState) => state.resetForm);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedMachine, setSelectedMachine] = useState('');
+  const [selectedLot, setSelectedLot] = useState('');
+  const [measuredValue, setMeasuredValue] = useState('');
+  const [comments, setComments] = useState('');
 
   const filteredMachines = selectedCategory
     ? machines.filter(m => m.category === selectedCategory)
     : [];
 
+  const selectedMachineObj = machines.find(m => m.id === selectedMachine);
+  const activeLots = selectedMachineObj?.tests?.filter(t => t.lotId !== -1 && t.isActive) || [];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setIsPending(true);
     const numericMachineId = parseInt(selectedMachine, 10);
-    const payload: CreateQcTestDto = {
-      machineId: isNaN(numericMachineId) ? 0 : numericMachineId,
-      testName: testName,
-      testType: selectedCategory || '',
+    const numericLotId = parseInt(selectedLot, 10);
+    const numericValue = parseFloat(measuredValue);
+
+    if (isNaN(numericMachineId) || isNaN(numericLotId) || isNaN(numericValue)) {
+      alert("Please ensure Machine, Lot, and Measured Value are correctly filled.");
+      return;
+    }
+
+    setIsPending(true);
+    const payload: CreateQcResultDto = {
+      machineId: numericMachineId,
+      results: [
+        {
+          lotId: numericLotId,
+          measuredValue: numericValue,
+          comments: comments || undefined,
+        }
+      ]
     };
-    const res = await createQcTest(payload);
+    
+    const res = await submitQcResult(payload);
     setIsPending(false);
 
     if (res.error) {
       alert("Failed: " + res.error);
     } else {
-      resetForm();
       onClose();
     }
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
   };
 
   return (
@@ -64,10 +86,10 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
         <div className="flex items-center justify-between p-5 sm:p-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 sticky top-0 bg-white dark:bg-[#1e1e1e] z-10">
           <div className="flex items-center gap-3">
             <Heart size={24} className="text-[#c41e3a] dark:text-[#e84855]" fill="currentColor" />
-            <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">Create New QC Test</h2>
+            <h2 className="text-gray-900 dark:text-white font-bold text-lg sm:text-xl">Record QC Result</h2>
           </div>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="text-gray-400 dark:text-gray-500 hover:text-[#c41e3a] dark:hover:text-[#e84855] p-2 rounded-lg hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-all"
           >
             <X size={24} />
@@ -83,6 +105,7 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
               onChange={(e) => {
                 setSelectedCategory(e.target.value);
                 setSelectedMachine('');
+                setSelectedLot('');
               }}
               required
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
@@ -101,7 +124,10 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
             <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Select Machine</label>
             <select
               value={selectedMachine}
-              onChange={(e) => setSelectedMachine(e.target.value)}
+              onChange={(e) => {
+                setSelectedMachine(e.target.value);
+                setSelectedLot('');
+              }}
               required
               disabled={!selectedCategory}
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
@@ -115,42 +141,42 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
             </select>
           </div>
 
-          {/* Test Name */}
+          {/* Lot Selection */}
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Test Name</label>
-            <input
-              type="text"
-              value={testName}
-              onChange={(e) => setTestName(e.target.value)}
+            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Select Control Lot (Test Type)</label>
+            <select
+              value={selectedLot}
+              onChange={(e) => setSelectedLot(e.target.value)}
               required
-              placeholder="e.g., Glucose QC Level 1"
-              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-            />
+              disabled={!selectedMachine}
+              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select a control lot</option>
+              {activeLots.map(lot => (
+                <option key={`${lot.id}-${lot.lotId}`} value={lot.lotId}>
+                  {lot.name} - Lot {lot.lotNumber} (Level {lot.level})
+                </option>
+              ))}
+            </select>
+            {selectedMachine && activeLots.length === 0 && (
+              <p className="text-[#c41e3a] dark:text-[#e84855] text-sm mt-2 font-medium">
+                No active control lots found for this machine.
+              </p>
+            )}
           </div>
 
-          {/* Result */}
+          {/* Measured Value */}
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Result Value</label>
+            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Measured Value</label>
             <input
-              type="text"
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
+              type="number"
+              step="any"
+              value={measuredValue}
+              onChange={(e) => setMeasuredValue(e.target.value)}
               required
-              placeholder="e.g., 95.5 mg/dL"
-              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-            />
-          </div>
-
-          {/* Expected Range */}
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Expected Range</label>
-            <input
-              type="text"
-              value={expectedRange}
-              onChange={(e) => setExpectedRange(e.target.value)}
-              required
-              placeholder="e.g., 90-110 mg/dL"
-              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              disabled={!selectedLot}
+              placeholder="e.g., 95.5"
+              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -158,10 +184,10 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
           <div>
             <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Notes (Optional)</label>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
               rows={4}
-              placeholder="Add any additional notes or observations..."
+              placeholder="Add any additional comments or observations..."
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
             />
           </div>
@@ -170,17 +196,17 @@ export function CreateQCTest({ onClose, machines, categories }: CreateQCTestProp
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="flex-1 px-6 py-3 rounded-xl border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a]/10 dark:hover:bg-[#e84855]/20 transition-all font-semibold"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isPending}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50"
+              disabled={isPending || !selectedLot || !measuredValue}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? 'Creating...' : 'Create QC Test'}
+              {isPending ? 'Submitting...' : 'Submit Result'}
             </button>
           </div>
         </form>

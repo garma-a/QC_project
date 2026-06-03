@@ -1,145 +1,99 @@
-import { api } from '@/lib/api/serverFetch';
-import type {
-  ControlLotResponseDto,
-  MachineResponseDto,
-  QcResultResponseDto,
-  QcResultsWithLotResponseDto,
-  QcTestResponseDto,
-} from '@/lib/types/api';
+'use client';
+
+import { Suspense } from 'react';
 import { QCHistoryInteractive } from '@/features/qc/components/QCHistoryInteractive';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { useInfiniteQcResults } from '@/hooks/useInfiniteQcResults';
 
-type MachineType = { id: string; name: string; category: string; model: string };
-type CategoryType = { id: string; name: string };
-type QcHistoryType = {
-  id: string;
-  machineId: string;
-  testName: string;
-  date: string;
-  performedBy: string;
-  numericResult?: number;
-  result: string;
-  expectedRange: string;
-  status: string;
-  notes?: string | null;
-};
+export default function QCPage() {
+  const { data: dashboardData, isLoading: isDashboardLoading, error: dashboardError } = useDashboardData();
+  const { 
+    qcHistory, 
+    isLoading: isQcLoading, 
+    error: qcError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQcResults();
 
-export default async function QCPage() {
-  let machines: MachineType[] = [];
-  let categories: CategoryType[] = [];
-  let qcHistory: QcHistoryType[] = [];
-
-  const formatDateTime = (value?: string | null) => {
-    if (!value) return 'N/A N/A';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'N/A N/A';
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-  };
-
-  try {
-    const fetchedMachines = await api.get<MachineResponseDto[]>('/api/v1/machines');
-    if (fetchedMachines && fetchedMachines.length > 0) {
-      // Map MachineResponseDto to the shape expected by QCHistory/CreateQCTest components
-      machines = fetchedMachines.map((m) => ({
-        id: m.id.toString(),
-        name: m.name,
-        category: m.sectionId.toString(),
-        model: m.hospCode ?? '',
-      }));
-
-      // Derive categories from unique sectionIds
-      const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
-      categories = sectionIds.map((sid) => ({
-        id: sid.toString(),
-        name: `Section ${sid}`,
-      }));
-
-      const [allLots, testsByMachine] = await Promise.all([
-        api.get<ControlLotResponseDto[]>('/api/v1/control-lots').catch(() => []),
-        Promise.all(
-          fetchedMachines.map(async (machine) => {
-            try {
-              const tests = await api.get<QcTestResponseDto[]>(
-                `/api/v1/qc-tests/machine/${machine.id}`,
-              );
-              return { machineId: machine.id, tests };
-            } catch {
-              return { machineId: machine.id, tests: [] as QcTestResponseDto[] };
-            }
-          }),
-        ),
-      ]);
-
-      const testById = new Map<number, { machineId: number; test: QcTestResponseDto }>();
-      for (const machineTests of testsByMachine) {
-        for (const test of machineTests.tests) {
-          testById.set(test.id, { machineId: machineTests.machineId, test });
-        }
-      }
-
-      const lotsWithContext = allLots
-        .map((lot) => {
-          const testContext = testById.get(lot.testId);
-          return testContext ? { lot, ...testContext } : null;
-        })
-        .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
-
-      const lotResults = await Promise.all(
-        lotsWithContext.map(async (ctx) => {
-          try {
-            const response = await api.get<QcResultsWithLotResponseDto>(
-              `/api/v1/qc-results?lotId=${ctx.lot.id}`,
-            );
-            const results = Array.isArray(response.results)
-              ? response.results
-              : [];
-
-            return { ctx, results };
-          } catch {
-            return { ctx, results: [] as QcResultResponseDto[] };
-          }
-        }),
-      );
-
-      qcHistory = lotResults.flatMap(({ ctx, results }) =>
-        results.map((result) => {
-          const low = ctx.lot.lowerControlLimit;
-          const high = ctx.lot.upperControlLimit;
-          const expectedRange =
-            typeof low === 'number' && typeof high === 'number'
-              ? `${low.toFixed(2)} - ${high.toFixed(2)}`
-              : 'Not set';
-
-          const normalizedStatus = result.status === 'PASS' ? 'pass' : result.status === 'WARNING' ? 'warning' : 'error';
-
-          return {
-            id: result.id.toString(),
-            machineId: ctx.machineId.toString(),
-            testName: ctx.test.testName,
-            date: formatDateTime(result.testDate),
-            performedBy: `User #${result.performedBy}`,
-            numericResult: result.measuredValue,
-            result: result.measuredValue.toFixed(2),
-            expectedRange,
-            status: normalizedStatus,
-            notes: result.comments ?? `Lot: ${ctx.lot.lotNumber}`,
-          };
-        }),
-      );
-    }
-  } catch {
-    console.error("Failed to fetch machines via Server Component");
+  if (dashboardError || qcError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] p-4 text-center animate-in">
+        <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
+          <div className="text-[#c41e3a] dark:text-[#e84855] text-4xl">⚠️</div>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Failed to load QC history</h2>
+        <p className="text-gray-600 dark:text-gray-400 max-w-md">{dashboardError || qcError}</p>
+      </div>
+    );
   }
 
+  const LoadingSkeleton = () => (
+    <div className="space-y-8 animate-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded-xl relative overflow-hidden" />
+        <div className="h-12 w-40 bg-gray-200 dark:bg-gray-800 rounded-xl relative overflow-hidden" />
+      </div>
+      <div className="h-14 w-full bg-gray-200 dark:bg-gray-800 rounded-xl relative overflow-hidden" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-gray-200 dark:bg-gray-800 rounded-xl relative overflow-hidden" />)}
+      </div>
+      <div className="space-y-4 pt-4">
+        {[1, 2].map(i => (
+          <div key={i} className="h-48 w-full glass-card rounded-2xl relative overflow-hidden">
+             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent animate-[shimmer_1.5s_infinite]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isDashboardLoading || isQcLoading || !dashboardData) {
+    return (
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
+  const machinesForQc = dashboardData.machines.map(m => ({
+    id: m.id.toString(),
+    name: m.name,
+    category: m.sectionId.toString(),
+    model: m.hospCode ?? '',
+    tests: m.tests ?? [],
+  }));
+
+  const qcHistoryForInteractive = qcHistory.map(entry => ({
+    id: entry.id.toString(),
+    machineId: entry.machineId.toString(),
+    testName: entry.testName,
+    date: entry.date,
+    rawDate: entry.testDate,
+    performedBy: 'User ' + entry.performedBy, // Pending backend performedBy resolution
+    numericResult: entry.measuredValue,
+    result: entry.measuredValue.toString(),
+    expectedRange: entry.expectedRange,
+    status: entry.status,
+    notes: entry.comments,
+    zScore: entry.zScore,
+    violatedRule: entry.violatedRule,
+    lotMean: entry.lotMean,
+    lotSd: entry.lotSd,
+  }));
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <QCHistoryInteractive 
-        qcHistory={qcHistory} 
-        machines={machines} 
-        categories={categories} 
-      />
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full animate-in">
+      <Suspense fallback={<LoadingSkeleton />}>
+        <QCHistoryInteractive
+          machines={machinesForQc}
+          categories={dashboardData.categories}
+          qcHistory={qcHistoryForInteractive}
+          fetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+        />
+      </Suspense>
     </div>
   );
 }

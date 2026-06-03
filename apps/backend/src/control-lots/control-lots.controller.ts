@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ControlLotsService } from './control-lots.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
@@ -95,8 +96,13 @@ export class ControlLotsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
-  findAll() {
-    return this.controlLotsService.findAll();
+  findAll(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.controlLotsService.findAll(parsedLimit, parsedOffset);
   }
 
   @Get(':id')

@@ -120,4 +120,83 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Global Custom Scrollbar matching Sidebar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(196 30 58 / 0.2); /* #c41e3a with 20% opacity */
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(196 30 58 / 0.5); /* #c41e3a with 50% opacity */
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgb(232 72 85 / 0.2); /* #e84855 with 20% opacity */
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgb(232 72 85 / 0.5); /* #e84855 with 50% opacity */
+  }
+}
+
+/* Shimmer animation for skeleton loading states */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Smooth fade-in for page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Masterpiece Animations */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(196, 30, 58, 0.4)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(184, 134, 11, 0.6)); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  @apply bg-white/70 dark:bg-black/50 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+}
+
+.glass-card {
+  @apply bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)];
+}
+
+.glass-input {
+  @apply bg-white/50 dark:bg-black/20 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/50 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all duration-300;
 }

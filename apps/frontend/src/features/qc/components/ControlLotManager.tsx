@@ -129,6 +129,7 @@ export function ControlLotManager({ initialLots, machines, allTests }: ControlLo
 
     const result = await createControlLot({
       testId: parseInt(selectedTestId),
+      level: 1, // Defaulting to 1 for backwards compatibility
       lotNumber: lotNumber.trim(),
       expirationDate: new Date(expirationDate).toISOString(),
       targetValue:         toNum(targetValue),

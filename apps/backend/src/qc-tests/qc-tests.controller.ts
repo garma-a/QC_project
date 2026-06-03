@@ -4,8 +4,10 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -19,6 +21,7 @@ import { QcTestsService } from './qc-tests.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { CreateQcTestDto } from './dto/create-qc-test.dto';
+import { UpdateQcTestDto } from './dto/update-qc-test.dto';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { Role } from '@/auth/auth.types';
 import { QcTestResponseDto } from './dto/qc-test-response.dto';
@@ -101,7 +104,83 @@ export class QcTestsController {
     description: 'Machine not found.',
     type: NotFoundResponseDto,
   })
-  async findByMachine(@Param('machineId', ParseIntPipe) machineId: number) {
-    return this.qcTestsService.getTestsByMachine(machineId);
+  async findByMachine(
+    @Param('machineId', ParseIntPipe) machineId: number,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcTestsService.getTestsByMachine(machineId, parsedLimit, parsedOffset);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'Get all QC tests',
+    description: 'Returns every QC test definition across all machines.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of all QC tests.',
+    type: [QcTestResponseDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  async findAll(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcTestsService.getAll(parsedLimit, parsedOffset);
+  }
+
+  @Patch(':id')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Update a QC test',
+    description:
+      'Partially updates an existing QC test definition. All fields are optional. Only administrators can update QC tests.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'The unique ID of the QC test to update',
+    example: 1,
+  })
+  @ApiBody({ type: UpdateQcTestDto })
+  @ApiResponse({
+    status: 200,
+    description: 'QC test updated successfully.',
+    type: QcTestResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed.',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only administrators can update QC tests.',
+    type: ForbiddenResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'QC test or target machine not found.',
+    type: NotFoundResponseDto,
+  })
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateQcTestDto: UpdateQcTestDto,
+  ) {
+    return this.qcTestsService.update(id, updateQcTestDto);
   }
 }

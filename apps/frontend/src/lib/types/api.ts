@@ -142,6 +142,12 @@ export interface CreateQcTestDto {
   machineId: number;
 }
 
+export interface UpdateQcTestDto {
+  testName?: string;
+  testType?: string;
+  machineId?: number;
+}
+
 // ===================================================================
 // Control Lot DTOs
 // ===================================================================
@@ -149,6 +155,7 @@ export interface CreateQcTestDto {
 export interface ControlLotResponseDto {
   id: number;
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number | null;
@@ -166,6 +173,7 @@ export interface ControlLotResponseDto {
 
 export interface CreateControlLotDto {
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number;
@@ -178,6 +186,7 @@ export interface CreateControlLotDto {
 }
 
 export interface UpdateControlLotDto {
+  level?: number;
   expirationDate?: string;
   targetValue?: number;
   mean?: number;
@@ -197,6 +206,7 @@ export interface ControlLotDeactivateResponseDto {
 export interface ControlLotInResultDto {
   id: number;
   testId: number;
+  level: number;
   lotNumber: string;
   expirationDate: string;
   targetValue?: number | null;
@@ -222,13 +232,45 @@ export interface QcResultResponseDto {
   comments?: string | null;
   lotId: number;
   performedBy: number;
+  zScore: number;
+  violatedRule: string | null;
+}
+
+export interface QcResultItemDto {
+  lotId: number;
+  measuredValue: number;
+  comments?: string;
 }
 
 export interface CreateQcResultDto {
-  measuredValue: number;
-  lotId: number;
-  comments?: string;
+  machineId: number;
+  results: QcResultItemDto[];
 }
+
+export interface QcRunDto {
+  id: number;
+  machineId: number;
+  testId: number;
+  performedBy: number;
+  runDate: string;
+}
+
+export interface QcRunResultResponseDto {
+  id: number;
+  measuredValue: number;
+  zScore: number;
+  violatedRule: string | null;
+  status: QcResultStatus;
+  comments?: string | null;
+  runId: number;
+  lotId: number;
+}
+
+export interface QcRunResponseDto {
+  run: QcRunDto;
+  results: QcRunResultResponseDto[];
+}
+
 
 export interface UpdateQcResultDto {
   comments?: string;
@@ -244,6 +286,7 @@ export interface QcResultDetailResponseDto {
   performedBy: number;
   controlLot: ControlLotInResultDto;
   zScore: number;
+  violatedRule: string | null;
 }
 
 export interface LotSummaryDto {
@@ -276,6 +319,8 @@ export interface AlertResponseDto {
   ruleViolated?: string | null;
   suggestedSolution?: string | null;
   resultId: number;
+  machineId?: number;
+  testId?: number;
   createdAt?: string | null;
   status: UserAlertStatus;
   seenAt?: string | null;

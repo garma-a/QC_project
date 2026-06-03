@@ -20,8 +20,8 @@ export class AlertsService {
     return await this.alertsRepository.createForUsers(createAlertDto, userIds);
   }
 
-  async findAllByUser(userId: number) {
-    return await this.alertsRepository.findAllByUser(userId);
+  async findAllByUser(userId: number, limit?: number, offset?: number) {
+    return await this.alertsRepository.findAllByUser(userId, limit, offset);
   }
 
   async markSeen(alertId: number, userId: number) {

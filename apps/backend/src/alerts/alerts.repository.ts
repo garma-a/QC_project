@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
-import { alerts, usersToAlerts } from '@/drizzle/schema';
+import { alerts, controlLots, qcResults, qcTests, usersToAlerts } from '@/drizzle/schema';
 import { and, desc, eq } from 'drizzle-orm';
 
 @Injectable()
 export class AlertsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAllByUser(userId: number) {
-    return await this.databaseService.db
+  async findAllByUser(userId: number, limit?: number, offset?: number) {
+    let query = this.databaseService.db
       .select({
         id: alerts.id,
         type: alerts.type,
@@ -22,11 +22,25 @@ export class AlertsRepository {
         seenAt: usersToAlerts.seenAt,
         resolvedAt: usersToAlerts.resolvedAt,
         resolutionNote: usersToAlerts.resolutionNote,
+        machineId: qcTests.machineId,
+        testId: qcTests.id,
       })
       .from(usersToAlerts)
       .innerJoin(alerts, eq(usersToAlerts.alertId, alerts.id))
+      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
+      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .where(eq(usersToAlerts.userId, userId))
       .orderBy(desc(alerts.createdAt));
+
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+
+    return await query;
   }
 
   async create(createAlertDto: typeof alerts.$inferInsert) {

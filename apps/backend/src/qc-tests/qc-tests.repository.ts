@@ -27,14 +27,47 @@ export class QcTestsRepository {
     return newTest;
   }
 
-  async getTestsByMachine(machineId: number) {
-    return await this.databaseService.db
+  async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
+    let query = this.databaseService.db
       .select()
       .from(qcTests)
       .where(eq(qcTests.machineId, machineId));
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return query;
   }
 
+  async getQcTestById(testId: number) {
+    const [test] = await this.databaseService.db
+      .select()
+      .from(qcTests)
+      .where(eq(qcTests.id, testId))
+      .limit(1);
+    return test;
+  }
 
+  async updateQcTest(testId: number, data: Partial<typeof qcTests.$inferInsert>) {
+    const [updated] = await this.databaseService.db
+      .update(qcTests)
+      .set(data)
+      .where(eq(qcTests.id, testId))
+      .returning();
+    return updated;
+  }
+  async getAllTests(limit?: number, offset?: number) {
+    let query = this.databaseService.db.select().from(qcTests);
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    return query;
+  }
 
 
 }

@@ -27,8 +27,8 @@ export class MachinesService {
     }
   }
 
-  async findAll() {
-    return await this.machinesRepository.findAll();
+  async findAll(limit?: number, offset?: number) {
+    return await this.machinesRepository.findAll(limit, offset);
   }
 
   async findOne(id: number) {

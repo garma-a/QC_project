@@ -40,6 +40,12 @@ export class QcResultResponseDto {
     description: 'ID of the user who performed the measurement',
   })
   performedBy: number;
+
+  @ApiProperty({ example: 1.4, description: 'Stored Z-Score at time of submission' })
+  zScore: number;
+
+  @ApiPropertyOptional({ example: '1_2s', description: 'Westgard rule that triggered this status, null if PASS' })
+  violatedRule: string | null;
 }
 
 class LotSummaryDto {
@@ -135,11 +141,64 @@ export class QcResultDetailResponseDto extends QcResultResponseDto {
     description: 'Full control lot data associated with this result',
   })
   controlLot: ControlLotInResultDto;
+}
+
+export class QcRunDto {
+  @ApiProperty({ example: 1, description: 'Unique QC run identifier' })
+  id: number;
+
+  @ApiProperty({ example: 1, description: 'ID of the machine' })
+  machineId: number;
+
+  @ApiProperty({ example: 1, description: 'ID of the QC test' })
+  testId: number;
+
+  @ApiProperty({ example: 5, description: 'ID of the user who performed the run' })
+  performedBy: number;
 
   @ApiProperty({
-    example: 1.0,
-    description:
-      'Dynamically calculated Z-Score: (measuredValue - mean) / standardDeviation',
+    example: '2026-03-15T08:00:00.000Z',
+    description: 'Date and time the run was performed',
   })
-  zScore: number;
+  runDate: Date;
 }
+
+export class QcRunResultResponseDto {
+  @ApiProperty({ example: 1, description: 'Unique QC result identifier' })
+  id: number;
+
+  @ApiProperty({ example: 14.5, description: 'The measured value from the lab instrument' })
+  measuredValue: number;
+
+  @ApiProperty({ example: 1.4, description: 'Stored Z-Score at time of submission' })
+  zScore: number;
+
+  @ApiPropertyOptional({ example: '1_2s', description: 'Westgard rule that triggered this status, null if PASS' })
+  violatedRule: string | null;
+
+  @ApiProperty({
+    example: 'PASS',
+    enum: ['PASS', 'FAIL', 'WARNING'],
+    description: 'Auto-calculated status based on Westgard evaluation',
+  })
+  status: string;
+
+  @ApiPropertyOptional({ example: 'Morning QC run', description: 'Technician comments or notes' })
+  comments: string | null;
+
+  @ApiProperty({ example: 1, description: 'ID of the QC run this result is part of' })
+  runId: number;
+
+  @ApiProperty({ example: 1, description: 'ID of the control lot this result belongs to' })
+  lotId: number;
+}
+
+export class QcRunResponseDto {
+  @ApiProperty({ type: () => QcRunDto, description: 'The created QC run metadata' })
+  run: QcRunDto;
+
+  @ApiProperty({ type: () => [QcRunResultResponseDto], description: 'The evaluated QC results in this run' })
+  results: QcRunResultResponseDto[];
+}
+
+

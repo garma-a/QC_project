@@ -97,24 +97,41 @@ export const controlLots = pgTable('control_lots', {
   lowerControlLimit: doublePrecision('lower_control_limit'),
   upperWarningLimit: doublePrecision('upper_warning_limit'),
   lowerWarningLimit: doublePrecision('lower_warning_limit'),
+  level: integer('level').default(1).notNull(),
 
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const qcResults = pgTable('qc_results', {
+export const qcRuns = pgTable('qc_runs', {
   id: serial('id').primaryKey(),
-  measuredValue: doublePrecision('measured_value').notNull(),
-  testDate: timestamp('test_date').defaultNow(),
-  status: statusEnum('status').notNull(),
-  comments: text('comments'),
-  lotId: integer('lot_id')
-    .references(() => controlLots.id)
+  machineId: integer('machine_id')
+    .references(() => machines.id)
+    .notNull(),
+  testId: integer('test_id')
+    .references(() => qcTests.id)
     .notNull(),
   performedBy: integer('performed_by')
     .references(() => users.id)
     .notNull(),
+  runDate: timestamp('run_date').defaultNow(),
 });
+
+export const qcResults = pgTable('qc_results', {
+  id: serial('id').primaryKey(),
+  measuredValue: doublePrecision('measured_value').notNull(),
+  zScore: doublePrecision('z_score').notNull(),             // NEW
+  violatedRule: varchar('violated_rule', { length: 50 }),   // NEW — null = PASS
+  status: statusEnum('status').notNull(),
+  comments: text('comments'),
+  runId: integer('run_id')
+    .references(() => qcRuns.id)
+    .notNull(),
+  lotId: integer('lot_id')
+    .references(() => controlLots.id)
+    .notNull(),
+});
+
 
 export const alerts = pgTable('alerts', {
   id: serial('id').primaryKey(),
@@ -192,14 +209,30 @@ export const controlLotsRelations = relations(controlLots, ({ one, many }) => ({
   qcResults: many(qcResults),
 }));
 
+export const qcRunsRelations = relations(qcRuns, ({ one, many }) => ({
+  machine: one(machines, {
+    fields: [qcRuns.machineId],
+    references: [machines.id],
+  }),
+  qcTest: one(qcTests, {
+    fields: [qcRuns.testId],
+    references: [qcTests.id],
+  }),
+  performedBy: one(users, {
+    fields: [qcRuns.performedBy],
+    references: [users.id],
+  }),
+  results: many(qcResults),
+}));
+
 export const qcResultsRelations = relations(qcResults, ({ one }) => ({
+  run: one(qcRuns, {
+    fields: [qcResults.runId],
+    references: [qcRuns.id],
+  }),
   controlLot: one(controlLots, {
     fields: [qcResults.lotId],
     references: [controlLots.id],
-  }),
-  performedBy: one(users, {
-    fields: [qcResults.performedBy],
-    references: [users.id],
   }),
   alert: one(alerts),
 }));
@@ -214,7 +247,7 @@ export const alertsRelations = relations(alerts, ({ one, many }) => ({
 
 export const usersRelations = relations(users, ({ many }) => ({
   sectionAssignments: many(usersToSections),
-  performedResults: many(qcResults),
+  performedRuns: many(qcRuns),
   alertNotifications: many(usersToAlerts),
 }));
 

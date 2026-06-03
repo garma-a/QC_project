@@ -13,7 +13,8 @@ export class ControlLotsService {
       return { ...lot, daysActive: 0, needsChecking: false };
     }
     const msPerDay = 1000 * 60 * 60 * 24;
-    const diffMs = Date.now() - lot.createdAt.getTime();
+    const createdAtDate = typeof lot.createdAt === 'string' ? new Date(lot.createdAt) : lot.createdAt;
+    const diffMs = Date.now() - createdAtDate.getTime();
     const daysActive = Math.max(0, Math.floor(diffMs / msPerDay));
     return {
       ...lot,
@@ -44,8 +45,8 @@ export class ControlLotsService {
     return this.computeAgeFlags(newLot);
   }
 
-  async findAll() {
-    const lots = await this.controlLotsRepository.findAll();
+  async findAll(limit?: number, offset?: number) {
+    const lots = await this.controlLotsRepository.findAll(limit, offset);
     return lots.map((lot) => this.computeAgeFlags(lot));
   }
 

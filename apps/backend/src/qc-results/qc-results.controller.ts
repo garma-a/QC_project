@@ -26,6 +26,7 @@ import {
   QcResultResponseDto,
   QcResultsWithLotResponseDto,
   QcResultDetailResponseDto,
+  QcRunResponseDto,
 } from './dto/qc-result-response.dto';
 import {
   ValidationErrorResponseDto,
@@ -44,12 +45,16 @@ export class QcResultsController {
   @ApiOperation({
     summary: 'Submit a new QC result',
     description:
-      "Records a new quality control measurement against a specific control lot. The system automatically calculates the Z-Score based on the lot's mean and standard deviation, then assigns a status: **PASS** (|Z| <= 2), **WARNING** (2 < |Z| <= 3), or **FAIL** (|Z| > 3). The `performedBy` field is automatically set from the authenticated user's JWT token.",
+      'Records a new quality control run containing results for all active control lots for a test. ' +
+      'The system automatically evaluates the run against Multi-Lot Westgard Rules (cross-material R_4s, 2_2s) ' +
+      'and Single-Lot historical rules (1_3s, 2_2s, R_4s, 2of3_2s, 3_1s, 4_1s, 7_T, and shift rules 6_x, 8_x, 9_x, 10_x, 12_x) ' +
+      'as well as the 1_2s warning rule to assign a PASS, WARNING, or FAIL status ' +
+      'to each result. All active control lots for the test MUST be submitted together in the same run.',
   })
   @ApiResponse({
     status: 201,
-    description: 'The QC result has been successfully recorded and evaluated.',
-    type: QcResultResponseDto,
+    description: 'The QC run has been successfully recorded and evaluated.',
+    type: QcRunResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -76,21 +81,19 @@ export class QcResultsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Get all QC results for a specific lot',
-    description:
-      'Returns a comprehensive object containing the control lot parameters (mean, SD, limits, test name, machine name) alongside an array of all historical QC results for that lot, ordered by date descending. This data is used to render the Levey-Jennings chart.',
+    summary: 'Get QC results',
+    description: 'If lotId is provided, returns the control lot parameters and an array of all historical QC results for that lot. If not provided, returns all recent QC results.',
   })
   @ApiQuery({
     name: 'lotId',
-    required: true,
-    description: 'The ID of the control lot to fetch results for',
+    required: false,
+    description: 'The ID of the control lot to fetch results for (optional)',
     type: Number,
     example: 1,
   })
   @ApiResponse({
     status: 200,
-    description:
-      'Returns the control lot parameters and an array of all associated results.',
+    description: 'Returns the results.',
     type: QcResultsWithLotResponseDto,
   })
   @ApiResponse({
@@ -103,8 +106,15 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
-  findAll(@Query('lotId', ParseIntPipe) lotId: number) {
-    return this.qcResultsService.findAll(lotId);
+  findAll(
+    @Query('lotId') lotId?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.qcResultsService.findAll(parsedLotId, parsedLimit, parsedOffset);
   }
 
   @Get(':id')

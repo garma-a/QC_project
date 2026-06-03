@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight } from 'lucide-react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight, RefreshCw } from 'lucide-react';
 import { MachineCharts } from '@/features/machines/components/MachineCharts';
-import { LogoCompact } from '@/components/layout/Logo';
 
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 type MonitorResultEntry = QcResultResponseDto & {
   machineId: number;
+  testId: number;
   testName: string;
   lotId: number;
+  level: number;
   lotNumber: string;
 };
 
@@ -28,36 +29,37 @@ type MonitorClientProps = {
       lowRange: number;
       highRange: number;
       lotId: number;
+      level: number;
       lotNumber: string;
+      isActive: boolean;
       mean: number;
       standardDeviation: number;
     }[];
   })[];
   categories: { id: string; name: string }[];
   qcHistory: MonitorResultEntry[];
+  isFetching?: boolean;
 };
 
-export function MonitorClient({ machines, categories, qcHistory }: MonitorClientProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'charts'>('overview');
-  const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
+export function MonitorClient({ machines, categories, qcHistory, isFetching = false }: MonitorClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const machineIdFromUrl = searchParams.get('machineId');
-    if (!machineIdFromUrl) {
-      return;
+  const selectedMachineId = searchParams.get('machineId');
+  const tabParam = searchParams.get('tab');
+  const activeTab: 'overview' | 'charts' = tabParam === 'charts' ? 'charts' : 'overview';
+  const setUrlParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
     }
-
-    const machineExists = machines.some((m) => m.id.toString() === machineIdFromUrl);
-    if (machineExists) {
-      const frameId = window.requestAnimationFrame(() => {
-        setSelectedMachineId(machineIdFromUrl);
-      });
-
-      return () => window.cancelAnimationFrame(frameId);
-    }
-  }, [searchParams, machines]);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const machine = machines.find(m => m.id.toString() === selectedMachineId);
   const history = selectedMachineId
@@ -70,9 +72,12 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
       <div className="p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-between gap-3 mb-6">
           <div />
-          <div className="lg:hidden">
-            <LogoCompact />
-          </div>
+          {isFetching && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Refreshing…</span>
+            </div>
+          )}
         </div>
 
         {/* Decorative line */}
@@ -94,7 +99,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
                     <div
                       key={machine.id}
                       className="group bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 hover:shadow-2xl hover:shadow-[#c41e3a]/20 dark:hover:shadow-[#e84855]/30 transition-all cursor-pointer hover:border-[#c41e3a] dark:hover:border-[#e84855] hover:-translate-y-1 myc-pattern relative"
-                      onClick={() => setSelectedMachineId(machine.id.toString())}
+                      onClick={() => setUrlParams({ machineId: machine.id.toString(), tab: null, testId: null })}
                     >
                       {/* Corner accent */}
                       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
@@ -142,39 +147,45 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium"
-          >
-            <ArrowLeft size={20} />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <button 
+              type="button"
+              onClick={() => setUrlParams({ machineId: null, tab: null, testId: null })} 
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#1e1e1e] border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 text-[#c41e3a] dark:text-[#e84855] hover:bg-[#c41e3a] hover:text-white dark:hover:bg-[#e84855] dark:hover:text-white transition-all font-medium cursor-pointer"
+            >
+              <ArrowLeft size={20} />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          </div>
+          {isFetching && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
+              <RefreshCw size={14} className="animate-spin" />
+              <span>Refreshing…</span>
+            </div>
+          )}
         </div>
-        <div className="lg:hidden">
-          <LogoCompact />
-        </div>
-      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 sm:gap-4 mb-6 border-b-2 border-[#c41e3a]/20 dark:border-[#e84855]/30">
         <button
-          onClick={() => setActiveTab('overview')}
-          className={`pb-3 px-4 transition-all font-medium ${
+          type="button"
+          onClick={() => setUrlParams({ tab: 'overview' })}
+          className={`pb-3 px-4 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'overview'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
-              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855]'
+              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           Overview
         </button>
         <button
-          onClick={() => setActiveTab('charts')}
-          className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium ${
+          type="button"
+          onClick={() => setUrlParams({ tab: 'charts' })}
+          className={`pb-3 px-4 flex items-center gap-2 transition-all font-medium cursor-pointer rounded-t-lg ${
             activeTab === 'charts'
               ? 'text-[#c41e3a] dark:text-[#e84855] border-b-2 border-[#c41e3a] dark:border-[#e84855]'
-              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855]'
+              : 'text-gray-600 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           <BarChart3 size={18} />
@@ -186,12 +197,12 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
         <div>
 
         {/* Machine Header */}
-        <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg myc-pattern relative">
+        <div className="w-full bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 px-5 py-3 sm:px-6 sm:py-4 mb-6 shadow-lg myc-pattern relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full" />
           
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3 relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
-              <h1 className="text-gray-900 dark:text-white mb-2 break-words font-bold">{machine.name}</h1>
+              <h1 className="text-gray-900 dark:text-white mb-1 break-words font-bold">{machine.name}</h1>
               <p className="text-gray-600 dark:text-gray-400">{machine.hospCode}</p>
             </div>
             <div className={`px-4 py-2 rounded-xl font-semibold whitespace-nowrap self-start border-2 ${
@@ -203,7 +214,7 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 border-t-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 pt-3 border-t-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 relative z-10">
             <div>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Section ID</p>
               <p className="text-gray-900 dark:text-white font-medium capitalize">{machine.sectionId}</p>
@@ -218,16 +229,6 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
             </div>
           </div>
         </div>
-
-        {/* Available Tests (Placeholder until Control Lots are wired) */}
-        {machine.tests && machine.tests.length > 0 && (
-          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg">
-            <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Available Tests ({machine.tests.length})</h2>
-            <div className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 text-gray-600 dark:text-gray-400 text-sm">
-               Test details will be loaded from real control lots.
-            </div>
-          </div>
-        )}
 
         {/* Current Status */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6">
@@ -276,10 +277,20 @@ export function MonitorClient({ machines, categories, qcHistory }: MonitorClient
            </div>
         </div>
 
+        {/* Available Tests (Placeholder until Control Lots are wired) */}
+        {machine.tests && machine.tests.length > 0 && (
+          <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 mb-6 shadow-lg">
+            <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Available Tests ({machine.tests.length})</h2>
+            <div className="p-4 bg-[#fff8f0] dark:bg-[#2a2a2a] rounded-xl border border-[#c41e3a]/20 dark:border-[#e84855]/30 text-gray-600 dark:text-gray-400 text-sm">
+               Test details will be loaded from real control lots.
+            </div>
+          </div>
+        )}
+
         {/* QC History */}
         <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 shadow-lg">
           <h2 className="text-gray-900 dark:text-white mb-4 font-bold">Quality Control History</h2>
-          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
             {history.map((qc) => (
               <div key={qc.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#2a2a2a] border border-[#c41e3a]/10 dark:border-[#e84855]/20 group hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/40 transition-colors">
                 <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${

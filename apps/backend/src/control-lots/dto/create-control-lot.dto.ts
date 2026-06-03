@@ -25,6 +25,14 @@ export class CreateControlLotDto {
   @IsNotEmpty()
   lotNumber: string;
 
+  @ApiPropertyOptional({
+    description: 'The control level (e.g., 1 for Low, 2 for Normal, 3 for High)',
+    example: 1,
+  })
+  @IsInt()
+  @IsOptional()
+  level?: number;
+
   @ApiProperty({
     description:
       'The expiration date of the control material (ISO 8601 format)',

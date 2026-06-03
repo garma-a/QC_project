@@ -31,8 +31,8 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
         <button
           onClick={() => setSelectedCategory('all')}
           className={`px-4 sm:px-5 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm sm:text-base font-medium ${selectedCategory === 'all'
-              ? 'bg-[#8b1e3f] dark:bg-[#8b1e3f] text-white dark:shadow-lg dark:shadow-[#8b1e3f]/30 border-2 border-[#b8860b] dark:border-[#b8860b]'
-              : 'bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:border-[#c41e3a] dark:hover:border-[#e84855]'
+            ? 'bg-[#8b1e3f] dark:bg-[#8b1e3f] text-white dark:shadow-lg dark:shadow-[#8b1e3f]/30 border-2 border-[#b8860b] dark:border-[#b8860b]'
+            : 'bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:border-[#c41e3a] dark:hover:border-[#e84855]'
             }`}
         >
           All Machines
@@ -42,8 +42,8 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
             key={category.id}
             onClick={() => setSelectedCategory(category.id)}
             className={`px-4 sm:px-5 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm sm:text-base font-medium ${selectedCategory === category.id
-                ? 'bg-[#8b1e3f] dark:bg-[#8b1e3f] text-white shadow-lg shadow-[#8b1e3f]/30 border-2 border-[#b8860b] dark:border-[#b8860b]'
-                : 'bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:border-[#c41e3a] dark:hover:border-[#e84855]'
+              ? 'bg-[#8b1e3f] dark:bg-[#8b1e3f] text-white shadow-lg shadow-[#8b1e3f]/30 border-2 border-[#b8860b] dark:border-[#b8860b]'
+              : 'bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] hover:border-[#c41e3a] dark:hover:border-[#e84855]'
               }`}
           >
             {category.name}
@@ -60,7 +60,7 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
             <div
               key={machine.id}
               className="group relative bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 p-5 sm:p-6 hover:shadow-2xl hover:shadow-[#c41e3a]/20 dark:hover:shadow-[#e84855]/30 transition-all cursor-pointer hover:border-[#c41e3a] dark:hover:border-[#e84855] hover:-translate-y-1 myc-pattern"
-              onClick={() => router.push(`/monitor?machineId=${machine.id}`)}
+              onClick={() => router.push(`/dashboard?machineId=${machine.id}`)}
             >
               {/* Decorative corner accent */}
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#b8860b]/10 to-transparent dark:from-[#ffd700]/10 rounded-bl-full opacity-50" />
@@ -74,10 +74,10 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
                 </div>
                 <div className="relative flex-shrink-0 ml-2">
                   <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' :
-                      machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                    machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                     }`} />
                   <div className={`absolute inset-0 w-3.5 h-3.5 rounded-full animate-ping opacity-75 ${machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' :
-                      machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
+                    machine.currentStatus === 'MAINTENANCE' ? 'bg-[#f59e0b]' : 'bg-[#c41e3a]'
                     }`} />
                 </div>
               </div>
@@ -111,8 +111,8 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
 
                 {machine.violationCount > 0 && (
                   <div className={`px-3 py-1.5 rounded-lg text-xs font-medium ${machine.qcStatus === 'error'
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                      : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                     }`}>
                     {machine.violationCount} Westgard rule violation{machine.violationCount > 1 ? 's' : ''}
                   </div>

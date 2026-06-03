@@ -14,4 +14,12 @@ export class AuthRepository {
       .where(eq(users.email, email));
     return user;
   }
+
+  async findById(id: number) {
+    const [user] = await this.databaseService.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
+  }
 }

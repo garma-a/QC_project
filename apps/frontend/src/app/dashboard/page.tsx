@@ -1,46 +1,55 @@
-import { api } from '@/lib/api/serverFetch';
-import { DashboardInteractive, type MachineWithQcStatus } from '@/features/dashboard/components/DashboardInteractive';
-import type { MachineResponseDto } from '@/lib/types/api';
+'use client';
 
-export default async function DashboardPage() {
-  let machinesWithStatus: MachineWithQcStatus[] = [];
-  let categories: { id: string; name: string }[] = [];
+import { Suspense } from 'react';
+import { MonitorClient } from '@/features/machines/components/MonitorClient';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton';
 
-  try {
-    const fetchedMachines = await api.get<MachineResponseDto[]>('/api/v1/machines');
-    if (fetchedMachines && Array.isArray(fetchedMachines)) {
-      machinesWithStatus = fetchedMachines.map((m) => ({
-        ...m,
-        qcStatus: 'pass' as const,
-        violationCount: 0,
-        lastQC: { date: 'N/A' },
-      }));
+export default function DashboardPage() {
+  const { data, isLoading, isFetching, error } = useDashboardData();
 
-      // Derive categories from unique sectionIds in the machine data
-      const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
-      categories = sectionIds.map((sid) => ({
-        id: sid.toString(),
-        name: `Section ${sid}`,
-      }));
-    }
-  } catch (err) {
-    console.error("Failed to fetch machines via Server Component:", err);
+  if (isLoading && !data) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] p-4 text-center">
+        <div className="text-[#c41e3a] dark:text-[#e84855] text-4xl mb-4">⚠️</div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Failed to load dashboard</h2>
+        <p className="text-gray-600 dark:text-gray-400">{error || 'Unknown error'}</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <DashboardSkeleton />;
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Header with Magdi Yacoub Branding */}
-      <div className="mb-8">
-        <div className="mb-4" />
+    <div className="relative">
+      {/* Subtle background refetch indicator */}
+      {isFetching && !isLoading && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5">
+          <div className="h-full bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] animate-pulse rounded-full" />
+        </div>
+      )}
 
-        {/* Decorative line with heart center branding */}
-        <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full" />
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Header decorative line */}
+        <div className="mb-6">
+          <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full" />
+        </div>
+
+        <Suspense fallback={<DashboardSkeleton />}>
+          <MonitorClient
+            machines={data.machines}
+            categories={data.categories}
+            qcHistory={data.qcHistory}
+            isFetching={isFetching}
+          />
+        </Suspense>
       </div>
-
-      <DashboardInteractive
-        machinesWithStatus={machinesWithStatus}
-        categories={categories}
-      />
     </div>
   );
 }

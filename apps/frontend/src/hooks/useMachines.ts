@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { MachineResponseDto } from '@/lib/types/api';
@@ -10,31 +10,43 @@ interface UseMachinesReturn {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  fetchNextPage: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
 }
 
 export function useMachines(): UseMachinesReturn {
   const token = useAuthStore((s) => s.accessToken);
 
-  // The AbortSignal is forwarded by React Query so stale requests (e.g. fired
-  // while the token was changing) are automatically cancelled before the new
-  // request starts — eliminating the race condition.
   const {
-    data: machines = [],
+    data,
     isLoading,
     isError,
     error: rawError,
     refetch,
-  } = useQuery({
-    queryKey: ['machines', token],
-    queryFn: ({ signal }) =>
-      clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token),
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['machines'],
+    queryFn: ({ pageParam = 0, signal }) =>
+      clientFetch<MachineResponseDto[]>(`/api/v1/machines?limit=50&offset=${pageParam}`, { signal }, token),
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 50 ? allPages.length * 50 : undefined;
+    },
+    initialPageParam: 0,
     enabled: !!token,
   });
+
+  const machines = data?.pages.flat() || [];
 
   return {
     machines,
     loading: isLoading,
     error: isError ? (rawError instanceof Error ? rawError.message : 'Failed to fetch machines') : null,
     refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   };
 }

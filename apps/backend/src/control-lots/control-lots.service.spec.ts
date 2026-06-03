@@ -84,6 +84,31 @@ describe('ControlLotsService', () => {
       expect(result.isActive).toBe(true);
     });
 
+    it('should pass the level field correctly for multi-lot configurations', async () => {
+      // Arrange
+      const multiLotDto = { ...newLotDto, level: 2 };
+      mockRepository.findTestById.mockResolvedValue({ id: 1, testName: 'Hemoglobin' });
+      mockRepository.createWithDeactivation.mockResolvedValue({
+        id: 2,
+        ...multiLotDto,
+        expirationDate: new Date('2026-12-31'),
+        isActive: true,
+        createdAt: new Date('2026-05-19T12:00:00Z'),
+      });
+
+      // Act
+      const result = await service.create(multiLotDto);
+
+      // Assert
+      expect(mockRepository.createWithDeactivation).toHaveBeenCalledWith(
+        multiLotDto.testId,
+        expect.objectContaining({
+          level: 2,
+        }),
+      );
+      expect(result.level).toBe(2);
+    });
+
     it('should return daysActive=5 and needsChecking=false for a 5-day-old lot', async () => {
       // Arrange — created 5 days before FROZEN_NOW → 2026-05-17
       mockRepository.findTestById.mockResolvedValue({ id: 1, testName: 'Hemoglobin' });

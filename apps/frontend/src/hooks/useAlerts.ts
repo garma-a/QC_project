@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type {
@@ -14,6 +14,9 @@ interface UseAlertsReturn {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  fetchNextPage: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
   markSeen: (alertId: number) => Promise<UserAlertStatusResponseDto[]>;
   markResolved: (
     alertId: number,
@@ -25,30 +28,29 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
   const token = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
-  // ── Main query ──────────────────────────────────────────────────────────────
-  // React Query differentiates `isLoading` (first fetch, no cached data) from
-  // `isFetching` (background refetch). This eliminates the loading-flash bug
-  // that the background-flag workaround was solving.
-  // The AbortSignal is forwarded by React Query so in-flight requests are
-  // automatically cancelled on unmount or when a newer request supersedes them.
   const {
-    data: alerts = [],
+    data,
     isLoading,
     isError,
     error: rawError,
     refetch,
-  } = useQuery({
-    queryKey: ['alerts', token],
-    queryFn: async ({ signal }) =>
-      clientFetch<AlertResponseDto[]>('/api/v1/alerts', { signal }, token),
-    // Poll in the background. React Query keeps showing the previous (cached)
-    // data while the background fetch is in progress — no visible flash.
-    refetchInterval: pollIntervalMs && pollIntervalMs > 0 ? pollIntervalMs : false,
-    // Disable the query entirely when there is no auth token
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['alerts'],
+    queryFn: async ({ pageParam = 0, signal }) =>
+      clientFetch<AlertResponseDto[]>(`/api/v1/alerts?limit=50&offset=${pageParam}`, { signal }, token),
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 50 ? allPages.length * 50 : undefined;
+    },
+    initialPageParam: 0,
     enabled: !!token,
+    refetchInterval: pollIntervalMs && pollIntervalMs > 0 ? pollIntervalMs : false,
   });
 
-  // ── markSeen mutation ───────────────────────────────────────────────────────
+  const alerts = data?.pages.flat() || [];
+
   const { mutateAsync: markSeen } = useMutation({
     mutationFn: (alertId: number) =>
       clientFetch<UserAlertStatusResponseDto[]>(
@@ -56,14 +58,11 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
         { method: 'PATCH' },
         token,
       ),
-    // After a successful mutation, invalidate the cache so the list refreshes
-    // with accurate statuses. No manual fetch call needed.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
   });
 
-  // ── markResolved mutation ───────────────────────────────────────────────────
   const { mutateAsync: markResolved } = useMutation({
     mutationFn: ({ alertId, payload }: { alertId: number; payload?: ResolveAlertDto }) =>
       clientFetch<UserAlertStatusResponseDto[]>(
@@ -84,7 +83,9 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     loading: isLoading,
     error: isError ? (rawError instanceof Error ? rawError.message : 'Failed to fetch alerts') : null,
     refetch,
-    // Flatten the tuple signature to match the original hook's interface
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     markSeen,
     markResolved: (alertId, payload) => markResolved({ alertId, payload }),
   };

@@ -7,7 +7,11 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
+  Query,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/auth/guards/roles.guard';
 import { MachinesService } from '@/machines/machines.service';
 import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
 import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
@@ -21,6 +25,7 @@ import {
 
 @ApiTags('Machines')
 @Controller('machines')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class MachinesController {
   constructor(private readonly machinesService: MachinesService) { }
 
@@ -61,8 +66,13 @@ export class MachinesController {
     description: 'Array of all machines.',
     type: [MachineResponseDto],
   })
-  findAll() {
-    return this.machinesService.findAll();
+  findAll(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    return this.machinesService.findAll(parsedLimit, parsedOffset);
   }
 
   @Get(':id')
