@@ -103,12 +103,17 @@ export function useDashboardData() {
         const lotResults = await Promise.all(
           lotsWithContext.map(async (ctx) => {
             try {
-              const response = await clientFetch<QcResultsWithLotResponseDto>(
-                `/api/v1/qc-results?lotId=${ctx.lot.id}`,
+              const response = await clientFetch<QcResultsWithLotResponseDto | QcResultResponseDto[]>(
+                `/api/v1/qc-results?lotId=${ctx.lot.id}&limit=1000`,
                 { signal },
                 token
               );
-              const results = Array.isArray(response.results) ? response.results : [];
+              // Handle both flat-array and wrapped { results: [] } response shapes
+              const results: QcResultResponseDto[] = Array.isArray(response)
+                ? response
+                : Array.isArray((response as QcResultsWithLotResponseDto).results)
+                  ? (response as QcResultsWithLotResponseDto).results
+                  : [];
               return { ctx, results };
             } catch (err) {
               console.error(`Failed to fetch QC results for lot ${ctx.lot.id}:`, err);
@@ -207,7 +212,7 @@ export function useDashboardData() {
 
   return {
     data,
-    isLoading: isLoading || !token,
-    error: token ? error?.message || null : null,
+    isLoading,
+    error: error?.message || null,
   };
 }

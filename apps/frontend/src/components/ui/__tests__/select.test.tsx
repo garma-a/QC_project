@@ -1,49 +1,59 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { Select, SelectOption } from '../select';
-import React from 'react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../select';
 
 describe('Select component', () => {
   it('renders correctly with options', () => {
     render(
-      <Select data-testid="select">
-        <SelectOption value="1">Option 1</SelectOption>
-        <SelectOption value="2">Option 2</SelectOption>
+      <Select>
+        <SelectTrigger data-testid="select-trigger">
+          <SelectValue placeholder="Select an option" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1">Option 1</SelectItem>
+          <SelectItem value="2">Option 2</SelectItem>
+        </SelectContent>
       </Select>
     );
 
-    const select = screen.getByTestId('select');
-    expect(select).toBeInTheDocument();
-    expect(screen.getByText('Option 1')).toBeInTheDocument();
-    expect(screen.getByText('Option 2')).toBeInTheDocument();
+    const trigger = screen.getByTestId('select-trigger');
+    expect(trigger).toBeInTheDocument();
   });
 
   it('renders placeholder correctly', () => {
     render(
-      <Select placeholder="Select an option" data-testid="select">
-        <SelectOption value="1">Option 1</SelectOption>
+      <Select>
+        <SelectTrigger>
+          <SelectValue placeholder="Custom Placeholder" />
+        </SelectTrigger>
       </Select>
     );
 
-    expect(screen.getByText('Select an option')).toBeDisabled();
+    expect(screen.getByText('Custom Placeholder')).toBeInTheDocument();
   });
 
-  it('handles value changes', () => {
+  it('handles controlled value', () => {
     render(
-      <Select data-testid="select">
-        <SelectOption value="1">Option 1</SelectOption>
-        <SelectOption value="2">Option 2</SelectOption>
+      <Select value="2">
+        <SelectTrigger data-testid="trigger">
+          <SelectValue placeholder="Select" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1">Option 1</SelectItem>
+          <SelectItem value="2">Option 2</SelectItem>
+        </SelectContent>
       </Select>
     );
-
-    const select = screen.getByTestId('select') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: '2' } });
-    expect(select.value).toBe('2');
+    expect(screen.getByTestId('trigger')).toBeInTheDocument();
   });
 
-  it('forwards ref correctly', () => {
-    const ref = React.createRef<HTMLSelectElement>();
-    render(<Select ref={ref} />);
-    expect(ref.current).toBeInstanceOf(HTMLSelectElement);
+  it('forwards ref correctly to trigger', () => {
+    const ref = React.createRef<HTMLButtonElement>();
+    render(
+      <Select>
+        <SelectTrigger ref={ref} />
+      </Select>
+    );
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
 });

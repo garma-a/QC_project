@@ -117,7 +117,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!initialMachines || initialMachines.length === 0 ? (
+            {!Array.isArray(initialMachines) || initialMachines.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-sm py-4">
                   No machines found. Click &quot;Add Machine&quot; to create one.

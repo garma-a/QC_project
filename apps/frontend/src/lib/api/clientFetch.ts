@@ -29,10 +29,11 @@ export async function clientFetch<T>(
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
+  const fullUrl = url.startsWith('http') ? url : `http://localhost:4000${endpoint}`;
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch(fullUrl, {
       ...options,
       headers,
       // Forward any AbortSignal supplied by React Query / useEffect cleanup

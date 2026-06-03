@@ -66,6 +66,7 @@ describe('QcResultsService', () => {
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
       mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 1, lotNumber: 'LOT-1' }]);
+      mockRepository.getLotTestMachineByLotId.mockResolvedValue({ qc_tests: { machineId } });
     });
 
     it('should create a QC run with PASS status when z-score is within 2 SD', async () => {

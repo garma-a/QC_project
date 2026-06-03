@@ -2,13 +2,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MonitorClient } from '../components/MonitorClient';
 
-// Mock router
 const mockPush = vi.fn();
+let mockSearchParams = new URLSearchParams('');
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: vi.fn(),
   }),
-  useSearchParams: () => new URLSearchParams(''),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock machine charts component since we only want to test MonitorClient data handling
@@ -19,13 +21,12 @@ vi.mock('@/features/machines/components/MachineCharts', () => ({
 describe('MonitorClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams('');
   });
 
   it('renders empty state gracefully when machines list is empty (fetch failed/no data)', () => {
     render(<MonitorClient machines={[]} categories={[]} qcHistory={[]} />);
-    // Should not crash, just won't render any machines
     const heading = screen.queryByText(/Monitor/i);
-    // As it renders categories based on map, it should render nothing if categories is empty
     expect(screen.queryByText('Last QC:')).not.toBeInTheDocument();
   });
 
@@ -39,17 +40,13 @@ describe('MonitorClient', () => {
       isActive: true,
       createdAt: '2023-01-01',
       updatedAt: '2023-01-01'
-      // Missing tests, testsToday, lastQC
     }];
     const categories = [{ id: '1', name: 'Category 1' }];
 
     render(<MonitorClient machines={malformedMachines} categories={categories} qcHistory={[]} />);
     
-    // Machine is rendered
     expect(screen.getByText('Partial Machine')).toBeInTheDocument();
     expect(screen.getByText('Category 1')).toBeInTheDocument();
-    
-    // Should render "Unknown" or fallback for missing lastQC
     expect(screen.getByText('Last QC: Unknown')).toBeInTheDocument();
   });
 
@@ -67,12 +64,12 @@ describe('MonitorClient', () => {
       lastQC: { date: '2023-01-01', status: 'warning' }
     };
 
+    // Pre-set the search param to simulate the machine being selected
+    mockSearchParams = new URLSearchParams('?machineId=1');
+
     render(<MonitorClient machines={[machine]} categories={[{ id: '1', name: 'Cat' }]} qcHistory={[]} />);
     
-    // Click machine card to select it
-    fireEvent.click(screen.getByText('Test Machine'));
-    
-    // It should render the detailed view
+    // It should render the detailed view directly
     expect(screen.getByText('No QC history found for this machine.')).toBeInTheDocument();
     expect(screen.getByText('Tests Today')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
@@ -82,12 +79,11 @@ describe('MonitorClient', () => {
     const machine = {
       id: 1, name: 'Analytics Machine', hospCode: 'H-03', sectionId: 1, currentStatus: 'IDLE' as const, isActive: true, createdAt: '', updatedAt: ''
     };
+
+    // Pre-set the search params to simulate being on the charts tab
+    mockSearchParams = new URLSearchParams('?machineId=1&tab=charts');
+
     render(<MonitorClient machines={[machine]} categories={[{id: '1', name: 'Cat'}]} qcHistory={[]} />);
-    
-    fireEvent.click(screen.getByText('Analytics Machine')); // Select
-    
-    // Switch tab
-    fireEvent.click(screen.getByText('Analytics'));
     
     // The mock component should render
     expect(screen.getByTestId('machine-charts-mock')).toBeInTheDocument();

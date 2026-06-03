@@ -1,13 +1,20 @@
-import { api } from '@/lib/api/serverFetch';
+import { cookies } from 'next/headers';
 import type { MachineResponseDto, SectionResponseDto } from '@/lib/types/api';
 import { MachinesTable } from '@/features/machines/components/MachinesTable';
 
 export default async function MachinesPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth_token')?.value ?? '';
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
   // Fetch both in parallel — fast, no sequential waterfall
-  const [machines, sections] = await Promise.all([
-    api.get<MachineResponseDto[]>('/api/v1/machines'),
-    api.get<SectionResponseDto[]>('/api/v1/sections'),
+  const [machinesRes, sectionsRes] = await Promise.all([
+    fetch('http://localhost:4000/api/v1/machines', { cache: 'no-store', headers }),
+    fetch('http://localhost:4000/api/v1/sections', { cache: 'no-store', headers }),
   ]);
+
+  const machines: MachineResponseDto[] = machinesRes.ok ? await machinesRes.json() : [];
+  const sections: SectionResponseDto[] = sectionsRes.ok ? await sectionsRes.json() : [];
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

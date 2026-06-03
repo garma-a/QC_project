@@ -127,16 +127,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
     // Get most recent points for this test
     const sortedTests = group.tests
       .filter((t: QcHistoryType) => t.numericResult !== undefined)
-      .sort((a: QcHistoryType, b: QcHistoryType) => {
-        const aTime = Date.parse(a.date);
-        const bTime = Date.parse(b.date);
-
-        if (!Number.isNaN(aTime) && !Number.isNaN(bTime)) {
-          return aTime - bTime;
-        }
-
-        return a.date.localeCompare(b.date);
-      })
+      .sort((a: QcHistoryType, b: QcHistoryType) => a.rawDate.localeCompare(b.rawDate))
       .slice(-7);
     
     const firstTest = sortedTests[0];
