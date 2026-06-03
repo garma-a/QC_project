@@ -41,7 +41,7 @@ describe('useQcTests hook', () => {
     });
 
     expect(result.current.tests).toEqual(mockTests);
-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/qc-tests/machine/1', expect.any(Object), 'valid-token');
+    expect(clientFetch).toHaveBeenCalledWith('/api/v1/qc-tests/machine/1?limit=50&offset=0', expect.any(Object), 'valid-token');
   });
 
   it('does not fetch when machineId is null', async () => {

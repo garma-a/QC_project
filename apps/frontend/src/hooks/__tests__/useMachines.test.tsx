@@ -43,7 +43,7 @@ describe('useMachines hook', () => {
 
     expect(result.current.machines).toEqual(mockData);
     expect(result.current.error).toBeNull();
-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/machines', expect.any(Object), 'valid-token');
+    expect(clientFetch).toHaveBeenCalledWith('/api/v1/machines?limit=50&offset=0', expect.any(Object), 'valid-token');
   });
 
   it('handles server errors correctly', async () => {

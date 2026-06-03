@@ -66,6 +66,29 @@ describe('QcResultsService', () => {
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
       mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 1, lotNumber: 'LOT-1' }]);
+      mockRepository.getLotTestMachineByLotId.mockResolvedValue({ qc_tests: { machineId: 9 } });
+    });
+
+    it('should throw BadRequestException when results array is empty', async () => {
+      const emptyDto = { machineId: 9, results: [] };
+      await expect(service.create(emptyDto, userId)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when machineId does not match the test', async () => {
+      const badDto = { machineId: 99, results: [{ lotId: 1, measuredValue: 14.5 }] };
+      await expect(service.create(badDto, userId)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when lot has invalid statistical values (e.g., zero SD)', async () => {
+      mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: 14, standardDeviation: 0, lotNumber: 'LOT-1' });
+      await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when submitted lot does not belong to the active lots for the test', async () => {
+      // Active lots only has lot 2, but we are also submitting lot 1
+      mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 2, lotNumber: 'LOT-2' }]);
+      const invalidDto = { machineId: 9, results: [{ lotId: 1, measuredValue: 14.5, comments: '' }, { lotId: 2, measuredValue: 15.0, comments: '' }] };
+      await expect(service.create(invalidDto, userId)).rejects.toThrow(BadRequestException);
     });
 
     it('should create a QC run with PASS status when z-score is within 2 SD', async () => {

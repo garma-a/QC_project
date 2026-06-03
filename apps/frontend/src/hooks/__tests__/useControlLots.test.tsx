@@ -42,7 +42,7 @@ describe('useControlLots hook', () => {
 
     expect(result.current.lots).toEqual(mockLots);
     expect(result.current.error).toBeNull();
-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/control-lots', expect.any(Object), 'valid-token');
+    expect(clientFetch).toHaveBeenCalledWith('/api/v1/control-lots?limit=50&offset=0', expect.any(Object), 'valid-token');
   });
 
   it('handles server errors correctly', async () => {
