@@ -59,7 +59,7 @@ export function useDashboardData() {
 
   useEffect(() => {
     if (isHydrated && !token) {
-      window.location.href = '/login';
+      window.location.href = '/login?force=true';
     }
   }, [isHydrated, token]);
 
