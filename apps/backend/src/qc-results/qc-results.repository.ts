@@ -143,7 +143,7 @@ export class QcResultsRepository {
     const query = sql`
       SELECT 
         r.id as id,
-        r."measured_value" as "measuredValue",
+        r.measured_value as "measuredValue",
         r.z_score as "zScore",
         r.violated_rule as "violatedRule",
         r.status as status,
@@ -152,14 +152,15 @@ export class QcResultsRepository {
         r.lot_id as "lotId",
         run.run_date as "testDate",
         run.performed_by as "performedBy"
-      FROM (
-        SELECT 
-          id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id,
-          ROW_NUMBER() OVER(PARTITION BY lot_id ORDER BY id DESC) as rn
-        FROM qc_results
+      FROM control_lots l
+      CROSS JOIN LATERAL (
+        SELECT id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id
+        FROM qc_results qr
+        WHERE qr.lot_id = l.id
+        ORDER BY qr.id DESC
+        LIMIT 30
       ) r
-      JOIN qc_runs run ON r.run_id = run.id
-      WHERE r.rn <= 30
+      JOIN qc_runs run ON r.run_id = r.run_id
       ORDER BY run.run_date DESC
     `;
     const result: any = await this.databaseService.db.execute(query);
@@ -205,9 +206,8 @@ export class QcResultsRepository {
     const rows = await this.databaseService.db
       .select({ zScore: qcResults.zScore })
       .from(qcResults)
-      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcRuns.runDate))
+      .orderBy(desc(qcResults.id))
       .limit(limit);
     return rows.map(r => r.zScore);
   }
