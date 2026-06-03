@@ -104,7 +104,7 @@ export function useDashboardData() {
           lotsWithContext.map(async (ctx) => {
             try {
               const response = await clientFetch<QcResultsWithLotResponseDto>(
-                `/api/v1/qc-results?lotId=${ctx.lot.id}`,
+                `/api/v1/qc-results?lotId=${ctx.lot.id}&limit=1000`,
                 { signal },
                 token
               );
@@ -188,7 +188,7 @@ export function useDashboardData() {
 
           return {
             ...machine,
-            testsToday: machineResults.length,
+            testsToday: machine.testsToday ?? machineResults.length,
             lastQC: latestResult
               ? {
                   date: new Date(latestResult.testDate).toLocaleString(),

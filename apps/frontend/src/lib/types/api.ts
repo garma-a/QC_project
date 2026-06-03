@@ -110,6 +110,7 @@ export interface MachineResponseDto {
   createdAt: string;
   updatedAt?: string | null;
   specialization?: Specialization | null;
+  testsToday?: number;
 }
 
 export interface CreateMachineDto {

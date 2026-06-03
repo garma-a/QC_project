@@ -115,7 +115,7 @@ export class QcResultsRepository {
     return lot;
   }
 
-  async getResultsByLotId(lotId: number) {
+  async getResultsByLotId(lotId: number, queryLimit: number = 30) {
     const results = await this.databaseService.db
       .select({
         id: qcResults.id,
@@ -133,7 +133,7 @@ export class QcResultsRepository {
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
       .orderBy(desc(qcRuns.runDate))
-      .limit(30);
+      .limit(queryLimit);
 
     return results;
   }

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type { MachineResponseDto } from '@/lib/types/api';
 
 interface UseMachinesReturn {
+  data: MachineResponseDto[];
   machines: MachineResponseDto[];
   loading: boolean;
   error: string | null;
@@ -32,6 +33,7 @@ export function useMachines(): UseMachinesReturn {
   });
 
   return {
+    data: machines,
     machines,
     loading: isLoading,
     error: isError ? (rawError instanceof Error ? rawError.message : 'Failed to fetch machines') : null,

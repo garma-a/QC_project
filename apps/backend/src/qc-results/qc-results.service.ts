@@ -190,13 +190,13 @@ export class QcResultsService {
     return savedRunData;
   }
 
-  async findAll(lotId: number) {
+  async findAll(lotId: number, limit: number = 30) {
     const lot = await this.qcResultsRepository.getLotById(lotId);
     if (!lot) throw new NotFoundException('Control lot not found');
 
     const lotContext =
       await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-    const results = await this.qcResultsRepository.getResultsByLotId(lotId);
+    const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit);
 
     return {
       lot: {

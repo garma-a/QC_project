@@ -103,7 +103,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
       <div className="flex items-center justify-end">
         <MachineFormDialog mode="create" sections={sections} />
       </div>
-
+      <pre className="text-blue-500 font-bold text-sm border-4 border-blue-500 p-4 bg-white z-50 relative mb-4"> MACHINES TABLE PROP DUMP: {JSON.stringify(initialMachines, null, 2)} </pre>
       <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 shadow-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -112,44 +112,46 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
               <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4">Hospital Code</TableHead>
               <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4">Section</TableHead>
               <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4">Status</TableHead>
-              <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4">Last Run</TableHead>
+              <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4">Tests Today</TableHead>
               <TableHead className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider py-4 text-right pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!initialMachines || initialMachines.length === 0 ? (
+            {!Array.isArray(initialMachines) || initialMachines.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-sm py-4">
                   No machines found. Click &quot;Add Machine&quot; to create one.
                 </TableCell>
               </TableRow>
             ) : (
-              initialMachines.map((machine) => (
-                <TableRow
-                  key={machine.id}
-                  className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
-                >
-                  <TableCell className="font-semibold text-sm py-4 pl-6 text-gray-900 dark:text-white">{machine.name}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospCode || '-'}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getSectionName(machine.sectionId)}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getStatusBadge(machine.currentStatus)}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-600 dark:text-gray-400 font-mono">
-                    {formatLastRun(machine.lastRunAt as unknown)}
-                  </TableCell>
-                  <TableCell className="text-sm py-4 pr-6 text-right flex items-center justify-end gap-2">
-                    <MachineFormDialog mode="edit" initialData={machine} sections={sections} />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:text-red-600"
-                      onClick={() => handleDeleteClick(machine)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              initialMachines.map((machine) => {
+                return (
+                  <TableRow
+                    key={machine.id}
+                    className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
+                  >
+                    <TableCell className="font-semibold text-sm py-4 pl-6 text-gray-900 dark:text-white">{machine.name}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospCode || '-'}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getSectionName(machine.sectionId)}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getStatusBadge(machine.currentStatus)}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-600 dark:text-gray-400 font-mono">
+                      {machine.testsToday ?? 0}
+                    </TableCell>
+                    <TableCell className="text-sm py-4 pr-6 text-right flex items-center justify-end gap-2">
+                      <MachineFormDialog mode="edit" initialData={machine} sections={sections} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-red-600"
+                        onClick={() => handleDeleteClick(machine)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

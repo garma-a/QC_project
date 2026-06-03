@@ -1,4 +1,4 @@
-CREATE TABLE "qc_runs" (
+CREATE TABLE IF NOT EXISTS "qc_runs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"machine_id" integer NOT NULL,
 	"test_id" integer NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE "qc_runs" (
 	"run_date" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-ALTER TABLE "qc_results" DROP CONSTRAINT "qc_results_performed_by_users_id_fk";
+ALTER TABLE "qc_results" DROP CONSTRAINT IF EXISTS "qc_results_performed_by_users_id_fk";
 --> statement-breakpoint
 ALTER TABLE "qc_results" ADD COLUMN "z_score" double precision;--> statement-breakpoint
 -- Backfill z_score mathematically

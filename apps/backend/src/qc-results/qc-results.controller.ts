@@ -92,6 +92,12 @@ export class QcResultsController {
     type: Number,
     example: 1,
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of results to fetch (defaults to 30)',
+    type: Number,
+  })
   @ApiResponse({
     status: 200,
     description:
@@ -108,8 +114,12 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
-  findAll(@Query('lotId', ParseIntPipe) lotId: number) {
-    return this.qcResultsService.findAll(lotId);
+  findAll(
+    @Query('lotId', ParseIntPipe) lotId: number,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 30;
+    return this.qcResultsService.findAll(lotId, limitNum);
   }
 
   @Get(':id')

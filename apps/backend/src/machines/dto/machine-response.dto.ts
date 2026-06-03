@@ -53,4 +53,10 @@ export class MachineResponseDto {
     description: 'Machine specialization',
   })
   specialization: string | null;
+
+  @ApiPropertyOptional({
+    example: 12,
+    description: 'Number of QC runs performed today',
+  })
+  testsToday?: number;
 }

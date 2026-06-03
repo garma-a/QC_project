@@ -51,16 +51,18 @@ export default function QCPage() {
   }));
 
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c41e3a] dark:border-[#e84855]"></div>
-      </div>
-    }>
+    <>
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#c41e3a] dark:border-[#e84855]"></div>
+        </div>
+      }>
       <QCHistoryInteractive
         machines={machinesForQc}
         categories={data.categories}
         qcHistory={qcHistoryForInteractive}
       />
-    </Suspense>
+      </Suspense>
+    </>
   );
 }

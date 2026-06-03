@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
-import { machines } from '@/drizzle/schema';
+import { machines, qcRuns } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, sql, max } from 'drizzle-orm';
 
 @Injectable()
 export class MachinesRepository {
@@ -16,15 +16,48 @@ export class MachinesRepository {
   }
 
   async findAll() {
-    return await this.databaseService.db.select().from(machines);
+    try {
+      const results = await this.databaseService.db
+        .select({
+          machine: machines,
+          lastRunAt: max(qcRuns.runDate),
+          testsToday: sql<number>`cast(count(case when cast(${qcRuns.runDate} as date) = current_date then 1 end) as int)`,
+        })
+        .from(machines)
+        .leftJoin(qcRuns, eq(machines.id, qcRuns.machineId))
+        .groupBy(machines.id);
+
+      return results.map((r) => ({
+        ...r.machine,
+        lastRunAt: r.lastRunAt || r.machine.lastRunAt,
+        testsToday: r.testsToday,
+      }));
+    } catch (e) {
+      console.error('ERROR in MachinesRepository.findAll:', e);
+      throw e;
+    }
   }
 
   async findById(id: number) {
-    const [machine] = await this.databaseService.db
-      .select()
+    const results = await this.databaseService.db
+      .select({
+        machine: machines,
+        lastRunAt: max(qcRuns.runDate),
+        testsToday: sql<number>`cast(count(case when cast(${qcRuns.runDate} as date) = current_date then 1 end) as int)`,
+      })
       .from(machines)
-      .where(eq(machines.id, id));
-    return machine;
+      .leftJoin(qcRuns, eq(machines.id, qcRuns.machineId))
+      .where(eq(machines.id, id))
+      .groupBy(machines.id);
+
+    if (results.length === 0) return undefined;
+
+    const r = results[0];
+    return {
+      ...r.machine,
+      lastRunAt: r.lastRunAt || r.machine.lastRunAt,
+      testsToday: r.testsToday,
+    };
   }
 
   async update(id: number, data: Partial<typeof machines.$inferInsert>) {

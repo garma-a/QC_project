@@ -4,10 +4,9 @@ import { MachinesTable } from '@/features/machines/components/MachinesTable';
 
 export default async function MachinesPage() {
   // Fetch both in parallel — fast, no sequential waterfall
-  const [machines, sections] = await Promise.all([
-    api.get<MachineResponseDto[]>('/api/v1/machines'),
-    api.get<SectionResponseDto[]>('/api/v1/sections'),
-  ]);
+  const res = await fetch('http://localhost:4000/api/v1/machines', { cache: 'no-store' });
+  const data = await res.json() as MachineResponseDto[];
+  const sections = await api.get<SectionResponseDto[]>('/api/v1/sections');
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -18,7 +17,7 @@ export default async function MachinesPage() {
         </p>
       </div>
       {/* sections comes from the real /api/v1/sections endpoint — works on empty DB too */}
-      <MachinesTable initialMachines={machines} sections={sections} />
+      <MachinesTable initialMachines={data} sections={sections} />
     </div>
   );
 }
