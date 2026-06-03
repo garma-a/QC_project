@@ -17,7 +17,8 @@ export function proxy(request: NextRequest) {
   }
 
   // If accessing login page with a valid token, redirect to dashboard
-  if (pathname === '/login' && token) {
+  // unless explicitly forced to stay on login (e.g. after a 401 logout failure)
+  if (pathname === '/login' && token && request.nextUrl.searchParams.get('force') !== 'true') {
     const dashboardUrl = new URL('/dashboard', request.url);
     return Response.redirect(dashboardUrl);
   }

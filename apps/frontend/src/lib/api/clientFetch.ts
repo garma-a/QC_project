@@ -1,3 +1,6 @@
+import { logoutAccount } from '../actions';
+import { useAuthStore } from '@/store/useAuthStore';
+
 /**
  * Client-side API helper for data-fetching hooks.
  * Uses the JWT token from the auth store to make authenticated requests.
@@ -54,7 +57,17 @@ export async function clientFetch<T>(
     if (res.status === 401) {
       // Token expired or invalid — clear auth and redirect
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        // Clear cookies via server action FIRST, awaiting it so it finishes
+        // before we clear the Zustand store. This prevents a race condition
+        // where useDashboardData navigates away before the cookies are actually deleted.
+        try {
+          await logoutAccount();
+        } catch (e) {
+          // Ignore logout errors
+        }
+        // Now clear the Zustand store
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login?force=true';
       }
     }
 
