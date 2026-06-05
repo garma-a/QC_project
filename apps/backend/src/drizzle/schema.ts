@@ -108,6 +108,9 @@ export const controlLots = pgTable('control_lots', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   testIdIdx: index('idx_control_lots_test_id').on(t.testId),
+  // Composite covers: WHERE test_id = ? AND is_active = true
+  // Used by: getActiveLotsByTestId, createWithDeactivation (UPDATE filter)
+  testIdIsActiveIdx: index('idx_control_lots_test_id_is_active').on(t.testId, t.isActive),
 }));
 
 export const qcRuns = pgTable('qc_runs', {
@@ -161,6 +164,8 @@ export const alerts = pgTable('alerts', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   resultIdIdx: index('idx_alerts_result_id').on(t.resultId),
+  // Supports ORDER BY alerts.created_at DESC in findAllByUser
+  createdAtIdx: index('idx_alerts_created_at').on(t.createdAt),
 }));
 
 export const usersToAlerts = pgTable(

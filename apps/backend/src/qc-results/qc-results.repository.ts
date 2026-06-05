@@ -57,7 +57,7 @@ export class QcResultsRepository {
   ) {
     // Note: neon-http does not support interactive transactions.
     // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
-    
+
     // 1. Insert the Run
     const [run] = await this.databaseService.db
       .insert(qcRuns)
@@ -141,7 +141,7 @@ export class QcResultsRepository {
   async getRecentResultsAll() {
     const { sql } = require('drizzle-orm');
     const query = sql`
-      SELECT 
+      SELECT
         r.id as id,
         r.measured_value as "measuredValue",
         r.z_score as "zScore",
@@ -160,7 +160,7 @@ export class QcResultsRepository {
         ORDER BY qr.id DESC
         LIMIT 30
       ) r
-      JOIN qc_runs run ON r.run_id = r.run_id
+      JOIN qc_runs run ON r.run_id = run.id
       ORDER BY run.run_date DESC
     `;
     const result: any = await this.databaseService.db.execute(query);
