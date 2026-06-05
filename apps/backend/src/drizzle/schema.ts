@@ -10,6 +10,7 @@ import {
   integer,
   boolean,
   doublePrecision,
+  index,
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
@@ -70,7 +71,9 @@ export const machines = pgTable('machines', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   specialization: specializationEnum('specialization'),
-});
+}, (t) => ({
+  sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
+}));
 
 export const qcTests = pgTable('qc_tests', {
   id: serial('id').primaryKey(),
@@ -80,7 +83,9 @@ export const qcTests = pgTable('qc_tests', {
     .references(() => machines.id)
     .notNull(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
-});
+}, (t) => ({
+  machineIdIdx: index('idx_qc_tests_machine_id').on(t.machineId),
+}));
 
 export const controlLots = pgTable('control_lots', {
   id: serial('id').primaryKey(),
@@ -101,7 +106,12 @@ export const controlLots = pgTable('control_lots', {
 
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (t) => ({
+  testIdIdx: index('idx_control_lots_test_id').on(t.testId),
+  // Composite covers: WHERE test_id = ? AND is_active = true
+  // Used by: getActiveLotsByTestId, createWithDeactivation (UPDATE filter)
+  testIdIsActiveIdx: index('idx_control_lots_test_id_is_active').on(t.testId, t.isActive),
+}));
 
 export const qcRuns = pgTable('qc_runs', {
   id: serial('id').primaryKey(),
@@ -115,7 +125,11 @@ export const qcRuns = pgTable('qc_runs', {
     .references(() => users.id)
     .notNull(),
   runDate: timestamp('run_date').defaultNow(),
-});
+}, (t) => ({
+  machineIdIdx: index('idx_qc_runs_machine_id').on(t.machineId),
+  testIdIdx: index('idx_qc_runs_test_id').on(t.testId),
+  runDateIdx: index('idx_qc_runs_run_date').on(t.runDate),
+}));
 
 export const qcResults = pgTable('qc_results', {
   id: serial('id').primaryKey(),
@@ -130,7 +144,11 @@ export const qcResults = pgTable('qc_results', {
   lotId: integer('lot_id')
     .references(() => controlLots.id)
     .notNull(),
-});
+}, (t) => ({
+  runIdIdx: index('idx_qc_results_run_id').on(t.runId),
+  lotIdIdx: index('idx_qc_results_lot_id').on(t.lotId),
+  lotIdIdIdx: index('idx_qc_results_lot_id_id').on(t.lotId, t.id),
+}));
 
 
 export const alerts = pgTable('alerts', {
@@ -144,7 +162,11 @@ export const alerts = pgTable('alerts', {
     .references(() => qcResults.id)
     .notNull(),
   createdAt: timestamp('created_at').defaultNow(),
-});
+}, (t) => ({
+  resultIdIdx: index('idx_alerts_result_id').on(t.resultId),
+  // Supports ORDER BY alerts.created_at DESC in findAllByUser
+  createdAtIdx: index('idx_alerts_created_at').on(t.createdAt),
+}));
 
 export const usersToAlerts = pgTable(
   'users_to_alerts',
