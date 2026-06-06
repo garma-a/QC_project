@@ -26,7 +26,7 @@ function gaussianRandom(mean = 0, stdev = 1) {
 // Helper to wipe the database cleanly
 async function clearDatabase(db: any) {
   console.log('🗑️  Wiping existing database records to start fresh...');
-  await db.execute('TRUNCATE TABLE users_to_alerts, users_to_sections, alerts, qc_results, qc_runs, control_lots, qc_tests, machines, users, sections CASCADE');
+  await db.execute('TRUNCATE TABLE users_to_alerts, users_to_sections, alerts, qc_results, qc_runs, control_lots, qc_tests, machines, users, sections RESTART IDENTITY CASCADE');
   console.log('✨ Database wiped successfully!');
 }
 
@@ -51,7 +51,7 @@ async function bootstrap() {
 
     // 2. Create Users
     const plainTextPassword = 'Password123!';
-    const hashedPassword = await argon2.hash(plainTextPassword);
+    const hashedPassword = await argon2.hash(plainTextPassword, { timeCost: 3, memoryCost: 65536, parallelism: 4 });
 
     const [adminUser] = await db.insert(users).values({
       firstName: 'Admin', lastName: 'Seeder', email: 'admin@lab.local', passwordHash: hashedPassword, role: 'ADMIN',

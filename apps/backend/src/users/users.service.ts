@@ -16,19 +16,18 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly workerService: WorkerService,
-  ) {}
+  ) { }
 
   private async validateSectionIds(
     sectionIds: number[] | undefined,
     context: 'create' | 'update',
   ) {
-    if (sectionIds === undefined) return;
+    if (sectionIds === undefined) return [];
 
     const uniqueSectionIds = [...new Set(sectionIds)];
-    if (uniqueSectionIds.length === 0) return;
+    if (uniqueSectionIds.length === 0) return [];
 
-    const existingSections =
-      await this.usersRepository.findSectionsByIds(uniqueSectionIds);
+    const existingSections = await this.usersRepository.findSectionsByIds(uniqueSectionIds);
     const existingIds = new Set(existingSections.map((s) => s.id));
     const missing = uniqueSectionIds.filter((id) => !existingIds.has(id));
 
@@ -39,10 +38,12 @@ export class UsersService {
           : 'Cannot update user. Laboratory section IDs do not exist:';
       throw new BadRequestException(`${prefix} ${missing.join(', ')}`);
     }
+
+    return existingSections;
   }
 
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
-    await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
+    const validSections = await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
 
     const existing = await this.usersRepository.findByEmail(
       adminCreateUserDto.email,
@@ -70,18 +71,11 @@ export class UsersService {
       adminCreateUserDto.sectionIds ?? [],
     );
 
-    const sectionIds = await this.usersRepository.getSectionIdsForUser(
-      createdUser.id,
-    );
-    const createdWithSections = await this.usersRepository.findByIdWithSections(
-      createdUser.id,
-    );
-
     const { passwordHash, ...safeUser } = createdUser;
     return {
       ...safeUser,
-      sectionIds,
-      sectionNames: createdWithSections?.sectionNames ?? [],
+      sectionIds: validSections.map((s) => s.id),
+      sectionNames: validSections.map((s) => s.name),
     };
   }
 
@@ -118,29 +112,34 @@ export class UsersService {
         );
       }
     }
-    await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
+    const validSections = await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
 
     const { sectionIds: nextSectionIds, ...updatableUserFields } =
       adminUpdateUserDto;
 
-    const updatedUser = await this.usersRepository.update(
-      id,
-      updatableUserFields,
-    );
+    let updatedUser = existingUser;
+
+    if (Object.keys(updatableUserFields).length > 0) {
+      updatedUser = await this.usersRepository.update(
+        id,
+        updatableUserFields,
+      ) as any;
+    }
+
+    let finalSectionIds = existingUser.sectionIds;
+    let finalSectionNames = existingUser.sectionNames;
 
     if (nextSectionIds !== undefined) {
       await this.usersRepository.replaceUserSections(id, nextSectionIds);
+      finalSectionIds = validSections.map((s) => s.id);
+      finalSectionNames = validSections.map((s) => s.name);
     }
-
-    const sectionIds = await this.usersRepository.getSectionIdsForUser(id);
-    const updatedWithSections =
-      await this.usersRepository.findByIdWithSections(id);
 
     const { passwordHash, ...safeUser } = updatedUser;
     return {
       ...safeUser,
-      sectionIds,
-      sectionNames: updatedWithSections?.sectionNames ?? [],
+      sectionIds: finalSectionIds,
+      sectionNames: finalSectionNames,
     };
   }
 
