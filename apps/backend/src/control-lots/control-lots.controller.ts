@@ -23,6 +23,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import {
   ControlLotResponseDto,
@@ -95,6 +96,18 @@ export class ControlLotsController {
     status: 401,
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
   })
   findAll(
     @Query('limit') limit?: string,

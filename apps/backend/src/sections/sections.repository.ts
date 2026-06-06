@@ -2,11 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
 import { sections } from '@/drizzle/schema';
 
+import { desc } from 'drizzle-orm';
+
 @Injectable()
 export class SectionsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll() {
-    return this.databaseService.db.select().from(sections);
+  async findAll(limit?: number, offset?: number) {
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
+    return this.databaseService.db
+      .select()
+      .from(sections)
+      .orderBy(desc(sections.id))
+      .limit(safeLimit)
+      .offset(safeOffset);
   }
 }

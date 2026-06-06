@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 @Injectable()
 export class ControlLotsRepository {
@@ -41,13 +41,14 @@ export class ControlLotsRepository {
   }
 
   async findAll(limit?: number, offset?: number) {
-    let query = this.databaseService.db.select().from(controlLots);
-    if (limit !== undefined) {
-      query = query.limit(limit) as any;
-    }
-    if (offset !== undefined) {
-      query = query.offset(offset) as any;
-    }
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
+    let query = this.databaseService.db
+      .select()
+      .from(controlLots)
+      .orderBy(desc(controlLots.id))
+      .limit(safeLimit)
+      .offset(safeOffset);
     return await query;
   }
 

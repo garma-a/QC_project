@@ -197,7 +197,7 @@ export class QcResultsService {
 
       const lotContext =
         await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-      const results = await this.qcResultsRepository.getResultsByLotId(lotId);
+      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset);
 
       return {
         lot: {
@@ -214,11 +214,10 @@ export class QcResultsService {
         },
         results,
       };
-    } else if (limit !== undefined && offset !== undefined) {
-      const results = await this.qcResultsRepository.getPaginatedResults(limit, offset);
-      return { lot: null, results };
     } else {
-      const results = await this.qcResultsRepository.getRecentResultsAll();
+      const parsedLimit = limit ?? 50;
+      const parsedOffset = offset ?? 0;
+      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset);
       return { lot: null, results };
     }
   }

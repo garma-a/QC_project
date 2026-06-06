@@ -1,6 +1,6 @@
 import { DatabaseService } from '@/database/database.service';
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { machines, qcTests } from '@/drizzle/schema';
 
 @Injectable()
@@ -28,16 +28,15 @@ export class QcTestsRepository {
   }
 
   async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
     let query = this.databaseService.db
       .select()
       .from(qcTests)
-      .where(eq(qcTests.machineId, machineId));
-    if (limit !== undefined) {
-      query = query.limit(limit) as any;
-    }
-    if (offset !== undefined) {
-      query = query.offset(offset) as any;
-    }
+      .where(eq(qcTests.machineId, machineId))
+      .orderBy(desc(qcTests.id))
+      .limit(safeLimit)
+      .offset(safeOffset);
     return query;
   }
 
@@ -59,13 +58,14 @@ export class QcTestsRepository {
     return updated;
   }
   async getAllTests(limit?: number, offset?: number) {
-    let query = this.databaseService.db.select().from(qcTests);
-    if (limit !== undefined) {
-      query = query.limit(limit) as any;
-    }
-    if (offset !== undefined) {
-      query = query.offset(offset) as any;
-    }
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
+    let query = this.databaseService.db
+      .select()
+      .from(qcTests)
+      .orderBy(desc(qcTests.id))
+      .limit(safeLimit)
+      .offset(safeOffset);
     return query;
   }
 

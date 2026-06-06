@@ -106,6 +106,18 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   findAll(
     @Query('lotId') lotId?: string,
     @Query('limit') limit?: string,

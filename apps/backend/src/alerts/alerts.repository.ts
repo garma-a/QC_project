@@ -31,14 +31,12 @@ export class AlertsRepository {
       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .where(eq(usersToAlerts.userId, userId))
-      .orderBy(desc(alerts.createdAt));
+      .orderBy(desc(usersToAlerts.alertId));
 
-    if (limit !== undefined) {
-      query = query.limit(limit) as any;
-    }
-    if (offset !== undefined) {
-      query = query.offset(offset) as any;
-    }
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
+
+    query = query.limit(safeLimit).offset(safeOffset) as any;
 
     return await query;
   }

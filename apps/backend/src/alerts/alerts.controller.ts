@@ -15,6 +15,7 @@ import {
   ApiParam,
   ApiResponse,
   ApiTags,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { AlertsService } from '@/alerts/alerts.service';
@@ -52,13 +53,25 @@ export class AlertsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   async findAll(
     @CurrentUser('userId') userId: number,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) : 50;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
     return await this.alertsService.findAllByUser(userId, parsedLimit, parsedOffset);
   }
 

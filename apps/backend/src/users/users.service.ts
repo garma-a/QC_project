@@ -9,10 +9,14 @@ import * as argon2 from 'argon2';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
 import { Role } from '@/auth/auth.types';
 import { UsersRepository } from './users.repository';
+import { WorkerService } from '@/auth/workers/worker.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly workerService: WorkerService,
+  ) {}
 
   private async validateSectionIds(
     sectionIds: number[] | undefined,
@@ -38,8 +42,6 @@ export class UsersService {
   }
 
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
-    const hashedPassword = await argon2.hash(adminCreateUserDto.password);
-
     await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
 
     const existing = await this.usersRepository.findByEmail(
@@ -49,6 +51,10 @@ export class UsersService {
     if (existing) {
       throw new ConflictException('Email already exists');
     }
+
+    const hashedPassword = await this.workerService.hashPassword(
+      adminCreateUserDto.password,
+    );
 
     const createdUser = await this.usersRepository.create({
       firstName: adminCreateUserDto.firstName,
@@ -138,13 +144,13 @@ export class UsersService {
     };
   }
 
-  async getUsers(roleFilter?: Role) {
+  async getUsers(roleFilter?: Role, limit?: number, offset?: number) {
     if (roleFilter && !Object.values(Role).includes(roleFilter)) {
       throw new BadRequestException(
         `"${roleFilter}" is not a valid user role.`,
       );
     }
-    return await this.usersRepository.findAllWithSections(roleFilter);
+    return await this.usersRepository.findAllWithSections(roleFilter, limit, offset);
   }
 
   async getUserById(id: number) {

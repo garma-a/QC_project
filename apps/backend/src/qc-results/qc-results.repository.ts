@@ -115,7 +115,9 @@ export class QcResultsRepository {
     return lot;
   }
 
-  async getResultsByLotId(lotId: number) {
+  async getResultsByLotId(lotId: number, limit?: number, offset?: number) {
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
     const results = await this.databaseService.db
       .select({
         id: qcResults.id,
@@ -133,7 +135,8 @@ export class QcResultsRepository {
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
       .orderBy(desc(qcRuns.runDate))
-      .limit(30);
+      .limit(safeLimit)
+      .offset(safeOffset);
 
     return results;
   }
@@ -168,6 +171,8 @@ export class QcResultsRepository {
   }
 
   async getPaginatedResults(limit: number, offset: number) {
+    const safeLimit = Math.min(limit || 50, 50);
+    const safeOffset = offset || 0;
     const results = await this.databaseService.db
       .select({
         id: qcResults.id,
@@ -183,9 +188,9 @@ export class QcResultsRepository {
       })
       .from(qcResults)
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
-      .orderBy(desc(qcRuns.runDate))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(qcResults.id))
+      .limit(safeLimit)
+      .offset(safeOffset);
 
     return results;
   }
