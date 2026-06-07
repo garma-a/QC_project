@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
  * Server components should use `serverFetch.ts` instead.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export class ClientApiError extends Error {
   public statusCode: number;

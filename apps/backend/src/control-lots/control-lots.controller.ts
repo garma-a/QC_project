@@ -9,7 +9,11 @@ import {
   ParseIntPipe,
   UseGuards,
   Query,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ControlLotsService } from './control-lots.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
@@ -114,6 +118,17 @@ export class ControlLotsController {
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     return this.controlLotsService.findAll(limit, offset);
+  }
+
+  @Sse('stream')
+  @ApiOperation({
+    summary: 'Stream of control lot events',
+    description: 'Server-Sent Events endpoint that streams real-time updates for control lots.',
+  })
+  stream(): Observable<MessageEvent> {
+    return this.controlLotsService.lotEvents$.pipe(
+      map((event) => ({ data: event } as MessageEvent)),
+    );
   }
 
   @Get(':id')

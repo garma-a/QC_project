@@ -1,6 +1,8 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { clientFetch } from '@/lib/api/clientFetch';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from 'react';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   ControlLotResponseDto,
   QcResultResponseDto,
@@ -10,6 +12,7 @@ import { MonitorResultEntry } from './useDashboardData';
 
 export function useInfiniteQcResults() {
   const token = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
 
   // Fetch contextual data once (lots and tests)
   const { data: contextData } = useQuery({
@@ -60,6 +63,39 @@ export function useInfiniteQcResults() {
     getNextPageParam: (lastPage) => lastPage.nextOffset,
     enabled: !!token && !!contextData,
   });
+
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const connectSse = async () => {
+      try {
+        await fetchEventSource(`${API_BASE_URL}/api/v1/qc-results/stream`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+          onmessage(msg) {
+            if (!msg.event || msg.event === 'message') {
+              queryClient.invalidateQueries({ queryKey: ['qc-results-infinite'] });
+            }
+          },
+          onerror(err) {
+            throw err;
+          }
+        });
+      } catch (err) {}
+    };
+
+    connectSse();
+
+    return () => {
+      controller.abort();
+    };
+  }, [token, queryClient]);
 
   // Map results to MonitorResultEntry
   const qcHistory: MonitorResultEntry[] = [];

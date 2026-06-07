@@ -1,8 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { clientFetch } from '@/lib/api/clientFetch';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from 'react';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type { QcResultsWithLotResponseDto } from '@/lib/types/api';
 
 interface UseQcResultsReturn {
@@ -23,6 +25,7 @@ interface UseQcResultsReturn {
  */
 export function useQcResults(lotId: number | null): UseQcResultsReturn {
   const token = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
 
   const {
     data = null,
@@ -43,6 +46,40 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
     enabled: lotId !== null && !!token,
     placeholderData: (prev) => prev,
   });
+
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const connectSse = async () => {
+      try {
+        await fetchEventSource(`${API_BASE_URL}/api/v1/qc-results/stream`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+          onmessage(msg) {
+            if (!msg.event || msg.event === 'message') {
+              // Invalidate qc-results queries when a new result arrives
+              queryClient.invalidateQueries({ queryKey: ['qc-results'] });
+            }
+          },
+          onerror(err) {
+            throw err;
+          }
+        });
+      } catch (err) {}
+    };
+
+    connectSse();
+
+    return () => {
+      controller.abort();
+    };
+  }, [token, queryClient]);
 
   return {
     data,

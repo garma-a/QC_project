@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { QcResultsRepository } from './qc-results.repository';
@@ -26,6 +27,8 @@ interface EvaluatedResultItem {
 
 @Injectable()
 export class QcResultsService {
+  public readonly qcResultEvents$ = new Subject<any>();
+
   constructor(
     private readonly qcResultsRepository: QcResultsRepository,
     private readonly alertsService: AlertsService,
@@ -187,6 +190,8 @@ export class QcResultsService {
       console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
     }
 
+    this.qcResultEvents$.next({ type: 'new-qc-run', runData: savedRunData, testId });
+
     return savedRunData;
   }
 
@@ -242,6 +247,8 @@ export class QcResultsService {
     if (!updated)
       throw new NotFoundException(`QC Result with ID ${id} not found`);
 
-    return this.findOne(id);
+    const updatedResult = await this.findOne(id);
+    this.qcResultEvents$.next({ type: 'update-qc-result', result: updatedResult });
+    return updatedResult;
   }
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { clientFetch } from '@/lib/api/clientFetch';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   ControlLotResponseDto,
   MachineResponseDto,
@@ -51,6 +52,7 @@ export interface DashboardData {
 
 export function useDashboardData() {
   const token = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -62,6 +64,42 @@ export function useDashboardData() {
       window.location.href = '/login?force=true';
     }
   }, [isHydrated, token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const connectSse = async (endpoint: string) => {
+      try {
+        await fetchEventSource(`${API_BASE_URL}${endpoint}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+          onmessage(msg) {
+            if (!msg.event || msg.event === 'message') {
+              queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
+            }
+          },
+          onerror(err) {
+            throw err;
+          }
+        });
+      } catch (err) {}
+    };
+
+    connectSse('/api/v1/qc-results/stream');
+    connectSse('/api/v1/machines/stream');
+    connectSse('/api/v1/control-lots/stream');
+    connectSse('/api/v1/qc-tests/stream');
+
+    return () => {
+      controller.abort();
+    };
+  }, [token, queryClient]);
 
   const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
     queryKey: ['dashboard-data'],

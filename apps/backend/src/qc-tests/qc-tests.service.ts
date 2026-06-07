@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { CreateQcTestDto } from './dto/create-qc-test.dto';
 import { UpdateQcTestDto } from './dto/update-qc-test.dto';
 import { QcTestsRepository } from './qc-tests.repository';
 
 @Injectable()
 export class QcTestsService {
+  public testEvents$ = new Subject<any>();
+
   constructor(private readonly qcTestsRepository: QcTestsRepository) { }
 
   async create(createQcTestDto: CreateQcTestDto) {
@@ -15,6 +18,7 @@ export class QcTestsService {
     }
     const newTest = await this.qcTestsRepository.createQcTest(createQcTestDto);
 
+    this.testEvents$.next({ type: 'create', data: newTest });
     return newTest;
   }
 
@@ -43,7 +47,9 @@ export class QcTestsService {
       }
     }
 
-    return this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
+    const updatedTest = await this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
+    this.testEvents$.next({ type: 'update', data: updatedTest });
+    return updatedTest;
   }
 
   async getAll(limit?: number, offset?: number) {

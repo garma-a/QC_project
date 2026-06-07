@@ -1,8 +1,10 @@
 'use client';
 
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { clientFetch } from '@/lib/api/clientFetch';
+import { useEffect } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type { QcTestResponseDto } from '@/lib/types/api';
 
 interface UseQcTestsReturn {
@@ -26,6 +28,42 @@ interface UseQcTestsReturn {
  */
 export function useQcTests(machineId?: number | null): UseQcTestsReturn {
   const token = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const connectSse = async () => {
+      try {
+        await fetchEventSource(`${API_BASE_URL}/api/v1/qc-tests/stream`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+          onmessage(msg) {
+            if (!msg.event || msg.event === 'message') {
+              queryClient.invalidateQueries({ queryKey: ['qc-tests'] });
+            }
+          },
+          onerror(err) {
+            throw err;
+          }
+        });
+      } catch (err) {
+        // Silently ignore connection errors
+      }
+    };
+
+    connectSse();
+
+    return () => {
+      controller.abort();
+    };
+  }, [token, queryClient]);
 
   const {
     data,

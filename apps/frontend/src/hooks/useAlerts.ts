@@ -1,8 +1,10 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { clientFetch } from '@/lib/api/clientFetch';
+import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useEffect } from 'react';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   AlertResponseDto,
   ResolveAlertDto,
@@ -50,6 +52,42 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
   });
 
   const alerts = data?.pages.flat() || [];
+
+  useEffect(() => {
+    if (!token) return;
+
+    const controller = new AbortController();
+
+    const connectSse = async () => {
+      try {
+        await fetchEventSource(`${API_BASE_URL}/api/v1/alerts/stream`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+          onmessage(msg) {
+            if (!msg.event || msg.event === 'message') {
+              queryClient.invalidateQueries({ queryKey: ['alerts'] });
+            }
+          },
+          onerror(err) {
+            // Rethrowing here tells fetchEventSource to attempt reconnect
+            throw err;
+          }
+        });
+      } catch (err) {
+        // SSE connection will automatically retry, we can silently catch here to avoid unhandled rejections
+      }
+    };
+
+    connectSse();
+
+    return () => {
+      controller.abort();
+    };
+  }, [token, queryClient]);
 
   const { mutateAsync: markSeen } = useMutation({
     mutationFn: (alertId: number) =>

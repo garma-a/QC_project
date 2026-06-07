@@ -8,7 +8,11 @@ import {
   UseGuards,
   Query,
   ParseIntPipe,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { QcResultsService } from './qc-results.service';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
@@ -125,6 +129,17 @@ export class QcResultsController {
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
     return this.qcResultsService.findAll(parsedLotId, limit, offset);
+  }
+
+  @Sse('stream')
+  @ApiOperation({
+    summary: 'Stream of QC result events',
+    description: 'Server-Sent Events endpoint that streams real-time updates for QC results.',
+  })
+  stream(): Observable<MessageEvent> {
+    return this.qcResultsService.qcResultEvents$.pipe(
+      map((event) => ({ data: event } as MessageEvent)),
+    );
   }
 
   @Get(':id')

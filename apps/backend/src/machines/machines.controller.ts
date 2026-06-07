@@ -9,7 +9,11 @@ import {
   ParseIntPipe,
   UseGuards,
   Query,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { MachinesService } from '@/machines/machines.service';
@@ -83,6 +87,17 @@ export class MachinesController {
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     return this.machinesService.findAll(limit, offset);
+  }
+
+  @Sse('stream')
+  @ApiOperation({
+    summary: 'Stream of machine events',
+    description: 'Server-Sent Events endpoint that streams real-time updates for machines.',
+  })
+  stream(): Observable<MessageEvent> {
+    return this.machinesService.machineEvents$.pipe(
+      map((event) => ({ data: event } as MessageEvent)),
+    );
   }
 
   @Get(':id')

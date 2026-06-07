@@ -8,7 +8,11 @@ import {
   Post,
   UseGuards,
   Query,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -157,6 +161,17 @@ export class QcTestsController {
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     return this.qcTestsService.getAll(limit, offset);
+  }
+
+  @Sse('stream')
+  @ApiOperation({
+    summary: 'Stream of QC test events',
+    description: 'Server-Sent Events endpoint that streams real-time updates for QC tests.',
+  })
+  stream(): Observable<MessageEvent> {
+    return this.qcTestsService.testEvents$.pipe(
+      map((event) => ({ data: event } as MessageEvent)),
+    );
   }
 
   @Patch(':id')
