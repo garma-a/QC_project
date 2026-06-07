@@ -3,16 +3,13 @@ import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
-import * as argon2 from 'argon2';
-
-jest.mock('argon2', () => ({
-  verify: jest.fn(),
-}));
+import { WorkerService } from './workers/worker.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let mockAuthRepository: Record<string, jest.Mock>;
   let mockJwtService: Record<string, jest.Mock>;
+  let mockWorkerService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     mockAuthRepository = {
@@ -23,11 +20,16 @@ describe('AuthService', () => {
       sign: jest.fn(),
     };
 
+    mockWorkerService = {
+      verifyPassword: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: mockAuthRepository },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: WorkerService, useValue: mockWorkerService },
       ],
     }).compile();
 
@@ -49,7 +51,7 @@ describe('AuthService', () => {
         isActive: true,
       };
       mockAuthRepository.findByEmail.mockResolvedValue(user);
-      (argon2.verify as jest.Mock).mockResolvedValue(true);
+      mockWorkerService.verifyPassword.mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('jwt.token.here');
 
       const result = await service.login(validCredentials);
@@ -77,7 +79,7 @@ describe('AuthService', () => {
         isActive: true,
       };
       mockAuthRepository.findByEmail.mockResolvedValue(user);
-      (argon2.verify as jest.Mock).mockResolvedValue(false);
+      mockWorkerService.verifyPassword.mockResolvedValue(false);
 
       await expect(service.login(validCredentials)).rejects.toThrow(
         UnauthorizedException,
@@ -96,7 +98,7 @@ describe('AuthService', () => {
         isActive: false,
       };
       mockAuthRepository.findByEmail.mockResolvedValue(deactivatedUser);
-      (argon2.verify as jest.Mock).mockResolvedValue(true);
+      mockWorkerService.verifyPassword.mockResolvedValue(true);
 
       await expect(service.login(validCredentials)).rejects.toThrow(
         UnauthorizedException,

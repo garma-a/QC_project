@@ -7,6 +7,7 @@ import {
 import { UsersService } from './users.service';
 import { UsersRepository } from './users.repository';
 import { Role } from '@/auth/auth.types';
+import { WorkerService } from '@/auth/workers/worker.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -26,11 +27,16 @@ describe('UsersService', () => {
     findAllWithSections: jest.fn(),
   };
 
+  const mockWorkerService = {
+    hashPassword: jest.fn().mockResolvedValue('hashed_password'),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: UsersRepository, useValue: mockUsersRepository },
+        { provide: WorkerService, useValue: mockWorkerService },
       ],
     }).compile();
 
@@ -79,7 +85,7 @@ describe('UsersService', () => {
     });
 
     it('returns user without password hash when creation is successful', async () => {
-      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 1 }]);
+      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 1, name: 'Hematology' }]);
       mockUsersRepository.findByEmail.mockResolvedValueOnce(undefined);
       mockUsersRepository.create.mockResolvedValueOnce({
         id: 10,
@@ -89,11 +95,6 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: Role.TECHNICIAN,
         isActive: true,
-      });
-      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([1]);
-      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
-        id: 10,
-        sectionNames: ['Hematology'],
       });
 
       const result = await service.createUser(createUserDto);
@@ -128,11 +129,6 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: 'TECHNICIAN',
         isActive: true,
-      });
-      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([]);
-      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
-        id: 11,
-        sectionNames: [],
       });
 
       const result = await service.createUser(dtoWithoutSection);
@@ -224,7 +220,7 @@ describe('UsersService', () => {
     it('returns updated user without password hash when update is successful', async () => {
       mockUsersRepository.findById.mockResolvedValueOnce({ id: 5 });
       mockUsersRepository.findEmailCollision.mockResolvedValueOnce(undefined);
-      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 2 }]);
+      mockUsersRepository.findSectionsByIds.mockResolvedValueOnce([{ id: 2, name: 'Chemistry' }]);
       mockUsersRepository.update.mockResolvedValueOnce({
         id: 5,
         firstName: 'Updated',
@@ -233,11 +229,6 @@ describe('UsersService', () => {
         passwordHash: 'hashed_password',
         role: Role.TECHNICIAN,
         isActive: true,
-      });
-      mockUsersRepository.getSectionIdsForUser.mockResolvedValueOnce([2]);
-      mockUsersRepository.findByIdWithSections.mockResolvedValueOnce({
-        id: 5,
-        sectionNames: ['Chemistry'],
       });
 
       const result = await service.updateUser(5, updateDto);
