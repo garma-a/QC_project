@@ -1,16 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '@/auth/auth.types';
 import { ConfigService } from '@nestjs/config';
 import { AuthRepository } from '@/auth/auth.repository';
-import { UnauthorizedException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
     private readonly authRepository: AuthRepository,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -20,10 +22,30 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.authRepository.findById(payload.userId);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('User is invalid or inactive');
+    const cacheKey = `user_status_${payload.userId}`;
+    const cachedUser = await this.cacheManager.get<{ isActive: boolean, role: any }>(cacheKey);
+
+    if (cachedUser) {
+      if (!cachedUser.isActive) {
+        throw new UnauthorizedException('User is inactive');
+      }
+      return { userId: payload.userId, role: cachedUser.role };
     }
-    return { userId: payload.userId, role: payload.role };
+
+    const user = await this.authRepository.findById(payload.userId);
+    if (!user) {
+      throw new UnauthorizedException('User is invalid');
+    }
+
+    const minimalUser = { isActive: user.isActive ?? false, role: user.role };
+    // Note: cache-manager v5+ uses milliseconds for ttl, older versions used seconds.
+    // NestJS cache-manager defaults to ms, so we pass 300000ms.
+    await this.cacheManager.set(cacheKey, minimalUser, 300000);
+
+    if (!minimalUser.isActive) {
+      throw new UnauthorizedException('User is inactive');
+    }
+
+    return { userId: payload.userId, role: minimalUser.role };
   }
 }

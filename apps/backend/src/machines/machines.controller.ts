@@ -15,7 +15,7 @@ import { RolesGuard } from '@/auth/guards/roles.guard';
 import { MachinesService } from '@/machines/machines.service';
 import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
 import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { MachineResponseDto } from '@/machines/dto/machine-response.dto';
 import {
   ValidationErrorResponseDto,
@@ -66,13 +66,23 @@ export class MachinesController {
     description: 'Array of all machines.',
     type: [MachineResponseDto],
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   findAll(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.machinesService.findAll(parsedLimit, parsedOffset);
+    return this.machinesService.findAll(limit, offset);
   }
 
   @Get(':id')

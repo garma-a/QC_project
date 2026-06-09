@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { ParseIntPipe, Controller, Get } from '@nestjs/common';
 import { AppService } from '@/app.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 

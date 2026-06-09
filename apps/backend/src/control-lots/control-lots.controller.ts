@@ -23,6 +23,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import {
   ControlLotResponseDto,
@@ -96,13 +97,23 @@ export class ControlLotsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   findAll(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.controlLotsService.findAll(parsedLimit, parsedOffset);
+    return this.controlLotsService.findAll(limit, offset);
   }
 
   @Get(':id')

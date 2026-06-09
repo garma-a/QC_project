@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { QcTestsService } from './qc-tests.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
@@ -104,14 +105,24 @@ export class QcTestsController {
     description: 'Machine not found.',
     type: NotFoundResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   async findByMachine(
     @Param('machineId', ParseIntPipe) machineId: number,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcTestsService.getTestsByMachine(machineId, parsedLimit, parsedOffset);
+    return this.qcTestsService.getTestsByMachine(machineId, limit, offset);
   }
 
   @Get()
@@ -129,13 +140,23 @@ export class QcTestsController {
     description: 'JWT token missing or invalid.',
     type: UnauthorizedResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   async findAll(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcTestsService.getAll(parsedLimit, parsedOffset);
+    return this.qcTestsService.getAll(limit, offset);
   }
 
   @Patch(':id')

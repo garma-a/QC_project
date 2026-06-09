@@ -219,8 +219,24 @@ export class UsersController {
     description: 'Only administrators can list users.',
     type: ForbiddenResponseDto,
   })
-  async getUsers(@Query('role') role?: Role) {
-    return this.userService.getUsers(role);
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
+  async getUsers(
+    @Query('role') role?: Role,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+  ) {
+    return this.userService.getUsers(role, limit, offset);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

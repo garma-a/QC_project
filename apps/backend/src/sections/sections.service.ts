@@ -5,7 +5,7 @@ import { SectionsRepository } from './sections.repository';
 export class SectionsService {
   constructor(private readonly sectionsRepository: SectionsRepository) {}
 
-  async findAll() {
-    return this.sectionsRepository.findAll();
+  async findAll(limit?: number, offset?: number) {
+    return this.sectionsRepository.findAll(limit, offset);
   }
 }

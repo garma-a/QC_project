@@ -2,7 +2,7 @@ import { Role } from '@/auth/auth.types';
 import { DatabaseService } from '@/database/database.service';
 import { sections, users, usersToSections } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne, desc } from 'drizzle-orm';
 
 @Injectable()
 export class UsersRepository {
@@ -119,29 +119,26 @@ export class UsersRepository {
     return user;
   }
 
-  async findAllWithSections(roleFilter?: Role) {
-    const baseUsers = roleFilter
-      ? await this.databaseService.db
-          .select({
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            email: users.email,
-            role: users.role,
-            isActive: users.isActive,
-          })
-          .from(users)
-          .where(eq(users.role, roleFilter))
-      : await this.databaseService.db
-          .select({
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            email: users.email,
-            role: users.role,
-            isActive: users.isActive,
-          })
-          .from(users);
+  async findAllWithSections(roleFilter?: Role, limit: number = 50, offset: number = 0) {
+    let query = this.databaseService.db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        role: users.role,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .$dynamic();
+
+    if (roleFilter) {
+      query = query.where(eq(users.role, roleFilter));
+    }
+
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeOffset = Math.max(0, offset ?? 0);
+    const baseUsers = await query.orderBy(desc(users.id)).limit(safeLimit).offset(safeOffset);
 
     if (baseUsers.length === 0) return [];
 

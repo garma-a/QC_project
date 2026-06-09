@@ -106,15 +106,25 @@ export class QcResultsController {
     description: 'Control lot not found.',
     type: NotFoundResponseDto,
   })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Limit the number of results returned (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    type: Number,
+    required: false,
+    description: 'Number of results to skip (default: 0)',
+  })
   findAll(
     @Query('lotId') lotId?: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, parsedLimit, parsedOffset);
+    return this.qcResultsService.findAll(parsedLotId, limit, offset);
   }
 
   @Get(':id')

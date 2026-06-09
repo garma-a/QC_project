@@ -3,28 +3,35 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
 import * as argon2 from 'argon2';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
 import { Role } from '@/auth/auth.types';
 import { UsersRepository } from './users.repository';
+import { WorkerService } from '@/auth/workers/worker.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly workerService: WorkerService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) { }
 
   private async validateSectionIds(
     sectionIds: number[] | undefined,
     context: 'create' | 'update',
   ) {
-    if (sectionIds === undefined) return;
+    if (sectionIds === undefined) return [];
 
     const uniqueSectionIds = [...new Set(sectionIds)];
-    if (uniqueSectionIds.length === 0) return;
+    if (uniqueSectionIds.length === 0) return [];
 
-    const existingSections =
-      await this.usersRepository.findSectionsByIds(uniqueSectionIds);
+    const existingSections = await this.usersRepository.findSectionsByIds(uniqueSectionIds);
     const existingIds = new Set(existingSections.map((s) => s.id));
     const missing = uniqueSectionIds.filter((id) => !existingIds.has(id));
 
@@ -35,12 +42,12 @@ export class UsersService {
           : 'Cannot update user. Laboratory section IDs do not exist:';
       throw new BadRequestException(`${prefix} ${missing.join(', ')}`);
     }
+
+    return existingSections;
   }
 
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
-    const hashedPassword = await argon2.hash(adminCreateUserDto.password);
-
-    await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
+    const validSections = await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
 
     const existing = await this.usersRepository.findByEmail(
       adminCreateUserDto.email,
@@ -49,6 +56,10 @@ export class UsersService {
     if (existing) {
       throw new ConflictException('Email already exists');
     }
+
+    const hashedPassword = await this.workerService.hashPassword(
+      adminCreateUserDto.password,
+    );
 
     const createdUser = await this.usersRepository.create({
       firstName: adminCreateUserDto.firstName,
@@ -64,18 +75,11 @@ export class UsersService {
       adminCreateUserDto.sectionIds ?? [],
     );
 
-    const sectionIds = await this.usersRepository.getSectionIdsForUser(
-      createdUser.id,
-    );
-    const createdWithSections = await this.usersRepository.findByIdWithSections(
-      createdUser.id,
-    );
-
     const { passwordHash, ...safeUser } = createdUser;
     return {
       ...safeUser,
-      sectionIds,
-      sectionNames: createdWithSections?.sectionNames ?? [],
+      sectionIds: validSections.map((s) => s.id),
+      sectionNames: validSections.map((s) => s.name),
     };
   }
 
@@ -90,6 +94,8 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    await this.cacheManager.del(`user_status_${id}`);
 
     return { message: 'User deactivated successfully' };
   }
@@ -112,39 +118,48 @@ export class UsersService {
         );
       }
     }
-    await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
+    const validSections = await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
 
     const { sectionIds: nextSectionIds, ...updatableUserFields } =
       adminUpdateUserDto;
 
-    const updatedUser = await this.usersRepository.update(
-      id,
-      updatableUserFields,
-    );
+    let updatedUser = existingUser;
+
+    if (Object.keys(updatableUserFields).length > 0) {
+      updatedUser = await this.usersRepository.update(
+        id,
+        updatableUserFields,
+      ) as any;
+    }
+
+    let finalSectionIds = existingUser.sectionIds;
+    let finalSectionNames = existingUser.sectionNames;
 
     if (nextSectionIds !== undefined) {
       await this.usersRepository.replaceUserSections(id, nextSectionIds);
+      finalSectionIds = validSections.map((s) => s.id);
+      finalSectionNames = validSections.map((s) => s.name);
     }
 
-    const sectionIds = await this.usersRepository.getSectionIdsForUser(id);
-    const updatedWithSections =
-      await this.usersRepository.findByIdWithSections(id);
+    if (adminUpdateUserDto.isActive !== undefined || adminUpdateUserDto.role !== undefined) {
+      await this.cacheManager.del(`user_status_${id}`);
+    }
 
     const { passwordHash, ...safeUser } = updatedUser;
     return {
       ...safeUser,
-      sectionIds,
-      sectionNames: updatedWithSections?.sectionNames ?? [],
+      sectionIds: finalSectionIds,
+      sectionNames: finalSectionNames,
     };
   }
 
-  async getUsers(roleFilter?: Role) {
+  async getUsers(roleFilter?: Role, limit?: number, offset?: number) {
     if (roleFilter && !Object.values(Role).includes(roleFilter)) {
       throw new BadRequestException(
         `"${roleFilter}" is not a valid user role.`,
       );
     }
-    return await this.usersRepository.findAllWithSections(roleFilter);
+    return await this.usersRepository.findAllWithSections(roleFilter, limit, offset);
   }
 
   async getUserById(id: number) {

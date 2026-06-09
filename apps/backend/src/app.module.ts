@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
 import { DatabaseModule } from '@/database/database.module';
@@ -14,6 +15,11 @@ import { SectionsModule } from '@/sections/sections.module';
 
 @Module({
   imports: [
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 5 * 60 * 1000,
+      max: 1000,
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -30,4 +36,4 @@ import { SectionsModule } from '@/sections/sections.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
