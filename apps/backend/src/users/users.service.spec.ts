@@ -8,6 +8,7 @@ import { UsersService } from './users.service';
 import { UsersRepository } from './users.repository';
 import { Role } from '@/auth/auth.types';
 import { WorkerService } from '@/auth/workers/worker.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -37,6 +38,7 @@ describe('UsersService', () => {
         UsersService,
         { provide: UsersRepository, useValue: mockUsersRepository },
         { provide: WorkerService, useValue: mockWorkerService },
+        { provide: CACHE_MANAGER, useValue: { del: jest.fn() } },
       ],
     }).compile();
 
