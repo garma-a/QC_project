@@ -3,7 +3,10 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
 import * as argon2 from 'argon2';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
@@ -16,6 +19,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly workerService: WorkerService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) { }
 
   private async validateSectionIds(
@@ -91,6 +95,8 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    await this.cacheManager.del(`user_status_${id}`);
+
     return { message: 'User deactivated successfully' };
   }
 
@@ -133,6 +139,10 @@ export class UsersService {
       await this.usersRepository.replaceUserSections(id, nextSectionIds);
       finalSectionIds = validSections.map((s) => s.id);
       finalSectionNames = validSections.map((s) => s.name);
+    }
+
+    if (adminUpdateUserDto.isActive !== undefined || adminUpdateUserDto.role !== undefined) {
+      await this.cacheManager.del(`user_status_${id}`);
     }
 
     const { passwordHash, ...safeUser } = updatedUser;

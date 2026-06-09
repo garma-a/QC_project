@@ -116,8 +116,8 @@ export class QcResultsRepository {
   }
 
   async getResultsByLotId(lotId: number, limit?: number, offset?: number) {
-    const safeLimit = Math.min(limit || 50, 50);
-    const safeOffset = offset || 0;
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeOffset = Math.max(0, offset ?? 0);
     const results = await this.databaseService.db
       .select({
         id: qcResults.id,
@@ -171,8 +171,8 @@ export class QcResultsRepository {
   }
 
   async getPaginatedResults(limit: number, offset: number) {
-    const safeLimit = Math.min(limit || 50, 50);
-    const safeOffset = offset || 0;
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeOffset = Math.max(0, offset ?? 0);
     const results = await this.databaseService.db
       .select({
         id: qcResults.id,

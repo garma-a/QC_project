@@ -3,7 +3,7 @@ import * as argon2 from 'argon2';
 const ARGON2_OPTIONS = {
   timeCost: 3,
   memoryCost: 65536,
-  parallelism: 4,
+  parallelism: 1,
 };
 
 export async function verifyPassword({ hash, password }: { hash: string; password: string }): Promise<boolean> {

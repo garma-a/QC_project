@@ -67,12 +67,10 @@ export class AlertsController {
   })
   async findAll(
     @CurrentUser('userId') userId: number,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 50;
-    const parsedOffset = offset ? parseInt(offset, 10) : 0;
-    return await this.alertsService.findAllByUser(userId, parsedLimit, parsedOffset);
+    return await this.alertsService.findAllByUser(userId, limit, offset);
   }
 
   @Patch('/mark-seen/:id')

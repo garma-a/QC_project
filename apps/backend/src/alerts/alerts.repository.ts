@@ -33,8 +33,8 @@ export class AlertsRepository {
       .where(eq(usersToAlerts.userId, userId))
       .orderBy(desc(usersToAlerts.alertId));
 
-    const safeLimit = Math.min(limit || 50, 50);
-    const safeOffset = offset || 0;
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeOffset = Math.max(0, offset ?? 0);
 
     query = query.limit(safeLimit).offset(safeOffset) as any;
 

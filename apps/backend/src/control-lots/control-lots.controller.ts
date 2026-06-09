@@ -110,12 +110,10 @@ export class ControlLotsController {
     description: 'Number of results to skip (default: 0)',
   })
   findAll(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.controlLotsService.findAll(parsedLimit, parsedOffset);
+    return this.controlLotsService.findAll(limit, offset);
   }
 
   @Get(':id')

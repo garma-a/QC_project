@@ -120,13 +120,11 @@ export class QcResultsController {
   })
   findAll(
     @Query('lotId') lotId?: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, parsedLimit, parsedOffset);
+    return this.qcResultsService.findAll(parsedLotId, limit, offset);
   }
 
   @Get(':id')

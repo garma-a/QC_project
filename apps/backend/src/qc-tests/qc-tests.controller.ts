@@ -119,12 +119,10 @@ export class QcTestsController {
   })
   async findByMachine(
     @Param('machineId', ParseIntPipe) machineId: number,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcTestsService.getTestsByMachine(machineId, parsedLimit, parsedOffset);
+    return this.qcTestsService.getTestsByMachine(machineId, limit, offset);
   }
 
   @Get()
@@ -155,12 +153,10 @@ export class QcTestsController {
     description: 'Number of results to skip (default: 0)',
   })
   async findAll(
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-    return this.qcTestsService.getAll(parsedLimit, parsedOffset);
+    return this.qcTestsService.getAll(limit, offset);
   }
 
   @Patch(':id')

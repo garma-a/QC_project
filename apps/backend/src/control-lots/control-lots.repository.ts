@@ -41,8 +41,8 @@ export class ControlLotsRepository {
   }
 
   async findAll(limit?: number, offset?: number) {
-    const safeLimit = Math.min(limit || 50, 50);
-    const safeOffset = offset || 0;
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
       .select()
       .from(controlLots)
