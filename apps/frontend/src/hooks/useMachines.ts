@@ -37,11 +37,43 @@ export function useMachines(): UseMachinesReturn {
           signal: controller.signal,
           onmessage(msg) {
             if (!msg.event || msg.event === 'message') {
-              queryClient.invalidateQueries({ queryKey: ['machines'] });
+              try {
+                const parsed = JSON.parse(msg.data);
+                queryClient.setQueryData(['machines'], (oldData: any) => {
+                  if (!oldData) return oldData;
+                  const newPages = oldData.pages.map((page: any[]) => [...page]);
+                  
+                  if (parsed.type === 'create') {
+                    if (newPages.length > 0) {
+                      newPages[0].unshift(parsed.data);
+                    } else {
+                      newPages.push([parsed.data]);
+                    }
+                  } else if (parsed.type === 'update') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      const idx = newPages[i].findIndex((m) => m.id === parsed.data.id);
+                      if (idx !== -1) {
+                        newPages[i][idx] = parsed.data;
+                        break;
+                      }
+                    }
+                  } else if (parsed.type === 'delete') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      newPages[i] = newPages[i].filter((m) => m.id !== parsed.data.id);
+                    }
+                  }
+                  
+                  return { ...oldData, pages: newPages };
+                });
+              } catch (e) {
+                queryClient.invalidateQueries({ queryKey: ['machines'] });
+              }
             }
           },
           onerror(err) {
-            throw err;
+            if (err instanceof DOMException && err.name === 'AbortError') throw err;
+            console.error('SSE Error:', err);
+            return 5000; // Retry after 5s
           }
         });
       } catch (err) {

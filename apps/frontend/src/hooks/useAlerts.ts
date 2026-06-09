@@ -73,8 +73,9 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
             }
           },
           onerror(err) {
-            // Rethrowing here tells fetchEventSource to attempt reconnect
-            throw err;
+            if (err instanceof DOMException && err.name === 'AbortError') throw err;
+            console.error('SSE Error:', err);
+            return 5000; // Retry after 5s
           }
         });
       } catch (err) {

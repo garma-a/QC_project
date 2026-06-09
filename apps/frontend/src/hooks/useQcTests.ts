@@ -46,11 +46,43 @@ export function useQcTests(machineId?: number | null): UseQcTestsReturn {
           signal: controller.signal,
           onmessage(msg) {
             if (!msg.event || msg.event === 'message') {
-              queryClient.invalidateQueries({ queryKey: ['qc-tests'] });
+              try {
+                const parsed = JSON.parse(msg.data);
+                queryClient.setQueryData(['qc-tests'], (oldData: any) => {
+                  if (!oldData) return oldData;
+                  const newPages = oldData.pages.map((page: any[]) => [...page]);
+                  
+                  if (parsed.type === 'create') {
+                    if (newPages.length > 0) {
+                      newPages[0].unshift(parsed.data);
+                    } else {
+                      newPages.push([parsed.data]);
+                    }
+                  } else if (parsed.type === 'update') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      const idx = newPages[i].findIndex((t) => t.id === parsed.data.id);
+                      if (idx !== -1) {
+                        newPages[i][idx] = parsed.data;
+                        break;
+                      }
+                    }
+                  } else if (parsed.type === 'delete') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      newPages[i] = newPages[i].filter((t) => t.id !== parsed.data.id);
+                    }
+                  }
+                  
+                  return { ...oldData, pages: newPages };
+                });
+              } catch (e) {
+                queryClient.invalidateQueries({ queryKey: ['qc-tests'] });
+              }
             }
           },
           onerror(err) {
-            throw err;
+            if (err instanceof DOMException && err.name === 'AbortError') throw err;
+            console.error('SSE Error:', err);
+            return 5000; // Retry after 5s
           }
         });
       } catch (err) {

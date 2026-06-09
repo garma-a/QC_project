@@ -9,6 +9,11 @@ import React from 'react';
 // Mock clientFetch
 vi.mock('@/lib/api/clientFetch', () => ({
   clientFetch: vi.fn(),
+  API_BASE_URL: 'http://localhost',
+}));
+
+vi.mock('@microsoft/fetch-event-source', () => ({
+  fetchEventSource: vi.fn(),
 }));
 
 const queryClient = new QueryClient({
@@ -66,5 +71,27 @@ describe('useMachines hook', () => {
 
     expect(result.current.loading).toBe(false); // Should not load if not enabled
     expect(clientFetch).not.toHaveBeenCalled();
+  });
+
+  it('invalidates queries when SSE message is received', async () => {
+    const { fetchEventSource } = await import('@microsoft/fetch-event-source');
+    
+    const mockData = [{ id: 'm1', name: 'Machine 1', category: 'chemistry' }];
+    (clientFetch as any).mockResolvedValue(mockData);
+
+    renderHook(() => useMachines(), { wrapper });
+
+    await waitFor(() => {
+      expect(clientFetch).toHaveBeenCalledTimes(1);
+    });
+
+    // Simulate SSE message
+    const onmessage = (fetchEventSource as any).mock.calls[0][1].onmessage;
+    onmessage({ event: 'message', data: '{}' });
+
+    await waitFor(() => {
+      // Invalidation causes a refetch
+      expect(clientFetch).toHaveBeenCalledTimes(2);
+    });
   });
 });

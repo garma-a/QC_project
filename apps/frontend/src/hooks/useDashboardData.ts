@@ -68,36 +68,8 @@ export function useDashboardData() {
   useEffect(() => {
     if (!token) return;
 
-    const controller = new AbortController();
-
-    const connectSse = async (endpoint: string) => {
-      try {
-        await fetchEventSource(`${API_BASE_URL}${endpoint}`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'text/event-stream',
-          },
-          signal: controller.signal,
-          onmessage(msg) {
-            if (!msg.event || msg.event === 'message') {
-              queryClient.invalidateQueries({ queryKey: ['dashboard-data'] });
-            }
-          },
-          onerror(err) {
-            throw err;
-          }
-        });
-      } catch (err) {}
-    };
-
-    connectSse('/api/v1/qc-results/stream');
-    connectSse('/api/v1/machines/stream');
-    connectSse('/api/v1/control-lots/stream');
-    connectSse('/api/v1/qc-tests/stream');
-
     return () => {
-      controller.abort();
+      // no-op, SSE removed
     };
   }, [token, queryClient]);
 

@@ -63,12 +63,41 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
           signal: controller.signal,
           onmessage(msg) {
             if (!msg.event || msg.event === 'message') {
-              // Invalidate qc-results queries when a new result arrives
-              queryClient.invalidateQueries({ queryKey: ['qc-results'] });
+              try {
+                const parsed = JSON.parse(msg.data);
+                queryClient.setQueryData(['qc-results', lotId], (oldData: any) => {
+                  if (!oldData || !oldData.results) return oldData;
+                  
+                  const newResults = [...oldData.results];
+                  
+                  if (parsed.type === 'create') {
+                    // Only add if it belongs to this lot
+                    if (parsed.data.controlLotId === lotId) {
+                      newResults.unshift(parsed.data);
+                    }
+                  } else if (parsed.type === 'update') {
+                    const idx = newResults.findIndex((r) => r.id === parsed.data.id);
+                    if (idx !== -1) {
+                      newResults[idx] = parsed.data;
+                    }
+                  } else if (parsed.type === 'delete') {
+                    const idx = newResults.findIndex((r) => r.id === parsed.data.id);
+                    if (idx !== -1) {
+                      newResults.splice(idx, 1);
+                    }
+                  }
+                  
+                  return { ...oldData, results: newResults };
+                });
+              } catch (e) {
+                queryClient.invalidateQueries({ queryKey: ['qc-results'] });
+              }
             }
           },
           onerror(err) {
-            throw err;
+            if (err instanceof DOMException && err.name === 'AbortError') throw err;
+            console.error('SSE Error:', err);
+            return 5000; // Retry after 5s
           }
         });
       } catch (err) {}

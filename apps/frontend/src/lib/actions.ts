@@ -167,6 +167,9 @@ export async function createMachine(payload: CreateMachineDto) {
     await api.post<MachineResponseDto>('/api/v1/machines', payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -181,6 +184,9 @@ export async function updateMachine(machineId: number, payload: UpdateMachineDto
     await api.patch<MachineResponseDto>(`/api/v1/machines/${machineId}`, payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -194,6 +200,9 @@ export async function deleteMachine(machineId: number) {
     await api.delete(`/api/v1/machines/${machineId}`);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -211,6 +220,8 @@ export async function createQcTest(payload: CreateQcTestDto) {
     await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
+    revalidatePath('/dashboard');
+    revalidatePath('/control-lots');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -225,6 +236,8 @@ export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
     await api.patch<QcTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
+    revalidatePath('/dashboard');
+    revalidatePath('/control-lots');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -280,6 +293,7 @@ export async function createControlLot(payload: CreateControlLotDto) {
     revalidatePath('/qc');
     revalidatePath('/dashboard');
     revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
@@ -300,6 +314,8 @@ export async function updateControlLot(lotId: number, payload: UpdateControlLotD
     revalidatePath('/control-lots');
     revalidatePath('/qc');
     revalidatePath('/dashboard');
+    revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
@@ -314,6 +330,8 @@ export async function deactivateControlLot(lotId: number) {
     revalidatePath('/control-lots');
     revalidatePath('/qc');
     revalidatePath('/dashboard');
+    revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true };
   } catch (error: unknown) {
     return {

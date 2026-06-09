@@ -80,11 +80,43 @@ export function useInfiniteQcResults() {
           signal: controller.signal,
           onmessage(msg) {
             if (!msg.event || msg.event === 'message') {
-              queryClient.invalidateQueries({ queryKey: ['qc-results-infinite'] });
+              try {
+                const parsed = JSON.parse(msg.data);
+                queryClient.setQueryData(['qc-results-infinite'], (oldData: any) => {
+                  if (!oldData || !oldData.pages) return oldData;
+                  const newPages = oldData.pages.map((page: any) => ({ ...page, results: [...(page.results || [])] }));
+                  
+                  if (parsed.type === 'create') {
+                    if (newPages.length > 0) {
+                      newPages[0].results.unshift(parsed.data);
+                    } else {
+                      newPages.push({ results: [parsed.data], nextOffset: undefined });
+                    }
+                  } else if (parsed.type === 'update') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      const idx = newPages[i].results.findIndex((r: any) => r.id === parsed.data.id);
+                      if (idx !== -1) {
+                        newPages[i].results[idx] = parsed.data;
+                        break;
+                      }
+                    }
+                  } else if (parsed.type === 'delete') {
+                    for (let i = 0; i < newPages.length; i++) {
+                      newPages[i].results = newPages[i].results.filter((r: any) => r.id !== parsed.data.id);
+                    }
+                  }
+                  
+                  return { ...oldData, pages: newPages };
+                });
+              } catch (e) {
+                queryClient.invalidateQueries({ queryKey: ['qc-results-infinite'] });
+              }
             }
           },
           onerror(err) {
-            throw err;
+            if (err instanceof DOMException && err.name === 'AbortError') throw err;
+            console.error('SSE Error:', err);
+            return 5000; // Retry after 5s
           }
         });
       } catch (err) {}
