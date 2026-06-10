@@ -75,10 +75,10 @@ async function bootstrap() {
     }
     await db.insert(usersToSections).values(userToSectionsRows);
 
-    // 3. Create 15 Machines
-    const machinePrefixes = ['Sysmex', 'Cobas', 'Architect', 'Beckman', 'Alinity'];
+    // 3. Create 4 Machines
+    const machinePrefixes = ['Sysmex', 'Cobas', 'Architect', 'Beckman'];
     const insertedMachines: any[] = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 4; i++) {
       const sec = insertedSections[i % insertedSections.length];
       const prefix = machinePrefixes[i % machinePrefixes.length];
       const [m] = await db.insert(machines).values({
@@ -230,7 +230,7 @@ async function bootstrap() {
       }
     }
 
-    console.log(`✅ Seeded 4 Sections, 15 Machines, 45 Tests, 135 Control Lots`);
+    console.log(`✅ Seeded 4 Sections, 4 Machines, 12 Tests, 36 Control Lots`);
     console.log(`✅ Inserted ${totalResultsInserted} Historical QC Results!`);
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('🔑 USER CREDENTIALS FOR LOGIN:');
