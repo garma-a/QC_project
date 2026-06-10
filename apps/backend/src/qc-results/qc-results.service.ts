@@ -190,7 +190,11 @@ export class QcResultsService {
       console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
     }
 
-    this.qcResultEvents$.next({ type: 'new-qc-run', runData: savedRunData, testId });
+    if (savedRunData?.results) {
+      for (const result of savedRunData.results) {
+        this.qcResultEvents$.next({ type: 'create', data: result });
+      }
+    }
 
     return savedRunData;
   }
@@ -248,7 +252,7 @@ export class QcResultsService {
       throw new NotFoundException(`QC Result with ID ${id} not found`);
 
     const updatedResult = await this.findOne(id);
-    this.qcResultEvents$.next({ type: 'update-qc-result', result: updatedResult });
+    this.qcResultEvents$.next({ type: 'update', data: updatedResult });
     return updatedResult;
   }
 }

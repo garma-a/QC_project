@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
+import { useQuery } from '@tanstack/react-query';
+import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   ControlLotResponseDto,
   MachineResponseDto,
@@ -52,7 +51,6 @@ export interface DashboardData {
 
 export function useDashboardData() {
   const token = useAuthStore((s) => s.accessToken);
-  const queryClient = useQueryClient();
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -64,14 +62,6 @@ export function useDashboardData() {
       window.location.href = '/login?force=true';
     }
   }, [isHydrated, token]);
-
-  useEffect(() => {
-    if (!token) return;
-
-    return () => {
-      // no-op, SSE removed
-    };
-  }, [token, queryClient]);
 
   const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
     queryKey: ['dashboard-data'],

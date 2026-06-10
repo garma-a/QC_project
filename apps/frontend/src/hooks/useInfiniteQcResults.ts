@@ -1,8 +1,6 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { clientFetch, API_BASE_URL } from '@/lib/api/clientFetch';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useEffect } from 'react';
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   ControlLotResponseDto,
   QcResultResponseDto,
@@ -12,9 +10,7 @@ import { MonitorResultEntry } from './useDashboardData';
 
 export function useInfiniteQcResults() {
   const token = useAuthStore((s) => s.accessToken);
-  const queryClient = useQueryClient();
 
-  // Fetch contextual data once (lots and tests)
   const { data: contextData } = useQuery({
     queryKey: ['qc-context-data'],
     queryFn: async ({ signal }) => {
@@ -22,7 +18,7 @@ export function useInfiniteQcResults() {
         clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
         clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
       ]);
-      
+
       const testById = new Map<number, QcTestResponseDto>();
       for (const test of allTests) {
         testById.set(test.id, test);
@@ -34,7 +30,7 @@ export function useInfiniteQcResults() {
           return test ? { lot, machineId: test.machineId, test } : null;
         })
         .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
-        
+
       return { lotsWithContext };
     },
     enabled: !!token,
@@ -53,7 +49,7 @@ export function useInfiniteQcResults() {
       const limit = 50;
       const offset = pageParam;
       const res = await clientFetch<{ results: QcResultResponseDto[] }>(`/api/v1/qc-results?limit=${limit}&offset=${offset}`, { signal }, token);
-      
+
       return {
         results: Array.isArray(res?.results) ? res.results : [],
         nextOffset: (res?.results?.length ?? 0) === limit ? offset + limit : undefined,
@@ -64,77 +60,11 @@ export function useInfiniteQcResults() {
     enabled: !!token && !!contextData,
   });
 
-  useEffect(() => {
-    if (!token) return;
-
-    const controller = new AbortController();
-
-    const connectSse = async () => {
-      try {
-        await fetchEventSource(`${API_BASE_URL}/api/v1/qc-results/stream`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'text/event-stream',
-          },
-          signal: controller.signal,
-          onmessage(msg) {
-            if (!msg.event || msg.event === 'message') {
-              try {
-                const parsed = JSON.parse(msg.data);
-                queryClient.setQueryData(['qc-results-infinite'], (oldData: any) => {
-                  if (!oldData || !oldData.pages) return oldData;
-                  const newPages = oldData.pages.map((page: any) => ({ ...page, results: [...(page.results || [])] }));
-                  
-                  if (parsed.type === 'create') {
-                    if (newPages.length > 0) {
-                      newPages[0].results.unshift(parsed.data);
-                    } else {
-                      newPages.push({ results: [parsed.data], nextOffset: undefined });
-                    }
-                  } else if (parsed.type === 'update') {
-                    for (let i = 0; i < newPages.length; i++) {
-                      const idx = newPages[i].results.findIndex((r: any) => r.id === parsed.data.id);
-                      if (idx !== -1) {
-                        newPages[i].results[idx] = parsed.data;
-                        break;
-                      }
-                    }
-                  } else if (parsed.type === 'delete') {
-                    for (let i = 0; i < newPages.length; i++) {
-                      newPages[i].results = newPages[i].results.filter((r: any) => r.id !== parsed.data.id);
-                    }
-                  }
-                  
-                  return { ...oldData, pages: newPages };
-                });
-              } catch (e) {
-                queryClient.invalidateQueries({ queryKey: ['qc-results-infinite'] });
-              }
-            }
-          },
-          onerror(err) {
-            if (err instanceof DOMException && err.name === 'AbortError') throw err;
-            console.error('SSE Error:', err);
-            return 5000; // Retry after 5s
-          }
-        });
-      } catch (err) {}
-    };
-
-    connectSse();
-
-    return () => {
-      controller.abort();
-    };
-  }, [token, queryClient]);
-
-  // Map results to MonitorResultEntry
   const qcHistory: MonitorResultEntry[] = [];
-  
+
   if (data && contextData) {
     const allResults = data.pages.flatMap((page) => page.results);
-    
+
     for (const result of allResults) {
       const ctx = contextData.lotsWithContext.find((c) => c.lot.id === result.lotId);
       if (!ctx) continue;

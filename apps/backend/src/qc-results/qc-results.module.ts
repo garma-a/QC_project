@@ -9,5 +9,6 @@ import { UsersModule } from '@/users/users.module';
   imports: [AlertsModule, UsersModule],
   controllers: [QcResultsController],
   providers: [QcResultsService, QcResultsRepository],
+  exports: [QcResultsService],
 })
 export class QcResultsModule {}
