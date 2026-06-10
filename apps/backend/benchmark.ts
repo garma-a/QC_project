@@ -101,7 +101,9 @@ async function runBenchmark(moduleName: string, config: BenchmarkConfig, authHea
           errors: result.errors,
           timeouts: result.timeouts
         });
-        resolve();
+        
+        console.log('\x1b[90m[Cooldown] Waiting 5 seconds for background tasks to flush...\x1b[0m');
+        setTimeout(() => resolve(), 5000);
       }
     });
 
