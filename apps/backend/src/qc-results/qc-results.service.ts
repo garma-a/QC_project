@@ -224,9 +224,7 @@ export class QcResultsService {
         results,
       };
     } else {
-      const parsedLimit = limit ?? 50;
-      const parsedOffset = offset ?? 0;
-      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset);
+      const results = await this.qcResultsRepository.getPaginatedResults(limit, offset);
       return { lot: null, results };
     }
   }

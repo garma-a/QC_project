@@ -342,9 +342,9 @@ describe('QcResultsService', () => {
       const result = await service.findAll(1);
 
       // Assert
-      expect(result.lot.testName).toBe('Hemoglobin');
-      expect(result.lot.machineName).toBe('Sysmex XN-1000');
-      expect(result.lot.mean).toBe(14.0);
+      expect(result.lot!.testName).toBe('Hemoglobin');
+      expect(result.lot!.machineName).toBe('Sysmex XN-1000');
+      expect(result.lot!.mean).toBe(14.0);
     });
 
     it('should throw NotFoundException when lot does not exist', async () => {

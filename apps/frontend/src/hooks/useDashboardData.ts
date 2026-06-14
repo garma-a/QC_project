@@ -5,24 +5,22 @@ import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type {
-  ControlLotResponseDto,
+  EnrichedControlLotResponseDto,
+  EnrichedQcResultResponseDto,
   MachineResponseDto,
-  QcResultResponseDto,
-  QcResultsWithLotResponseDto,
-  QcTestResponseDto,
 } from '@/lib/types/api';
 
-export type MonitorResultEntry = QcResultResponseDto & {
-  machineId: number;
-  testId: number;
-  testName: string;
-  lotId: number;
-  level: number;
-  lotNumber: string;
-  lotMean: number;
-  lotSd: number;
-  expectedRange: string;
+export type MonitorResultEntry = EnrichedQcResultResponseDto & {
+  /** Formatted display date string (e.g. "6/14/2026 02:30 PM") */
   date: string;
+  /** Formatted expected range string (e.g. "96.5 - 106.5") */
+  expectedRange: string;
+  /** Alias: lot control level (1, 2, or 3) */
+  level: number;
+  /** Alias: lot mean value */
+  lotMean: number;
+  /** Alias: lot standard deviation */
+  lotSd: number;
 };
 
 export interface DashboardData {
@@ -66,116 +64,116 @@ export function useDashboardData() {
   const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
     queryKey: ['dashboard-data'],
     queryFn: async ({ signal }) => {
-      const [fetchedMachines, allLots, allTests, allResultsResponse] = await Promise.all([
+      /**
+       * SCALABLE DESIGN:
+       *
+       * 1. GET /api/v1/machines          — 4 rows (always small)
+       * 2. GET /api/v1/control-lots?isActive=true
+       *    — Returns ONLY active lots (~56 rows) enriched with testName, testType, machineId
+       *      via a server-side JOIN. No separate /qc-tests call needed.
+       *      Scales to 1M+ lots because isActive filter keeps the result set tiny.
+       * 3. GET /api/v1/qc-results        — latest 100 results enriched with lot/test/machine
+       *      context via server-side JOINs. Capped at 100 rows regardless of total data size.
+       *      For 100K+ rows, only the latest 100 are returned — fast and lightweight.
+       */
+      const [fetchedMachines, activeLots, allResultsResponse] = await Promise.all([
         clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
-        clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
-        clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
-        clientFetch<{ results: QcResultResponseDto[] }>('/api/v1/qc-results', { signal }, token).catch(() => ({ results: [] })),
+        clientFetch<EnrichedControlLotResponseDto[]>(
+          '/api/v1/control-lots?isActive=true',
+          { signal },
+          token,
+        ).catch(() => []),
+        clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
+          '/api/v1/qc-results',
+          { signal },
+          token,
+        ).catch(() => ({ results: [] })),
       ]);
 
-      const allResults = Array.isArray(allResultsResponse.results) ? allResultsResponse.results : [];
+      const allResults: EnrichedQcResultResponseDto[] = Array.isArray(allResultsResponse?.results)
+        ? allResultsResponse.results
+        : [];
 
       let categories: { id: string; name: string }[] = [];
       let qcHistory: MonitorResultEntry[] = [];
       let machines: DashboardData['machines'] = [];
 
       if (fetchedMachines && fetchedMachines.length > 0) {
+        // Build section categories from machines
         const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
         categories = sectionIds.map((sid) => ({
           id: sid.toString(),
           name: `Section ${sid}`,
         }));
 
-        const testById = new Map<number, QcTestResponseDto>();
-        for (const test of allTests) {
-          testById.set(test.id, test);
-        }
-
-        const lotsWithContext = allLots
-          .map((lot) => {
-            const test = testById.get(lot.testId);
-            return test ? { lot, machineId: test.machineId, test } : null;
-          })
-          .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
-
-        qcHistory = allResults.map((result) => {
-          const ctx = lotsWithContext.find((c) => c.lot.id === result.lotId);
-          if (!ctx) return null;
-
-          const dateObj = new Date(result.testDate);
+        /**
+         * Build qcHistory directly from enriched results.
+         * No cross-referencing needed — machineId, testName, lot details
+         * are all embedded in each result by the backend JOIN.
+         */
+        qcHistory = allResults.map((result): MonitorResultEntry => {
+          const dateObj = new Date(result.testDate as string);
           const dateStr = !Number.isNaN(dateObj.getTime())
             ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             : 'N/A N/A';
 
           return {
             ...result,
-            machineId: ctx.machineId,
-            testId: ctx.test.id,
-            testName: ctx.test.testName,
-            lotId: ctx.lot.id,
-            level: ctx.lot.level ?? 1,
-            lotNumber: ctx.lot.lotNumber,
-            lotMean: ctx.lot.mean ?? 0,
-            lotSd: ctx.lot.standardDeviation ?? 1,
-            expectedRange: `${ctx.lot.lowerControlLimit ?? 0} - ${ctx.lot.upperControlLimit ?? 0}`,
+            level: result.lotLevel ?? 1,
+            lotMean: result.lotMean ?? 0,
+            lotSd: result.lotSd ?? 1,
+            expectedRange: `${result.lowerControlLimit ?? 0} - ${result.upperControlLimit ?? 0}`,
             date: dateStr,
           };
-        }).filter((entry): entry is MonitorResultEntry => entry !== null);
+        });
 
+        /**
+         * Build machine entries from:
+         * - fetchedMachines (base machine data)
+         * - activeLots filtered per machine (for test/lot definitions)
+         * - qcHistory filtered per machine (for "last QC" and "tests today")
+         *
+         * activeLots has machineId + testName + testType already embedded.
+         */
         machines = fetchedMachines.map((machine) => {
           const machineResults = qcHistory
             .filter((entry) => entry.machineId === machine.id)
-            .sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime());
+            .sort((a, b) => new Date(b.testDate as string).getTime() - new Date(a.testDate as string).getTime());
           const latestResult = machineResults[0];
 
-          const machineTestsData = allTests.filter((t) => t.machineId === machine.id);
-          const machineLots = lotsWithContext.filter((ctx) => ctx.machineId === machine.id);
+          // Filter active lots that belong to this machine
+          const machineLots = activeLots.filter((lot) => lot.machineId === machine.id);
 
-          const tests = machineTestsData.flatMap((test) => {
-            const testLots = machineLots.filter((ctx) => ctx.test.id === test.id);
-            if (testLots.length > 0) {
-              return testLots.map((ctx) => ({
-                id: ctx.test.id.toString(),
-                name: ctx.test.testName,
-                category: ctx.test.testType ?? 'General',
-                code: ctx.test.id.toString(),
-                unit: 'unit',
-                lowRange: ctx.lot.lowerControlLimit ?? 0,
-                highRange: ctx.lot.upperControlLimit ?? 0,
-                lotId: ctx.lot.id,
-                level: ctx.lot.level ?? 1,
-                lotNumber: ctx.lot.lotNumber,
-                mean: ctx.lot.mean ?? 0,
-                standardDeviation: ctx.lot.standardDeviation ?? 0,
-                isActive: ctx.lot.isActive ?? true,
-              }));
-            } else {
-              return [{
-                id: test.id.toString(),
-                name: test.testName,
-                category: test.testType ?? 'General',
-                code: test.id.toString(),
-                unit: 'unit',
-                lowRange: 0,
-                highRange: 0,
-                lotId: -1,
-                level: 1,
-                lotNumber: 'No Lot',
-                mean: 0,
-                standardDeviation: 1,
-                isActive: true,
-              }];
-            }
-          });
+          // Each active lot maps to one entry in the tests array
+          const tests = machineLots.map((lot) => ({
+            id: lot.testId.toString(),
+            name: lot.testName,
+            category: lot.testType ?? 'General',
+            code: lot.testId.toString(),
+            unit: 'unit',
+            lowRange: lot.lowerControlLimit ?? 0,
+            highRange: lot.upperControlLimit ?? 0,
+            lotId: lot.id,
+            level: lot.level ?? 1,
+            lotNumber: lot.lotNumber,
+            mean: lot.mean ?? 0,
+            standardDeviation: lot.standardDeviation ?? 0,
+            isActive: lot.isActive ?? true,
+          }));
 
           return {
             ...machine,
             testsToday: machineResults.length,
             lastQC: latestResult
               ? {
-                date: new Date(latestResult.testDate).toLocaleString(),
-                status: latestResult.status === 'PASS' ? 'pass' : latestResult.status === 'WARNING' ? 'warning' : 'error',
-              }
+                  date: new Date(latestResult.testDate as string).toLocaleString(),
+                  status:
+                    latestResult.status === 'PASS'
+                      ? 'pass'
+                      : latestResult.status === 'WARNING'
+                        ? 'warning'
+                        : 'error',
+                }
               : { date: 'N/A', status: 'pass' },
             tests,
           };

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
-import { ControlLotsRepository } from './control-lots.repository';
+import { ControlLotsRepository, ActiveLotWithTestContext } from './control-lots.repository';
 
 @Injectable()
 export class ControlLotsService {
@@ -52,6 +52,15 @@ export class ControlLotsService {
 
   async findAll(limit?: number, offset?: number) {
     const lots = await this.controlLotsRepository.findAll(limit, offset);
+    return lots.map((lot) => this.computeAgeFlags(lot));
+  }
+
+  /**
+   * Returns all active lots enriched with their QC test context (testName, testType, machineId).
+   * Intended for dashboard/monitor usage — avoids fetching all 4000+ lots and all tests.
+   */
+  async findActiveWithTestContext(): Promise<(ActiveLotWithTestContext & { daysActive: number; needsChecking: boolean })[]> {
+    const lots = await this.controlLotsRepository.findActiveWithTestContext();
     return lots.map((lot) => this.computeAgeFlags(lot));
   }
 

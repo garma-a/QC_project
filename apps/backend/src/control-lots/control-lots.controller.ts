@@ -89,11 +89,11 @@ export class ControlLotsController {
   @ApiOperation({
     summary: 'Get all control lots',
     description:
-      'Returns a list of all control lots in the system, including both active and inactive ones. Any authenticated user can view control lots.',
+      'Returns a list of all control lots. Pass `isActive=true` to get only active lots enriched with test context (testName, testType, machineId) \u2014 recommended for dashboard usage as it avoids fetching thousands of inactive lots.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Array of all control lots.',
+    description: 'Array of control lots.',
     type: [ControlLotResponseDto],
   })
   @ApiResponse({
@@ -102,21 +102,34 @@ export class ControlLotsController {
     type: UnauthorizedResponseDto,
   })
   @ApiQuery({
+    name: 'isActive',
+    type: Boolean,
+    required: false,
+    description:
+      'When true, returns only active lots enriched with test context (testName, testType, machineId). No pagination applied \u2014 all active lots are returned.',
+  })
+  @ApiQuery({
     name: 'limit',
     type: Number,
     required: false,
-    description: 'Limit the number of results returned (default: 50)',
+    description: 'Limit the number of results returned (default: 50). Ignored when isActive=true.',
   })
   @ApiQuery({
     name: 'offset',
     type: Number,
     required: false,
-    description: 'Number of results to skip (default: 0)',
+    description: 'Number of results to skip (default: 0). Ignored when isActive=true.',
   })
   findAll(
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('isActive') isActiveStr?: string,
   ) {
+    // When isActive=true is requested, return enriched active lots \u2014 no pagination
+    // This is the scalable path used by the dashboard frontend
+    if (isActiveStr === 'true') {
+      return this.controlLotsService.findActiveWithTestContext();
+    }
     return this.controlLotsService.findAll(limit, offset);
   }
 

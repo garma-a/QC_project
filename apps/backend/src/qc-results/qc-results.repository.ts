@@ -170,11 +170,22 @@ export class QcResultsRepository {
     return result.rows || result;
   }
 
-  async getPaginatedResults(limit: number, offset: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+  /**
+   * Returns the latest QC results, enriched with lot/test/machine context via SQL JOINs.
+   *
+   * By embedding machineId, testName, lotNumber, mean, SD, etc. here, the frontend
+   * no longer needs to cross-reference lots and tests — completely eliminating the
+   * pagination bug that caused empty dashboards.
+   *
+   * Scalability cap: default 100 results, hard max 500 per call.
+   * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
+   */
+  async getPaginatedResults(limit?: number, offset?: number) {
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
-    const results = await this.databaseService.db
+    return this.databaseService.db
       .select({
+        // Core result fields
         id: qcResults.id,
         measuredValue: qcResults.measuredValue,
         zScore: qcResults.zScore,
@@ -185,14 +196,26 @@ export class QcResultsRepository {
         lotId: qcResults.lotId,
         testDate: qcRuns.runDate,
         performedBy: qcRuns.performedBy,
+        // Enriched: lot context
+        lotNumber: controlLots.lotNumber,
+        lotMean: controlLots.mean,
+        lotSd: controlLots.standardDeviation,
+        lotLevel: controlLots.level,
+        lowerControlLimit: controlLots.lowerControlLimit,
+        upperControlLimit: controlLots.upperControlLimit,
+        // Enriched: test + machine context
+        testId: qcTests.id,
+        testName: qcTests.testName,
+        machineId: machines.id,
       })
       .from(qcResults)
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
+      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
       .orderBy(desc(qcResults.id))
       .limit(safeLimit)
       .offset(safeOffset);
-
-    return results;
   }
 
   async getResultAndLotByResultId(resultId: number) {
