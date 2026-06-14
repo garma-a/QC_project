@@ -48,16 +48,28 @@ export async function loginAccount(formData: FormData) {
     }
 
     const token = response.accessToken;
+    const refreshToken = response.refreshToken;
     const cookieStore = await cookies();
 
-    // Store the JWT token (httpOnly for server components)
+    // Store the JWT access token
     cookieStore.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60, // 1 hour
     });
+
+    if (refreshToken) {
+      // Store the refresh token
+      cookieStore.set('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
 
     // Decode the JWT to get userId and role
     const jwtPayload = decodeJwt(token);
@@ -114,8 +126,58 @@ export async function loginAccount(formData: FormData) {
 export async function logoutAccount() {
   const cookieStore = await cookies();
   cookieStore.delete('auth_token');
+  cookieStore.delete('refresh_token');
   cookieStore.delete('user_info');
   return { success: true };
+}
+
+export async function refreshTokensAction() {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+
+  if (!refreshToken) {
+    return { error: 'No refresh token available.' };
+  }
+
+  try {
+    const response = await api.post<LoginResponseDto>('/api/v1/auth/refresh', {
+      refreshToken,
+    });
+
+    if (!response?.accessToken) {
+      return { error: 'Invalid refresh token response.' };
+    }
+
+    // Store the new access token
+    cookieStore.set('auth_token', response.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+    });
+
+    if (response.refreshToken) {
+      // Store the new refresh token
+      cookieStore.set('refresh_token', response.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
+
+    return { success: true, token: response.accessToken };
+  } catch (error: unknown) {
+    // If refresh fails, delete tokens so user is forced to log in
+    cookieStore.delete('auth_token');
+    cookieStore.delete('refresh_token');
+    cookieStore.delete('user_info');
+    return {
+      error: error instanceof Error ? error.message : 'Failed to refresh token.',
+    };
+  }
 }
 
 // ===================================================================
