@@ -4,12 +4,14 @@ import { AuthRepository } from './auth.repository';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
 import { WorkerService } from './workers/worker.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   let service: AuthService;
   let mockAuthRepository: Record<string, jest.Mock>;
   let mockJwtService: Record<string, jest.Mock>;
   let mockWorkerService: Record<string, jest.Mock>;
+  let mockConfigService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     mockAuthRepository = {
@@ -24,12 +26,21 @@ describe('AuthService', () => {
       verifyPassword: jest.fn(),
     };
 
+    mockConfigService = {
+      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
+        if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
+        if (key === 'JWT_REFRESH_SECRET') return 'anyrefreshsecret';
+        return defaultValue;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: AuthRepository, useValue: mockAuthRepository },
         { provide: JwtService, useValue: mockJwtService },
         { provide: WorkerService, useValue: mockWorkerService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -56,7 +67,7 @@ describe('AuthService', () => {
 
       const result = await service.login(validCredentials);
 
-      expect(result).toEqual({ accessToken: 'jwt.token.here' });
+      expect(result).toEqual({ accessToken: 'jwt.token.here', refreshToken: 'jwt.token.here' });
     });
 
     it('should reject login when user does not exist', async () => {
