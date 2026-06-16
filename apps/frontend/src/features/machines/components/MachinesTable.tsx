@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Search } from 'lucide-react';
 import { deleteMachine } from '@/lib/actions';
 import { useMachines } from '@/hooks/useMachines';
 import { MachineFormDialog } from './MachineFormDialog';
@@ -31,6 +31,8 @@ interface MachinesTableProps {
   sections: SectionResponseDto[];
 }
 
+const MACHINE_STATUSES = ['ALL', 'IDLE', 'RUNNING', 'MAINTENANCE', 'OFFLINE', 'ERROR'] as const;
+
 export function MachinesTable({ initialMachines, sections }: MachinesTableProps) {
   const { machines: fetchedMachines, fetchNextPage, hasNextPage, isFetchingNextPage } = useMachines();
   const displayMachines = fetchedMachines.length > 0 ? fetchedMachines : initialMachines;
@@ -39,10 +41,25 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
   const [machineToDelete, setMachineToDelete] = useState<MachineResponseDto | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Derived filtered list — pure client-side, no API calls
+  const filteredMachines = useMemo(() => {
+    const safeMachines = displayMachines || [];
+    return safeMachines.filter((machine) => {
+      const matchesSearch = machine.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase().trim());
+      const matchesStatus =
+        statusFilter === 'ALL' || machine.currentStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [displayMachines, searchQuery, statusFilter]);
 
   // Helper to map sectionId to section name
   const getSectionName = (sectionId: number) => {
@@ -102,9 +119,39 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
 
   return (
     <div className="space-y-4">
-      {/* Header section with Create Dialog aligned right */}
-      <div className="flex items-center justify-end">
-        <MachineFormDialog mode="create" sections={sections} />
+      {/* Toolbar: search + status filter + create button — matches QcTestsTable layout */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-6 w-full">
+        {/* Search input */}
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60" size={20} />
+          <input
+            id="machines-search"
+            type="text"
+            placeholder="Search by machine name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+          />
+        </div>
+
+        {/* Status filter + create button — right side */}
+        <div className="flex-shrink-0 w-full sm:w-auto flex items-center gap-3">
+          <select
+            id="machines-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-3 text-sm rounded-xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-colors cursor-pointer"
+          >
+            {MACHINE_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status === 'ALL' ? 'All Statuses' : status}
+              </option>
+            ))}
+          </select>
+
+          {/* Create button */}
+          <MachineFormDialog mode="create" sections={sections} />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border-2 border-[#c41e3a]/10 dark:border-[#e84855]/20 shadow-lg overflow-hidden">
@@ -120,39 +167,43 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!displayMachines || displayMachines.length === 0 ? (
+            {filteredMachines.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground text-sm py-4">
-                  No machines found. Click &quot;Add Machine&quot; to create one.
+                  {(displayMachines || []).length === 0
+                    ? 'No machines found. Click "Add Machine" to create one.'
+                    : 'No machines match your search or filter.'}
                 </TableCell>
               </TableRow>
             ) : (
-              displayMachines.map((machine) => (
-                <TableRow
-                  key={machine.id}
-                  className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
-                >
-                  <TableCell className="font-semibold text-sm py-4 pl-6 text-gray-900 dark:text-white">{machine.name}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospCode || '-'}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getSectionName(machine.sectionId)}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getStatusBadge(machine.currentStatus)}</TableCell>
-                  <TableCell className="text-sm py-4 text-gray-600 dark:text-gray-400 font-mono">
-                    {formatLastRun(machine.lastRunAt as unknown)}
-                  </TableCell>
-                  <TableCell className="text-sm py-4 pr-6 text-right flex items-center justify-end gap-2">
-                    <MachineFormDialog mode="edit" initialData={machine} sections={sections} />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:text-red-600"
-                      onClick={() => handleDeleteClick(machine)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredMachines.map((machine) => {
+                return (
+                  <TableRow
+                    key={machine.id}
+                    className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
+                  >
+                    <TableCell className="font-semibold text-sm py-4 pl-6 text-gray-900 dark:text-white">{machine.name}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospCode || '-'}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getSectionName(machine.sectionId)}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getStatusBadge(machine.currentStatus)}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-600 dark:text-gray-400 font-mono">
+                      {formatLastRun(machine.lastRunAt as unknown)}
+                    </TableCell>
+                    <TableCell className="text-sm py-4 pr-6 text-right flex items-center justify-end gap-2">
+                      <MachineFormDialog mode="edit" initialData={machine} sections={sections} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-red-600"
+                        onClick={() => handleDeleteClick(machine)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
             {hasNextPage && (
               <TableRow>

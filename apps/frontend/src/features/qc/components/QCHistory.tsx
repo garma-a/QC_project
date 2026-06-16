@@ -121,12 +121,11 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
       (!Number.isNaN(parsedDate.getTime()) && parsedDate.getFullYear().toString() === selectedYear);
 
     const matchesSearch =
+      !searchTerm.trim() ||
       qc.testName.toLowerCase().includes(searchLower) ||
-      qc.date.toLowerCase().includes(searchLower) ||
-      qc.performedBy.toLowerCase().includes(searchLower) ||
-      machine?.name.toLowerCase().includes(searchLower);
+      (machine?.name.toLowerCase().includes(searchLower) ?? false);
 
-    return matchesDay && matchesMonth && matchesYear && Boolean(matchesSearch);
+    return matchesDay && matchesMonth && matchesYear && matchesSearch;
   });
 
   // Group by test name for Westgard analysis
@@ -206,8 +205,16 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
     };
   });
 
+  // Deduplicate by id — prevents key collisions from infinite-scroll duplicate pages
+  const seenIds = new Set<string>();
+  const deduplicatedHistory = filteredHistory.filter((qc) => {
+    if (seenIds.has(qc.id)) return false;
+    seenIds.add(qc.id);
+    return true;
+  });
+
   // Group by date for display
-  const groupedByDate = filteredHistory.reduce((acc, qc) => {
+  const groupedByDate = deduplicatedHistory.reduce((acc, qc) => {
     const date = qc.date.split(' ')[0];
     if (!acc[date]) {
       acc[date] = [];
@@ -450,12 +457,12 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
           </div>
 
           <div className="space-y-4">
-            {tests.map((qc: QcHistoryType) => {
+            {tests.map((qc: QcHistoryType, index: number) => {
               const machine = machines.find((m: MachineType) => m.id === qc.machineId);
               const category = categories.find((c: CategoryType) => c.id === machine?.category);
 
               return (
-                <div key={qc.id} className="group/card p-5 glass border border-white/30 dark:border-white/5 rounded-2xl hover:shadow-lg hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/30 transition-all duration-300">
+                <div key={`${qc.id}-${index}`} className="group/card p-5 glass border border-white/30 dark:border-white/5 rounded-2xl hover:shadow-lg hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/30 transition-all duration-300">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-4 mb-4">
@@ -596,7 +603,7 @@ export function QCHistory({ searchTerm, selectedDay, selectedMonth, selectedYear
         </div>
       ))}
 
-      {filteredHistory.length === 0 && (
+      {deduplicatedHistory.length === 0 && (
         <div className="glass-card rounded-3xl p-12 text-center shadow-lg relative overflow-hidden animate-slide-up">
           <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent dark:from-gray-800/50" />
           <div className="relative z-10 flex flex-col items-center">

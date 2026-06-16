@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Plus, Search } from 'lucide-react';
 import { RecordQcResult } from '@/features/qc/components/RecordQcResult';
 import { QCHistory } from '@/features/qc/components/QCHistory';
@@ -58,6 +59,7 @@ export function QCHistoryInteractive({
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedDay, setSelectedDay] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
@@ -131,7 +133,7 @@ export function QCHistoryInteractive({
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#c41e3a] dark:group-focus-within:text-[#e84855] transition-colors duration-300" size={20} />
             <input
               type="text"
-              placeholder="Search by machine, test name, or date..."
+              placeholder="Search by machine or test name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="glass-input w-full pl-12 pr-4 py-3.5 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a]/50 dark:focus:ring-[#e84855]/50 focus:border-[#c41e3a] dark:focus:border-[#e84855] placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm"
@@ -182,7 +184,7 @@ export function QCHistoryInteractive({
       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
         {/* QC History */}
         <QCHistory
-          searchTerm={searchTerm}
+          searchTerm={debouncedSearchTerm}
           selectedDay={selectedDay}
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}
