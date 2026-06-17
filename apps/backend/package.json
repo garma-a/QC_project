@@ -21,7 +21,7 @@
         "test:cov": "bun test --coverage",
         "test:e2e": "bun test ./test",
         "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
-        "db:migrate": "bun x drizzle-kit migrate",
+        "db:migrate": "bunx drizzle-kit migrate",
         "db:seed": "bun --bun ts-node -r tsconfig-paths/register src/database/seed.ts"
     },
     "dependencies": {
