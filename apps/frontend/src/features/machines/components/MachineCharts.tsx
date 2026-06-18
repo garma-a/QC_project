@@ -156,23 +156,15 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
 }
 
 function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme }: any) {
-  const { data: lotData, loading } = useQcResults(lot.lotId);
+  const fetchStartDate = mode === 'archive' && startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
+  const fetchEndDate = mode === 'archive' && endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
+
+  const { data: lotData, loading } = useQcResults(lot.lotId, fetchStartDate, fetchEndDate);
 
   const qcData = useMemo(() => {
     if (!lotData || !lotData.results) return [];
 
-    let filtered = lotData.results;
-
-    if (mode === 'archive') {
-      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
-      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
-      filtered = filtered.filter((entry: any) => {
-        const t = new Date(entry.testDate).getTime();
-        return t >= start && t <= end;
-      });
-    }
-
-    return filtered
+    return lotData.results
       .slice()
       .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
       .map((entry: any) => ({
@@ -183,7 +175,7 @@ function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme 
         violatedRule: entry.violatedRule,
         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
-  }, [lotData, mode, startDate, endDate, testName]);
+  }, [lotData, testName]);
 
   const westgardAnalysis = useMemo(() => {
     const mean = lot?.mean ?? 0;

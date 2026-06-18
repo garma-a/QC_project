@@ -371,6 +371,19 @@ describe('QcResultsService', () => {
       // Act & Assert
       await expect(service.findAll(999)).rejects.toThrow(NotFoundException);
     });
+
+    it('should pass startDate and endDate to the repository when provided', async () => {
+      // Arrange
+      mockRepository.getLotById.mockResolvedValue({ id: 1, lotNumber: 'LOT-1' });
+      mockRepository.getLotTestMachineByLotId.mockResolvedValue({});
+      mockRepository.getResultsByLotId.mockResolvedValue([]);
+
+      // Act
+      await service.findAll(1, 50, 0, undefined, '2026-01-01', '2026-12-31');
+
+      // Assert
+      expect(mockRepository.getResultsByLotId).toHaveBeenCalledWith(1, 50, 0, '2026-01-01', '2026-12-31');
+    });
   });
 
   describe('findOne', () => {
