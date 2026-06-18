@@ -22,6 +22,8 @@ describe('QcResultsService', () => {
       getResultAndLotByResultId: jest.fn(),
       getRecentZScoresByLotId: jest.fn(),
       getActiveLotsByTestId: jest.fn(),
+      getLotsByIds: jest.fn(),
+      getRecentZScoresByLotIds: jest.fn(),
     };
 
     mockAlertsService = {
@@ -62,9 +64,11 @@ describe('QcResultsService', () => {
     beforeEach(() => {
       // Arrange - common setup
       mockRepository.getLotById.mockResolvedValue(lotWithStats);
+      mockRepository.getLotsByIds.mockResolvedValue([lotWithStats]);
       mockRepository.getSectionIdByLotId.mockResolvedValue(10);
       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []]]));
       mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 1, lotNumber: 'LOT-1' }]);
       mockRepository.getLotTestMachineByLotId.mockResolvedValue({ qc_tests: { machineId: 9 } });
     });
@@ -80,7 +84,9 @@ describe('QcResultsService', () => {
     });
 
     it('should throw BadRequestException when lot has invalid statistical values (e.g., zero SD)', async () => {
-      mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: 14, standardDeviation: 0, lotNumber: 'LOT-1' });
+      const invalidLot = { id: 1, testId: 100, mean: 14, standardDeviation: 0, lotNumber: 'LOT-1' };
+      mockRepository.getLotById.mockResolvedValue(invalidLot);
+      mockRepository.getLotsByIds.mockResolvedValue([invalidLot]);
       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
     });
 
@@ -141,7 +147,7 @@ describe('QcResultsService', () => {
 
     it('should create a QC run with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
       // Arrange
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [2.1]]]));
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
       // Act
@@ -157,7 +163,7 @@ describe('QcResultsService', () => {
 
     it('should create a QC run with FAIL status (3_1s) when three consecutive z-scores exceed 1 SD', async () => {
       // Arrange
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.3, 1.4]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [1.3, 1.4]]]));
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
       // Act
@@ -173,7 +179,7 @@ describe('QcResultsService', () => {
 
     it('should create a QC run with FAIL status (7_T) when 7 consecutive z-scores trend upwards', async () => {
       // Arrange
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [0.6, 0.5, 0.4, 0.3, 0.2, 0.1]]]));
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
       // Act
@@ -189,7 +195,7 @@ describe('QcResultsService', () => {
 
     it('should create a QC run with FAIL status (6_x) when 6 consecutive z-scores fall on the same side', async () => {
       // Arrange
-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.5, 0.3, 0.6, 0.2, 0.8]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [0.5, 0.3, 0.6, 0.2, 0.8]]]));
       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
 
       // Act
@@ -216,6 +222,11 @@ describe('QcResultsService', () => {
         if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
         if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
       });
+      mockRepository.getLotsByIds.mockResolvedValue([
+        { id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' },
+        { id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' }
+      ]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []], [2, []]]));
       mockRepository.createQcRun.mockResolvedValue({
         run: { id: 100, machineId: 9, performedBy: userId, runDate: new Date() },
         results: [
@@ -260,6 +271,11 @@ describe('QcResultsService', () => {
         if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
         if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
       });
+      mockRepository.getLotsByIds.mockResolvedValue([
+        { id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' },
+        { id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' }
+      ]);
+      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []], [2, []]]));
       mockRepository.createQcRun.mockResolvedValue({
         run: { id: 101, machineId: 9, performedBy: userId, runDate: new Date() },
         results: [
@@ -299,6 +315,7 @@ describe('QcResultsService', () => {
     it('should throw BadRequestException when lot is missing statistical values', async () => {
       // Arrange
       mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+      mockRepository.getLotsByIds.mockResolvedValue([{ id: 1, testId: 100, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' }]);
 
       // Act & Assert
       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
