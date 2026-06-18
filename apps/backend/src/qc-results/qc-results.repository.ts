@@ -154,7 +154,16 @@ export class QcResultsRepository {
         r.run_id as "runId",
         r.lot_id as "lotId",
         run.run_date as "testDate",
-        run.performed_by as "performedBy"
+        run.performed_by as "performedBy",
+        l.lot_number as "lotNumber",
+        l.mean as "lotMean",
+        l.standard_deviation as "lotSd",
+        l.level as "lotLevel",
+        l.lower_control_limit as "lowerControlLimit",
+        l.upper_control_limit as "upperControlLimit",
+        t.id as "testId",
+        t.test_name as "testName",
+        m.id as "machineId"
       FROM control_lots l
       CROSS JOIN LATERAL (
         SELECT id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id
@@ -164,6 +173,8 @@ export class QcResultsRepository {
         LIMIT 30
       ) r
       JOIN qc_runs run ON r.run_id = run.id
+      JOIN qc_tests t ON l.test_id = t.id
+      JOIN machines m ON t.machine_id = m.id
       ORDER BY run.run_date DESC
     `;
     const result: any = await this.databaseService.db.execute(query);
@@ -180,10 +191,10 @@ export class QcResultsRepository {
    * Scalability cap: default 100 results, hard max 500 per call.
    * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
    */
-  async getPaginatedResults(limit?: number, offset?: number) {
+  async getPaginatedResults(limit?: number, offset?: number, machineId?: number) {
     const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
-    return this.databaseService.db
+    let query = this.databaseService.db
       .select({
         // Core result fields
         id: qcResults.id,
@@ -213,6 +224,13 @@ export class QcResultsRepository {
       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .$dynamic();
+      
+    if (machineId) {
+      query = query.where(eq(machines.id, machineId));
+    }
+    
+    return query
       .orderBy(desc(qcResults.id))
       .limit(safeLimit)
       .offset(safeOffset);

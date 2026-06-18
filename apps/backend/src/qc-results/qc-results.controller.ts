@@ -122,13 +122,38 @@ export class QcResultsController {
     required: false,
     description: 'Number of results to skip (default: 0)',
   })
+  @ApiQuery({
+    name: 'machineId',
+    type: Number,
+    required: false,
+    description: 'Filter results by a specific machine ID',
+  })
   findAll(
     @Query('lotId') lotId?: string,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, limit, offset);
+    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId);
+  }
+
+  @Get('recent-all')
+  @ApiOperation({
+    summary: 'Get recent QC results for all lots',
+    description: 'Returns the 30 most recent QC results for every control lot in the system efficiently.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the recent results.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  getRecentAll() {
+    return this.qcResultsService.getRecentAll();
   }
 
   @Sse('stream')

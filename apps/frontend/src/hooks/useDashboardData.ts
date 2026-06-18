@@ -72,9 +72,9 @@ export function useDashboardData() {
        *    — Returns ONLY active lots (~56 rows) enriched with testName, testType, machineId
        *      via a server-side JOIN. No separate /qc-tests call needed.
        *      Scales to 1M+ lots because isActive filter keeps the result set tiny.
-       * 3. GET /api/v1/qc-results        — latest 100 results enriched with lot/test/machine
-       *      context via server-side JOINs. Capped at 100 rows regardless of total data size.
-       *      For 100K+ rows, only the latest 100 are returned — fast and lightweight.
+       * 3. GET /api/v1/qc-results/recent-all — 30 latest results per lot using a CROSS JOIN LATERAL.
+       *      This inherently solves the pagination starvation bug by guaranteeing every lot gets
+       *      its recent history fetched, completely irrespective of total database size.
        */
       const [fetchedMachines, activeLots, allResultsResponse] = await Promise.all([
         clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
@@ -84,7 +84,7 @@ export function useDashboardData() {
           token,
         ).catch(() => []),
         clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
-          '/api/v1/qc-results',
+          '/api/v1/qc-results/recent-all',
           { signal },
           token,
         ).catch(() => ({ results: [] })),

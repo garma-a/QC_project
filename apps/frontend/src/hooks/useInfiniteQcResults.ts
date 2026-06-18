@@ -16,7 +16,7 @@ import { MonitorResultEntry } from './useDashboardData';
  * - For 100K+ results, the infinite scroll loads 50 rows at a time — the network
  *   only ever transfers what the user has scrolled to.
  */
-export function useInfiniteQcResults() {
+export function useInfiniteQcResults(machineId?: number) {
   const token = useAuthStore((s) => s.accessToken);
 
   const {
@@ -27,12 +27,14 @@ export function useInfiniteQcResults() {
     isLoading,
     error,
   } = useInfiniteQuery({
-    queryKey: ['qc-results-infinite'],
+    queryKey: ['qc-results-infinite', machineId],
     queryFn: async ({ pageParam = 0, signal }) => {
       const limit = 50;
       const offset = pageParam as number;
+      const url = `/api/v1/qc-results?limit=${limit}&offset=${offset}${machineId ? `&machineId=${machineId}` : ''}`;
+      
       const res = await clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
-        `/api/v1/qc-results?limit=${limit}&offset=${offset}`,
+        url,
         { signal },
         token,
       );
@@ -44,7 +46,7 @@ export function useInfiniteQcResults() {
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextOffset,
-    enabled: !!token,
+    enabled: !!token && machineId !== undefined, // Only fetch when a machine is selected
   });
 
   // Map enriched results directly to MonitorResultEntry — no cross-referencing needed

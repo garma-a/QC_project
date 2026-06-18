@@ -199,7 +199,7 @@ export class QcResultsService {
     return savedRunData;
   }
 
-  async findAll(lotId?: number, limit?: number, offset?: number) {
+  async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number) {
     if (lotId) {
       const lot = await this.qcResultsRepository.getLotById(lotId);
       if (!lot) throw new NotFoundException('Control lot not found');
@@ -224,9 +224,16 @@ export class QcResultsService {
         results,
       };
     } else {
-      const results = await this.qcResultsRepository.getPaginatedResults(limit, offset);
+      const parsedLimit = limit ?? 50;
+      const parsedOffset = offset ?? 0;
+      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset, machineId);
       return { lot: null, results };
     }
+  }
+
+  async getRecentAll() {
+    const results = await this.qcResultsRepository.getRecentResultsAll();
+    return { lot: null, results };
   }
 
   async findOne(id: number) {
