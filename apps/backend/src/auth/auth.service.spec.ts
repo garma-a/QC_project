@@ -32,6 +32,10 @@ describe('AuthService', () => {
         if (key === 'JWT_REFRESH_SECRET') return 'anyrefreshsecret';
         return defaultValue;
       }),
+      getOrThrow: jest.fn().mockImplementation((key: string) => {
+        if (key === 'JWT_REFRESH_SECRET') return 'anyrefreshsecret';
+        throw new Error(`Configuration key "${key}" does not exist`);
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
