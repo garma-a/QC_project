@@ -86,8 +86,13 @@ export class QcResultsService {
     //    Level 2's z-score, making cross-material rules like R_4s clinically incorrect.
     const completeRunContext: RunResultItem[] = [];
 
+    // BATCH FETCH ALL LOTS
+    const lotIds = [...new Set(createQcResultDto.results.map((r) => r.lotId))];
+    const lotsList = await this.qcResultsRepository.getLotsByIds(lotIds);
+    for (const lot of lotsList) lotMap.set(lot.id, lot);
+
     for (const resultItem of createQcResultDto.results) {
-      const lot = await this.qcResultsRepository.getLotById(resultItem.lotId);
+      const lot = lotMap.get(resultItem.lotId);
       if (!lot) throw new NotFoundException(`Control lot ${resultItem.lotId} not found`);
 
       if (lot.standardDeviation === null || lot.mean === null) {
@@ -105,22 +110,25 @@ export class QcResultsService {
       const zScore = (resultItem.measuredValue - lot.mean) / lot.standardDeviation;
 
       // Store in maps and complete batch context
-      lotMap.set(resultItem.lotId, lot);
       currentZScoreMap.set(resultItem.lotId, zScore);
       completeRunContext.push({ lotId: resultItem.lotId, zScore });
     }
 
     // 2. SECOND PASS: Run Westgard analysis using the complete run layout.
     //    Every lot now has full omniscient visibility of all other levels' z-scores.
+    
+    // BATCH FETCH ALL PREVIOUS Z-SCORES
+    const allPriorZScoresMap = await this.qcResultsRepository.getRecentZScoresByLotIds(
+      lotIds,
+      WESTGARD_HISTORY_SIZE
+    );
+
     for (const resultItem of createQcResultDto.results) {
       const lot = lotMap.get(resultItem.lotId)!;
       const zScore = currentZScoreMap.get(resultItem.lotId)!;
 
-      // Fetch historical data for this specific lot over time
-      const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
-        resultItem.lotId,
-        WESTGARD_HISTORY_SIZE,
-      );
+      // Fetch historical data for this specific lot over time from our batch map
+      const priorZScores = allPriorZScoresMap.get(resultItem.lotId) ?? [];
 
       const zScoreWindow = [zScore, ...priorZScores];
 

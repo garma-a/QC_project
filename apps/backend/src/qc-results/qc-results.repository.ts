@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { desc, eq, and } from 'drizzle-orm';
+import { desc, eq, and, inArray } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
@@ -16,6 +16,14 @@ export class QcResultsRepository {
       .where(eq(controlLots.id, lotId))
       .limit(1);
     return lot;
+  }
+
+  async getLotsByIds(lotIds: number[]) {
+    if (lotIds.length === 0) return [];
+    return this.databaseService.db
+      .select()
+      .from(controlLots)
+      .where(inArray(controlLots.id, lotIds));
   }
 
   async getActiveLotsByTestId(testId: number) {
@@ -248,7 +256,33 @@ export class QcResultsRepository {
       .where(eq(qcResults.lotId, lotId))
       .orderBy(desc(qcResults.id))
       .limit(limit);
-    return rows.map(r => r.zScore);
+
+    return rows.map((r) => r.zScore);
+  }
+
+  async getRecentZScoresByLotIds(lotIds: number[], limitPerLot: number): Promise<Map<number, number[]>> {
+    if (lotIds.length === 0) return new Map<number, number[]>();
+    
+    const { sql } = require('drizzle-orm');
+    const idsList = sql.join(lotIds, sql`, `);
+    const query = sql`
+      WITH RankedScores AS (
+        SELECT lot_id as "lotId", z_score as "zScore",
+               ROW_NUMBER() OVER(PARTITION BY lot_id ORDER BY id DESC) as rn
+        FROM qc_results
+        WHERE lot_id IN (${idsList})
+      )
+      SELECT "lotId", "zScore" FROM RankedScores WHERE rn <= ${limitPerLot} ORDER BY "lotId", rn ASC
+    `;
+    const result: any = await this.databaseService.db.execute(query);
+    const rows = result.rows || result;
+    
+    const map = new Map<number, number[]>();
+    for (const id of lotIds) map.set(id, []);
+    for (const row of rows) {
+      map.get(row.lotId)?.push(row.zScore);
+    }
+    return map;
   }
 
 }
