@@ -158,8 +158,9 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
 function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme }: any) {
   const fetchStartDate = mode === 'archive' && startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
   const fetchEndDate = mode === 'archive' && endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
+  const fetchLimit = mode === 'live' ? 30 : undefined;
 
-  const { data: lotData, loading } = useQcResults(lot.lotId, fetchStartDate, fetchEndDate);
+  const { data: lotData, loading } = useQcResults(lot.lotId, fetchStartDate, fetchEndDate, fetchLimit);
 
   const qcData = useMemo(() => {
     if (!lotData || !lotData.results) return [];

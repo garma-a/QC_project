@@ -12,7 +12,7 @@ interface UseQcResultsReturn {
   refetch: () => void;
 }
 
-export function useQcResults(lotId: number | null, startDate?: string, endDate?: string): UseQcResultsReturn {
+export function useQcResults(lotId: number | null, startDate?: string, endDate?: string, limit?: number): UseQcResultsReturn {
   const token = useAuthStore((s) => s.accessToken);
 
   const {
@@ -22,11 +22,12 @@ export function useQcResults(lotId: number | null, startDate?: string, endDate?:
     error: rawError,
     refetch,
   } = useQuery({
-    queryKey: ['qc-results', lotId, startDate, endDate],
+    queryKey: ['qc-results', lotId, startDate, endDate, limit],
     queryFn: ({ signal }) => {
       let url = `/api/v1/qc-results?lotId=${lotId}`;
       if (startDate) url += `&startDate=${startDate}`;
       if (endDate) url += `&endDate=${endDate}`;
+      if (limit) url += `&limit=${limit}`;
       
       return clientFetch<QcResultsWithLotResponseDto>(
         url,
