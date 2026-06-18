@@ -123,13 +123,14 @@ export class UsersService {
     const { sectionIds: nextSectionIds, ...updatableUserFields } =
       adminUpdateUserDto;
 
-    let updatedUser = existingUser;
+    let updatedUser = { ...existingUser };
 
     if (Object.keys(updatableUserFields).length > 0) {
-      updatedUser = await this.usersRepository.update(
+      const dbUpdate = await this.usersRepository.update(
         id,
         updatableUserFields,
-      ) as any;
+      );
+      updatedUser = { ...updatedUser, ...dbUpdate };
     }
 
     let finalSectionIds = existingUser.sectionIds;

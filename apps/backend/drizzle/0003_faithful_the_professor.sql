@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "idx_control_lots_unique_active" ON "control_lots" USING btree ("test_id","level") WHERE "control_lots"."is_active" = true;--> statement-breakpoint
+CREATE INDEX "idx_users_to_sections_section_id" ON "users_to_sections" USING btree ("section_id");

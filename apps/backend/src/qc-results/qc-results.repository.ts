@@ -117,7 +117,7 @@ export class QcResultsRepository {
   }
 
   async getResultsByLotId(lotId: number, limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
     const safeOffset = Math.max(0, offset ?? 0);
     const results = await this.databaseService.db
       .select({
@@ -135,7 +135,7 @@ export class QcResultsRepository {
       .from(qcResults)
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
       .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcRuns.runDate))
+      .orderBy(desc(qcResults.id))
       .limit(safeLimit)
       .offset(safeOffset);
 
@@ -192,7 +192,7 @@ export class QcResultsRepository {
    * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
    */
   async getPaginatedResults(limit?: number, offset?: number, machineId?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
       .select({

@@ -16,7 +16,7 @@ export class MachinesRepository {
   }
 
   async findAll(limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 10000));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
     const safeOffset = Math.max(0, offset ?? 0);
     
     let query = this.databaseService.db
@@ -41,10 +41,7 @@ export class MachinesRepository {
   async update(id: number, data: Partial<typeof machines.$inferInsert>) {
     const [updatedMachine] = await this.databaseService.db
       .update(machines)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set(data)
       .where(eq(machines.id, id))
       .returning();
     return updatedMachine;
@@ -53,7 +50,7 @@ export class MachinesRepository {
   async delete(id: number) {
     const [deletedMachine] = await this.databaseService.db
       .update(machines)
-      .set({ isActive: false, updatedAt: new Date() })
+      .set({ isActive: false })
       .where(eq(machines.id, id))
       .returning();
     return deletedMachine;

@@ -34,8 +34,8 @@ export class AuthService {
     
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET', 'anyrefreshsecret'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace(/['"]/g, '') as any,
+      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d') as any,
     });
 
     return { accessToken, refreshToken };
@@ -44,7 +44,7 @@ export class AuthService {
   async refreshTokens(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET', 'anyrefreshsecret'),
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
 
       const user = await this.authRepository.findById(payload.userId);
@@ -55,8 +55,8 @@ export class AuthService {
       const newPayload = { userId: user.id, role: user.role };
       const newAccessToken = this.jwtService.sign(newPayload);
       const newRefreshToken = this.jwtService.sign(newPayload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET', 'anyrefreshsecret'),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d').replace(/['"]/g, '') as any,
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d') as any,
       });
 
       return { accessToken: newAccessToken, refreshToken: newRefreshToken };

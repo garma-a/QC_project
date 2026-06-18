@@ -22,6 +22,13 @@
       "when": 1780683287421,
       "tag": "0002_needy_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781772507937,
+      "tag": "0003_faithful_the_professor",
+      "breakpoints": true
     }
   ]
 }

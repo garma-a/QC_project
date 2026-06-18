@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, eq } from 'drizzle-orm';
 import {
   primaryKey,
   pgEnum,
@@ -11,6 +11,7 @@ import {
   boolean,
   doublePrecision,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
@@ -112,6 +113,7 @@ export const controlLots = pgTable('control_lots', {
   // Composite covers: WHERE test_id = ? AND is_active = true
   // Used by: getActiveLotsByTestId, createWithDeactivation (UPDATE filter)
   testIdIsActiveIdx: index('idx_control_lots_test_id_is_active').on(t.testId, t.isActive),
+  uniqueActiveLevelIdx: uniqueIndex('idx_control_lots_unique_active').on(t.testId, t.level).where(eq(t.isActive, true)),
 }));
 
 export const qcRuns = pgTable('qc_runs', {
@@ -200,6 +202,7 @@ export const usersToSections = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.sectionId] }),
+    sectionIdIdx: index('idx_users_to_sections_section_id').on(t.sectionId),
   }),
 );
 

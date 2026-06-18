@@ -25,7 +25,7 @@
         "db:seed": "bun --bun ts-node -r tsconfig-paths/register src/database/seed.ts"
     },
     "dependencies": {
-        "@neondatabase/serverless": "^1.0.2",
+
         "@nestjs/cache-manager": "^3.1.2",
         "@nestjs/common": "^11.1.14",
         "@nestjs/config": "^4.0.3",

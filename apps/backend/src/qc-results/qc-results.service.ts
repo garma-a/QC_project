@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
@@ -27,6 +28,7 @@ interface EvaluatedResultItem {
 
 @Injectable()
 export class QcResultsService {
+  private readonly logger = new Logger(QcResultsService.name);
   public readonly qcResultEvents$ = new Subject<any>();
 
   constructor(
@@ -195,7 +197,7 @@ export class QcResultsService {
         }
       }
     } catch (error) {
-      console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
+      this.logger.error('Non-fatal error: Failed to generate alerts for QC Run', error);
     }
 
     if (savedRunData?.results) {
