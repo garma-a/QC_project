@@ -71,6 +71,7 @@ export const machines = pgTable('machines', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   specialization: specializationEnum('specialization'),
+  isActive: boolean('is_active').default(true),
 }, (t) => ({
   sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
 }));

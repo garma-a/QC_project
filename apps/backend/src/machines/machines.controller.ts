@@ -16,6 +16,8 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
+import { Roles } from '@/auth/decorators/roles.decorator';
+import { Role } from '@/auth/auth.types';
 import { MachinesService } from '@/machines/machines.service';
 import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
 import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
@@ -55,6 +57,7 @@ export class MachinesController {
     description: 'A machine with these details already exists.',
     type: ConflictResponseDto,
   })
+  @Roles(Role.ADMIN)
   create(@Body() createMachineDto: CreateMachineDto) {
     return this.machinesService.create(createMachineDto);
   }
@@ -158,6 +161,7 @@ export class MachinesController {
     description: 'A machine with these details already exists.',
     type: ConflictResponseDto,
   })
+  @Roles(Role.ADMIN)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMachineDto: UpdateMachineDto,
@@ -188,6 +192,7 @@ export class MachinesController {
     description: 'Machine not found.',
     type: NotFoundResponseDto,
   })
+  @Roles(Role.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.machinesService.remove(id);
   }

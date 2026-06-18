@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { machines } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 @Injectable()
 export class MachinesRepository {
@@ -22,6 +22,7 @@ export class MachinesRepository {
     let query = this.databaseService.db
       .select()
       .from(machines)
+      .where(eq(machines.isActive, true))
       .orderBy(desc(machines.id))
       .limit(safeLimit)
       .offset(safeOffset);
@@ -33,7 +34,7 @@ export class MachinesRepository {
     const [machine] = await this.databaseService.db
       .select()
       .from(machines)
-      .where(eq(machines.id, id));
+      .where(and(eq(machines.id, id), eq(machines.isActive, true)));
     return machine;
   }
 
@@ -51,7 +52,8 @@ export class MachinesRepository {
 
   async delete(id: number) {
     const [deletedMachine] = await this.databaseService.db
-      .delete(machines)
+      .update(machines)
+      .set({ isActive: false, updatedAt: new Date() })
       .where(eq(machines.id, id))
       .returning();
     return deletedMachine;

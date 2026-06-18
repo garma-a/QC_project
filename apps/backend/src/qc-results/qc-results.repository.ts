@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { desc, eq, and, inArray } from 'drizzle-orm';
+import { desc, eq, and, inArray, sql } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
@@ -143,7 +143,6 @@ export class QcResultsRepository {
   }
 
   async getRecentResultsAll() {
-    const { sql } = require('drizzle-orm');
     const query = sql`
       SELECT
         r.id as id,
@@ -263,7 +262,6 @@ export class QcResultsRepository {
   async getRecentZScoresByLotIds(lotIds: number[], limitPerLot: number): Promise<Map<number, number[]>> {
     if (lotIds.length === 0) return new Map<number, number[]>();
     
-    const { sql } = require('drizzle-orm');
     const idsList = sql.join(lotIds, sql`, `);
     const query = sql`
       WITH RankedScores AS (
