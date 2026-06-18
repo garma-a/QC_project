@@ -55,22 +55,19 @@ export class QcResultsRepository {
       comments?: string;
     }[],
   ) {
-    // Note: neon-http does not support interactive transactions.
-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
+    return this.databaseService.db.transaction(async (tx) => {
+      // 1. Insert the Run
+      const [run] = await tx
+        .insert(qcRuns)
+        .values({
+          machineId,
+          testId,
+          performedBy: userId,
+        })
+        .returning();
 
-    // 1. Insert the Run
-    const [run] = await this.databaseService.db
-      .insert(qcRuns)
-      .values({
-        machineId,
-        testId,
-        performedBy: userId,
-      })
-      .returning();
-
-    try {
       // 2. Insert all results tied to this Run
-      const insertedResults = await this.databaseService.db
+      const insertedResults = await tx
         .insert(qcResults)
         .values(
           results.map((r) => ({
@@ -86,11 +83,7 @@ export class QcResultsRepository {
         .returning();
 
       return { run, results: insertedResults };
-    } catch (error) {
-      // Manual compensation: delete the orphaned run if results fail to insert
-      await this.databaseService.db.delete(qcRuns).where(eq(qcRuns.id, run.id));
-      throw error;
-    }
+    });
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {

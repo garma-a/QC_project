@@ -38,28 +38,27 @@ export class ControlLotsRepository {
   }
 
   async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
-    // Note: neon-http does not support interactive transactions.
-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
-    
-    // 1. Deactivate existing active lots for this test
-    await this.databaseService.db
-      .update(controlLots)
-      .set({ isActive: false })
-      .where(
-        and(
-          eq(controlLots.testId, testId),
-          eq(controlLots.isActive, true),
-          eq(controlLots.level, data.level ?? 1)
-        )
-      );
+    return this.databaseService.db.transaction(async (tx) => {
+      // 1. Deactivate existing active lots for this test
+      await tx
+        .update(controlLots)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(controlLots.testId, testId),
+            eq(controlLots.isActive, true),
+            eq(controlLots.level, data.level ?? 1)
+          )
+        );
 
-    // 2. Create the new lot
-    const [newLot] = await this.databaseService.db
-      .insert(controlLots)
-      .values(data)
-      .returning();
+      // 2. Create the new lot
+      const [newLot] = await tx
+        .insert(controlLots)
+        .values(data)
+        .returning();
 
-    return newLot;
+      return newLot;
+    });
   }
 
   async findAll(limit?: number, offset?: number) {
