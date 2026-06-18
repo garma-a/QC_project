@@ -1,6 +1,7 @@
-import { Controller, Sse, MessageEvent, UseGuards } from '@nestjs/common';
-import { Observable, merge, interval } from 'rxjs';
-import { map, filter } from 'rxjs/operators';
+import { Controller, Sse, MessageEvent, UseGuards, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { Observable, merge, interval, fromEvent } from 'rxjs';
+import { map, filter, takeUntil } from 'rxjs/operators';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/users/user.decorator';
@@ -30,7 +31,7 @@ export class EventsController {
       'Single SSE endpoint that multiplexes all entity events (machines, control-lots, qc-tests, qc-results, alerts). ' +
       'Includes a 30-second heartbeat to keep the connection alive through proxies.',
   })
-  stream(@CurrentUser('userId') userId: number): Observable<MessageEvent> {
+  stream(@CurrentUser('userId') userId: number, @Req() req: Request): Observable<MessageEvent> {
     const heartbeat$ = interval(30_000).pipe(
       map(() => ({ data: { type: 'heartbeat' } }) as MessageEvent),
     );
@@ -59,6 +60,8 @@ export class EventsController {
       map((event) => ({ data: { entity: 'alerts', ...event } }) as MessageEvent),
     );
 
-    return merge(heartbeat$, machines$, lots$, tests$, results$, alerts$);
+    return merge(heartbeat$, machines$, lots$, tests$, results$, alerts$).pipe(
+      takeUntil(fromEvent(req, 'close')),
+    );
   }
 }

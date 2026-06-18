@@ -9,9 +9,11 @@ import {
   Query,
   Sse,
   MessageEvent,
+  Req,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map, filter } from 'rxjs/operators';
+import type { Request } from 'express';
+import { Observable, fromEvent } from 'rxjs';
+import { map, filter, takeUntil } from 'rxjs/operators';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -157,8 +159,9 @@ export class AlertsController {
     summary: 'Stream of alert events for the current user',
     description: 'Server-Sent Events endpoint that streams alerts specific to the authenticated user.',
   })
-  stream(@CurrentUser('userId') userId: number): Observable<MessageEvent> {
+  stream(@CurrentUser('userId') userId: number, @Req() req: Request): Observable<MessageEvent> {
     return this.alertsService.alertEvents$.pipe(
+      takeUntil(fromEvent(req, 'close')),
       filter(event => {
         if (event.userIds) {
           return event.userIds.includes(userId);

@@ -11,9 +11,11 @@ import {
   Query,
   Sse,
   MessageEvent,
+  Req,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import type { Request } from 'express';
+import { Observable, fromEvent } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { ControlLotsService } from './control-lots.service';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
@@ -138,8 +140,9 @@ export class ControlLotsController {
     summary: 'Stream of control lot events',
     description: 'Server-Sent Events endpoint that streams real-time updates for control lots.',
   })
-  stream(): Observable<MessageEvent> {
+  stream(@Req() req: Request): Observable<MessageEvent> {
     return this.controlLotsService.lotEvents$.pipe(
+      takeUntil(fromEvent(req, 'close')),
       map((event) => ({ data: event } as MessageEvent)),
     );
   }

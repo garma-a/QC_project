@@ -11,9 +11,11 @@ import {
   Query,
   Sse,
   MessageEvent,
+  Req,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import type { Request } from 'express';
+import { Observable, fromEvent } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
@@ -97,8 +99,9 @@ export class MachinesController {
     summary: 'Stream of machine events',
     description: 'Server-Sent Events endpoint that streams real-time updates for machines.',
   })
-  stream(): Observable<MessageEvent> {
+  stream(@Req() req: Request): Observable<MessageEvent> {
     return this.machinesService.machineEvents$.pipe(
+      takeUntil(fromEvent(req, 'close')),
       map((event) => ({ data: event } as MessageEvent)),
     );
   }
