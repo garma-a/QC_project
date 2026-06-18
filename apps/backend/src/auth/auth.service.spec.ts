@@ -58,6 +58,7 @@ describe('AuthService', () => {
     };
 
     it('should return access token when credentials are valid', async () => {
+      // Arrange
       const user = {
         id: 1,
         email: 'technician@lab.com',
@@ -69,14 +70,18 @@ describe('AuthService', () => {
       mockWorkerService.verifyPassword.mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('jwt.token.here');
 
+      // Act
       const result = await service.login(validCredentials);
 
+      // Assert
       expect(result).toEqual({ accessToken: 'jwt.token.here', refreshToken: 'jwt.token.here' });
     });
 
     it('should reject login when user does not exist', async () => {
+      // Arrange
       mockAuthRepository.findByEmail.mockResolvedValue(undefined);
 
+      // Act & Assert
       await expect(service.login(validCredentials)).rejects.toThrow(
         UnauthorizedException,
       );
@@ -86,6 +91,7 @@ describe('AuthService', () => {
     });
 
     it('should reject login when password is incorrect', async () => {
+      // Arrange
       const user = {
         id: 1,
         email: 'technician@lab.com',
@@ -96,6 +102,7 @@ describe('AuthService', () => {
       mockAuthRepository.findByEmail.mockResolvedValue(user);
       mockWorkerService.verifyPassword.mockResolvedValue(false);
 
+      // Act & Assert
       await expect(service.login(validCredentials)).rejects.toThrow(
         UnauthorizedException,
       );
@@ -105,6 +112,7 @@ describe('AuthService', () => {
     });
 
     it('should reject login when account is deactivated', async () => {
+      // Arrange
       const deactivatedUser = {
         id: 1,
         email: 'technician@lab.com',
@@ -115,6 +123,7 @@ describe('AuthService', () => {
       mockAuthRepository.findByEmail.mockResolvedValue(deactivatedUser);
       mockWorkerService.verifyPassword.mockResolvedValue(true);
 
+      // Act & Assert
       await expect(service.login(validCredentials)).rejects.toThrow(
         UnauthorizedException,
       );
