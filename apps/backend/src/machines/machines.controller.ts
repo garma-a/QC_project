@@ -94,17 +94,7 @@ export class MachinesController {
     return this.machinesService.findAll(limit, offset);
   }
 
-  @Sse('stream')
-  @ApiOperation({
-    summary: 'Stream of machine events',
-    description: 'Server-Sent Events endpoint that streams real-time updates for machines.',
-  })
-  stream(@Req() req: Request): Observable<MessageEvent> {
-    return this.machinesService.machineEvents$.pipe(
-      takeUntil(fromEvent(req, 'close')),
-      map((event) => ({ data: event } as MessageEvent)),
-    );
-  }
+
 
   @Get(':id')
   @ApiOperation({

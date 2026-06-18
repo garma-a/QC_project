@@ -154,21 +154,5 @@ export class AlertsController {
     );
   }
 
-  @Sse('stream')
-  @ApiOperation({
-    summary: 'Stream of alert events for the current user',
-    description: 'Server-Sent Events endpoint that streams alerts specific to the authenticated user.',
-  })
-  stream(@CurrentUser('userId') userId: number, @Req() req: Request): Observable<MessageEvent> {
-    return this.alertsService.alertEvents$.pipe(
-      takeUntil(fromEvent(req, 'close')),
-      filter(event => {
-        if (event.userIds) {
-          return event.userIds.includes(userId);
-        }
-        return event.userId === userId;
-      }),
-      map((event) => ({ data: event } as MessageEvent)),
-    );
-  }
+
 }

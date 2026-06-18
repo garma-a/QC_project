@@ -135,17 +135,7 @@ export class ControlLotsController {
     return this.controlLotsService.findAll(limit, offset);
   }
 
-  @Sse('stream')
-  @ApiOperation({
-    summary: 'Stream of control lot events',
-    description: 'Server-Sent Events endpoint that streams real-time updates for control lots.',
-  })
-  stream(@Req() req: Request): Observable<MessageEvent> {
-    return this.controlLotsService.lotEvents$.pipe(
-      takeUntil(fromEvent(req, 'close')),
-      map((event) => ({ data: event } as MessageEvent)),
-    );
-  }
+
 
   @Get(':id')
   @ApiOperation({

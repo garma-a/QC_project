@@ -172,17 +172,7 @@ export class QcResultsController {
     return this.qcResultsService.getRecentAll();
   }
 
-  @Sse('stream')
-  @ApiOperation({
-    summary: 'Stream of QC result events',
-    description: 'Server-Sent Events endpoint that streams real-time updates for QC results.',
-  })
-  stream(@Req() req: Request): Observable<MessageEvent> {
-    return this.qcResultsService.qcResultEvents$.pipe(
-      takeUntil(fromEvent(req, 'close')),
-      map((event) => ({ data: event } as MessageEvent)),
-    );
-  }
+
 
   @Get(':id')
   @ApiOperation({

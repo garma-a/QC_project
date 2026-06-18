@@ -165,17 +165,7 @@ export class QcTestsController {
     return this.qcTestsService.getAll(limit, offset);
   }
 
-  @Sse('stream')
-  @ApiOperation({
-    summary: 'Stream of QC test events',
-    description: 'Server-Sent Events endpoint that streams real-time updates for QC tests.',
-  })
-  stream(@Req() req: Request): Observable<MessageEvent> {
-    return this.qcTestsService.testEvents$.pipe(
-      takeUntil(fromEvent(req, 'close')),
-      map((event) => ({ data: event } as MessageEvent)),
-    );
-  }
+
 
   @Patch(':id')
   @Roles(Role.ADMIN)
