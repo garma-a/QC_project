@@ -130,14 +130,28 @@ export class QcResultsController {
     required: false,
     description: 'Filter results by a specific machine ID',
   })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    required: false,
+    description: 'Filter results from this date (ISO string)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    required: false,
+    description: 'Filter results up to this date (ISO string)',
+  })
   findAll(
     @Query('lotId') lotId?: string,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
     @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId);
+    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId, startDate, endDate);
   }
 
   @Get('recent-all')

@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { desc, eq, and, inArray, sql } from 'drizzle-orm';
+import { desc, eq, and, inArray, sql, gte, lte } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
@@ -116,10 +116,19 @@ export class QcResultsRepository {
     return lot;
   }
 
-  async getResultsByLotId(lotId: number, limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+  async getResultsByLotId(lotId: number, limit?: number, offset?: number, startDate?: string, endDate?: string) {
+    let safeLimit = limit ?? 100;
+    
+    // Safety constraint: If historical date range is requested, max out at 500 points to prevent crashes.
+    if (startDate && endDate) {
+      safeLimit = Math.max(1, Math.min(limit ?? 500, 500));
+    } else {
+      safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+    }
+
     const safeOffset = Math.max(0, offset ?? 0);
-    const results = await this.databaseService.db
+
+    const baseQuery = this.databaseService.db
       .select({
         id: qcResults.id,
         measuredValue: qcResults.measuredValue,
@@ -134,7 +143,19 @@ export class QcResultsRepository {
       })
       .from(qcResults)
       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
-      .where(eq(qcResults.lotId, lotId))
+      .$dynamic();
+
+    const filters = [eq(qcResults.lotId, lotId)];
+    
+    if (startDate) {
+      filters.push(gte(qcRuns.runDate, new Date(startDate)));
+    }
+    if (endDate) {
+      filters.push(lte(qcRuns.runDate, new Date(endDate)));
+    }
+
+    const results = await baseQuery
+      .where(and(...filters))
       .orderBy(desc(qcResults.id))
       .limit(safeLimit)
       .offset(safeOffset);

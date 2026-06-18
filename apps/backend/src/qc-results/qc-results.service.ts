@@ -209,14 +209,14 @@ export class QcResultsService {
     return savedRunData;
   }
 
-  async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number) {
+  async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
     if (lotId) {
       const lot = await this.qcResultsRepository.getLotById(lotId);
       if (!lot) throw new NotFoundException('Control lot not found');
 
       const lotContext =
         await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset);
+      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset, startDate, endDate);
 
       return {
         lot: {
