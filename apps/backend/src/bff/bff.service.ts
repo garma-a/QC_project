@@ -121,7 +121,7 @@ export class BffService {
 
     const activeLots = Array.isArray(activeLotsResponse) 
       ? activeLotsResponse 
-      : (activeLotsResponse as any).data || [];
+      : (activeLotsResponse && (activeLotsResponse as any).data) || [];
 
     let categories: DashboardCategoryDto[] = [];
     
