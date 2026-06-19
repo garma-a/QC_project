@@ -2,11 +2,11 @@
 
 import { Suspense, useState } from 'react';
 import { QCHistoryInteractive } from '@/features/qc/components/QCHistoryInteractive';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useQcPageMachines } from '@/hooks/useQcPageMachines';
 import { useInfiniteQcResults } from '@/hooks/useInfiniteQcResults';
 
 export default function QCPage() {
-  const { data: dashboardData, isLoading: isDashboardLoading, error: dashboardError } = useDashboardData();
+  const { data: pageData, isLoading: isPageLoading, error: pageError } = useQcPageMachines();
   const [selectedMachineId, setSelectedMachineId] = useState<string | undefined>(undefined);
   
   const { 
@@ -18,14 +18,14 @@ export default function QCPage() {
     isFetchingNextPage
   } = useInfiniteQcResults(selectedMachineId ? parseInt(selectedMachineId) : undefined);
 
-  if (dashboardError || qcError) {
+  if (pageError || qcError) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] p-4 text-center animate-in">
         <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-6">
           <div className="text-[#c41e3a] dark:text-[#e84855] text-4xl">⚠️</div>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Failed to load QC history</h2>
-        <p className="text-gray-600 dark:text-gray-400 max-w-md">{dashboardError || qcError}</p>
+        <p className="text-gray-600 dark:text-gray-400 max-w-md">{pageError || qcError}</p>
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function QCPage() {
     </div>
   );
 
-  if (isDashboardLoading || isQcLoading || !dashboardData) {
+  if (isPageLoading || isQcLoading || !pageData) {
     return (
       <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <LoadingSkeleton />
@@ -58,39 +58,13 @@ export default function QCPage() {
     );
   }
 
-  const machinesForQc = dashboardData.machines.map(m => ({
-    id: m.id.toString(),
-    name: m.name,
-    category: m.sectionId.toString(),
-    model: m.hospCode ?? '',
-    tests: m.tests ?? [],
-  }));
-
-  const qcHistoryForInteractive = qcHistory.map(entry => ({
-    id: entry.id.toString(),
-    machineId: entry.machineId.toString(),
-    testName: entry.testName,
-    date: entry.date,
-    rawDate: entry.testDate,
-    performedBy: 'User ' + entry.performedBy, // Pending backend performedBy resolution
-    numericResult: entry.measuredValue,
-    result: entry.measuredValue.toString(),
-    expectedRange: entry.expectedRange,
-    status: entry.status,
-    notes: entry.comments,
-    zScore: entry.zScore,
-    violatedRule: entry.violatedRule,
-    lotMean: entry.lotMean,
-    lotSd: entry.lotSd,
-  }));
-
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full animate-in">
       <Suspense fallback={<LoadingSkeleton />}>
         <QCHistoryInteractive
-          machines={machinesForQc}
-          categories={dashboardData.categories}
-          qcHistory={qcHistoryForInteractive}
+          machines={pageData.machines}
+          categories={pageData.categories}
+          qcHistory={qcHistory}
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
