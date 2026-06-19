@@ -1,5 +1,5 @@
 import { DatabaseService } from '@/database/database.service';
-import { users } from '@/drizzle/schema';
+import { users, refreshTokens } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
@@ -21,5 +21,33 @@ export class AuthRepository {
       .from(users)
       .where(eq(users.id, id));
     return user;
+  }
+
+  async saveRefreshToken(userId: number, jti: string, expiresAt: Date) {
+    await this.databaseService.db.insert(refreshTokens).values({
+      userId,
+      jti,
+      expiresAt,
+    });
+  }
+
+  async findRefreshToken(jti: string) {
+    const [token] = await this.databaseService.db
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.jti, jti));
+    return token;
+  }
+
+  async deleteRefreshToken(jti: string) {
+    await this.databaseService.db
+      .delete(refreshTokens)
+      .where(eq(refreshTokens.jti, jti));
+  }
+
+  async deleteAllRefreshTokens(userId: number) {
+    await this.databaseService.db
+      .delete(refreshTokens)
+      .where(eq(refreshTokens.userId, userId));
   }
 }

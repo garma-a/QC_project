@@ -125,6 +125,16 @@ export async function loginAccount(formData: FormData) {
 
 export async function logoutAccount() {
   const cookieStore = await cookies();
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+
+  if (refreshToken) {
+    try {
+      await api.post('/api/v1/auth/logout', { refreshToken });
+    } catch (e) {
+      // Ignore API errors, we still want to clear the local session
+    }
+  }
+
   cookieStore.delete('auth_token');
   cookieStore.delete('refresh_token');
   cookieStore.delete('user_info');

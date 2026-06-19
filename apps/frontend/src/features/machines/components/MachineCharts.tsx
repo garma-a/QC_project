@@ -155,14 +155,33 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
   );
 }
 
-function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme }: any) {
+function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme, qcHistory }: any) {
   const fetchStartDate = mode === 'archive' && startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
   const fetchEndDate = mode === 'archive' && endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
-  const fetchLimit = mode === 'live' ? 30 : undefined;
-
-  const { data: lotData, loading } = useQcResults(lot.lotId, fetchStartDate, fetchEndDate, fetchLimit);
+  
+  // Only use the hook for archive fetches. For live mode, we rely on the pre-fetched global qcHistory.
+  const { data: lotData, loading } = useQcResults(
+    mode === 'archive' ? lot.lotId : null, 
+    fetchStartDate, 
+    fetchEndDate
+  );
 
   const qcData = useMemo(() => {
+    if (mode === 'live') {
+      return qcHistory
+        .filter((entry: any) => entry.lotId === lot.lotId)
+        .slice()
+        .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
+        .map((entry: any) => ({
+          date: new Date(entry.testDate).toLocaleString(),
+          value: entry.measuredValue,
+          testName: testName,
+          zScore: entry.zScore,
+          violatedRule: entry.violatedRule,
+          status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
+        }));
+    }
+
     if (!lotData || !lotData.results) return [];
 
     return lotData.results
@@ -176,7 +195,7 @@ function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme 
         violatedRule: entry.violatedRule,
         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
-  }, [lotData, testName]);
+  }, [mode, qcHistory, lot.lotId, lotData, testName]);
 
   const westgardAnalysis = useMemo(() => {
     const mean = lot?.mean ?? 0;
@@ -236,7 +255,7 @@ function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme 
     fill: getPointColor(point.status, isDark),
   }));
 
-  if (loading) {
+  if (mode === 'archive' && loading) {
     return (
       <div className="p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
         <Loader2 className="w-8 h-8 animate-spin text-[#c41e3a] dark:text-[#e84855] mb-2" />
@@ -588,6 +607,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
             machineName={machine?.name}
             testName={activeTest?.testName}
             theme={theme}
+            qcHistory={qcHistory}
           />
         ))
       ) : (
