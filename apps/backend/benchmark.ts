@@ -75,6 +75,7 @@ async function runBenchmark(moduleName: string, config: BenchmarkConfig, authHea
       body: bodyStr,
       connections: CONNECTIONS,
       duration: DURATION,
+      idReplacement: true,
     }, (err, result) => {
       if (err) {
         console.error(`\x1b[31m[ERROR] Failed benchmark ${config.title}:\x1b[0m`, err);
@@ -87,7 +88,7 @@ async function runBenchmark(moduleName: string, config: BenchmarkConfig, authHea
         console.log(`Requests/sec:   \x1b[32m${result.requests.average}\x1b[0m`);
         console.log(`Latency (p99):  ${result.latency.p99} ms`);
         console.log(`Total Requests: ${result.requests.total}`);
-        console.log(`Errors:         ${result.errors > 0 ? `\x1b[31m${result.errors}\x1b[0m` : '0'} (Validation/Conflict errors expected on static POSTs)`);
+        console.log(`Errors:         ${result.errors > 0 ? `\x1b[31m${result.errors}\x1b[0m` : '0'} (Should be 0 for valid dynamic requests)`);
         console.log(`Timeouts:       ${result.timeouts > 0 ? `\x1b[31m${result.timeouts}\x1b[0m` : '0'}`);
 
         allResults.push({
@@ -184,7 +185,7 @@ async function main() {
     body: { 
       firstName: 'Benchmark', 
       lastName: 'User', 
-      email: 'bench@lab.local', 
+      email: 'bench_[%ID%]@lab.local', 
       password: 'Password123!', 
       role: 'TECHNICIAN' 
     }
@@ -245,7 +246,7 @@ async function main() {
     title: 'Create New Machine',
     method: 'POST',
     url: `${BASE_URL}/machines`,
-    body: { name: 'Benchmark Auto-Analyzer', sectionId: 1, currentStatus: 'IDLE' }
+    body: { name: 'Benchmark Auto-Analyzer [%ID%]', sectionId: 1, currentStatus: 'IDLE' }
   }, authHeaders);
 
   await runBenchmark(moduleMachines, {
@@ -283,7 +284,7 @@ async function main() {
     title: 'Create QC Test Parameter',
     method: 'POST',
     url: `${BASE_URL}/qc-tests`,
-    body: { testName: 'Glucose Fasting Bench', machineId: 1 }
+    body: { testName: 'Glucose Fasting Bench [%ID%]', machineId: 1 }
   }, authHeaders);
 
   await runBenchmark(moduleQcTests, {
@@ -317,7 +318,7 @@ async function main() {
     url: `${BASE_URL}/control-lots`,
     body: { 
       testId: 1, 
-      lotNumber: 'BNCH-LOT-001', 
+      lotNumber: 'BNCH-LOT-[%ID%]', 
       expirationDate: '2030-01-01T00:00:00Z',
       targetValue: 100, 
       mean: 100, 
@@ -464,8 +465,8 @@ async function main() {
       // Specific check for timeouts
       if (res.timeouts > 0) statusStr = '\x1b[31mTIMEOUTS\x1b[0m  ';
 
-      // NOTE: We ignore `res.errors` in the status color check because 400/409 validation 
-      // responses are EXPECTED during POST/PATCH benchmarking loops.
+      // If there are many errors, mark the status as failing
+      if (res.errors > (res.totalRequests * 0.5)) statusStr = '\x1b[31mFAILING\x1b[0m   ';
 
       console.log(`\x1b[36m| \x1b[0m${endpointName} | \x1b[33m${methodStr}\x1b[0m | \x1b[32m${reqSecStr}\x1b[0m | ${latencyStr} | ${statusStr} \x1b[36m|\x1b[0m`);
     }

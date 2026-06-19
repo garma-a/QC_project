@@ -37,14 +37,18 @@ export class EventsController {
     return from(
       Promise.all([
         this.usersRepository.findById(userId),
-        this.usersRepository.getUserSections(userId),
+        this.usersRepository.getSectionIdsForUser(userId),
       ])
     ).pipe(
       mergeMap(([user, userSections]) => {
         const isAdmin = user?.role === 'ADMIN';
-        const sectionIds = new Set(userSections.map(s => s.sectionId));
+        const sectionIds = new Set(userSections);
 
-        const hasAccess = (sectionId?: number) => isAdmin || (sectionId && sectionIds.has(sectionId));
+        const hasAccess = (sectionId?: number): boolean => {
+          if (isAdmin) return true;
+          if (!sectionId) return false;
+          return sectionIds.has(sectionId);
+        };
 
         const heartbeat$ = interval(30_000).pipe(
           map(() => ({ data: { type: 'heartbeat' } }) as MessageEvent),
