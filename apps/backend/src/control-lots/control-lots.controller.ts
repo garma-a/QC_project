@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  ParseBoolPipe,
   UseGuards,
   Query,
   Sse,
@@ -125,11 +126,11 @@ export class ControlLotsController {
   findAll(
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
-    @Query('isActive') isActiveStr?: string,
+    @Query('isActive', new ParseBoolPipe({ optional: true })) isActive?: boolean,
   ) {
     // When isActive=true is requested, return enriched active lots \u2014 no pagination
     // This is the scalable path used by the dashboard frontend
-    if (isActiveStr === 'true') {
+    if (isActive) {
       return this.controlLotsService.findActiveWithTestContext();
     }
     return this.controlLotsService.findAll(limit, offset);

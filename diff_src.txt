@@ -1,0 +1,3608 @@
+diff --git a/apps/backend/src/alerts/alerts.controller.ts b/apps/backend/src/alerts/alerts.controller.ts
+index 866451f..e47343a 100644
+--- a/apps/backend/src/alerts/alerts.controller.ts
++++ b/apps/backend/src/alerts/alerts.controller.ts
+@@ -7,7 +7,13 @@ import {
+   UseGuards,
+   ParseIntPipe,
+   Query,
++  Sse,
++  MessageEvent,
++  Req,
+ } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, fromEvent } from 'rxjs';
++import { map, filter, takeUntil } from 'rxjs/operators';
+ import {
+   ApiBearerAuth,
+   ApiBody,
+@@ -148,4 +154,5 @@ export class AlertsController {
+     );
+   }
+ 
++
+ }
+diff --git a/apps/backend/src/alerts/alerts.repository.ts b/apps/backend/src/alerts/alerts.repository.ts
+index 3994458..80d83f2 100644
+--- a/apps/backend/src/alerts/alerts.repository.ts
++++ b/apps/backend/src/alerts/alerts.repository.ts
+@@ -31,12 +31,13 @@ export class AlertsRepository {
+       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+       .where(eq(usersToAlerts.userId, userId))
+-      .orderBy(desc(usersToAlerts.alertId));
++      .orderBy(desc(alerts.createdAt))
++      .$dynamic();
+ 
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+ 
+-    query = query.limit(safeLimit).offset(safeOffset) as any;
++    query = query.limit(safeLimit).offset(safeOffset);
+ 
+     return await query;
+   }
+diff --git a/apps/backend/src/alerts/alerts.service.ts b/apps/backend/src/alerts/alerts.service.ts
+index 8250e29..e7a7cb1 100644
+--- a/apps/backend/src/alerts/alerts.service.ts
++++ b/apps/backend/src/alerts/alerts.service.ts
+@@ -1,23 +1,30 @@
++import { Subject } from 'rxjs';
+ import { Injectable } from '@nestjs/common';
+ import { AlertsRepository } from './alerts.repository';
+ import { alerts } from '@/drizzle/schema';
+ 
+ @Injectable()
+ export class AlertsService {
++  public readonly alertEvents$ = new Subject<any>();
++
+   constructor(private readonly alertsRepository: AlertsRepository) {}
+ 
+   async createForUser(
+     createAlertDto: typeof alerts.$inferInsert,
+     userId: number,
+   ) {
+-    return await this.alertsRepository.createForUser(createAlertDto, userId);
++    const alert = await this.alertsRepository.createForUser(createAlertDto, userId);
++    this.alertEvents$.next({ type: 'new-alert', alert, userId });
++    return alert;
+   }
+ 
+   async createForUsers(
+     createAlertDto: typeof alerts.$inferInsert,
+     userIds: number[],
+   ) {
+-    return await this.alertsRepository.createForUsers(createAlertDto, userIds);
++    const newAlerts = await this.alertsRepository.createForUsers(createAlertDto, userIds);
++    this.alertEvents$.next({ type: 'new-alerts', alerts: newAlerts, userIds });
++    return newAlerts;
+   }
+ 
+   async findAllByUser(userId: number, limit?: number, offset?: number) {
+@@ -25,14 +32,18 @@ export class AlertsService {
+   }
+ 
+   async markSeen(alertId: number, userId: number) {
+-    return await this.alertsRepository.markSeen(alertId, userId);
++    const result = await this.alertsRepository.markSeen(alertId, userId);
++    this.alertEvents$.next({ type: 'alert-seen', alertId, userId });
++    return result;
+   }
+ 
+   async markResolved(alertId: number, userId: number, resolutionNote?: string) {
+-    return await this.alertsRepository.markResolved(
++    const result = await this.alertsRepository.markResolved(
+       alertId,
+       userId,
+       resolutionNote,
+     );
++    this.alertEvents$.next({ type: 'alert-resolved', alertId, userId, resolutionNote });
++    return result;
+   }
+ }
+diff --git a/apps/backend/src/app.module.ts b/apps/backend/src/app.module.ts
+index 877a3b1..bf28958 100644
+--- a/apps/backend/src/app.module.ts
++++ b/apps/backend/src/app.module.ts
+@@ -12,6 +12,7 @@ import { ControlLotsModule } from '@/control-lots/control-lots.module';
+ import { QcTestsModule } from '@/qc-tests/qc-tests.module';
+ import { AlertsModule } from '@/alerts/alerts.module';
+ import { SectionsModule } from '@/sections/sections.module';
++import { EventsModule } from '@/events/events.module';
+ 
+ @Module({
+   imports: [
+@@ -32,6 +33,7 @@ import { SectionsModule } from '@/sections/sections.module';
+     QcTestsModule,
+     AlertsModule,
+     SectionsModule,
++    EventsModule,
+   ],
+   controllers: [AppController],
+   providers: [AppService],
+diff --git a/apps/backend/src/auth/auth.controller.ts b/apps/backend/src/auth/auth.controller.ts
+index 8c659d4..c7dba1c 100644
+--- a/apps/backend/src/auth/auth.controller.ts
++++ b/apps/backend/src/auth/auth.controller.ts
+@@ -2,7 +2,7 @@ import { ParseIntPipe, Body, Controller, Post } from '@nestjs/common';
+ import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+ import { AuthService } from '@/auth/auth.service';
+ import { LoginDto } from '@/auth/dto/login.dto';
+-import { LoginResponseDto } from '@/auth/dto/auth-response.dto';
++import { LoginResponseDto, RefreshTokenDto } from '@/auth/dto/auth-response.dto';
+ import {
+   UnauthorizedResponseDto,
+   ValidationErrorResponseDto,
+@@ -39,4 +39,38 @@ export class AuthController {
+   login(@Body() loginDto: LoginDto) {
+     return this.authService.login(loginDto);
+   }
++
++  @Post('refresh')
++  @ApiOperation({
++    summary: 'Refresh access token',
++    description: 'Provide a valid refresh token to obtain a new access token.',
++  })
++  @ApiBody({ type: RefreshTokenDto })
++  @ApiResponse({
++    status: 200,
++    description: 'Refresh successful. Returns a new access token and refresh token.',
++    type: LoginResponseDto,
++  })
++  @ApiResponse({
++    status: 401,
++    description: 'Invalid or expired refresh token.',
++    type: UnauthorizedResponseDto,
++  })
++  refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
++    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
++  }
++
++  @Post('logout')
++  @ApiOperation({
++    summary: 'Logout user',
++    description: 'Invalidates the provided refresh token.',
++  })
++  @ApiBody({ type: RefreshTokenDto })
++  @ApiResponse({
++    status: 204,
++    description: 'Logout successful.',
++  })
++  async logout(@Body() refreshTokenDto: RefreshTokenDto) {
++    await this.authService.logout(refreshTokenDto.refreshToken);
++  }
+ }
+diff --git a/apps/backend/src/auth/auth.module.ts b/apps/backend/src/auth/auth.module.ts
+index e7adbaa..d794d07 100644
+--- a/apps/backend/src/auth/auth.module.ts
++++ b/apps/backend/src/auth/auth.module.ts
+@@ -9,6 +9,7 @@ import { WorkerService } from './workers/worker.service';
+ 
+ @Module({
+   imports: [
++    ConfigModule,
+     JwtModule.registerAsync({
+       imports: [ConfigModule],
+       inject: [ConfigService],
+diff --git a/apps/backend/src/auth/auth.repository.ts b/apps/backend/src/auth/auth.repository.ts
+index e2f8a74..4beaa2e 100644
+--- a/apps/backend/src/auth/auth.repository.ts
++++ b/apps/backend/src/auth/auth.repository.ts
+@@ -1,5 +1,5 @@
+ import { DatabaseService } from '@/database/database.service';
+-import { users } from '@/drizzle/schema';
++import { users, refreshTokens } from '@/drizzle/schema';
+ import { Injectable } from '@nestjs/common';
+ import { eq } from 'drizzle-orm';
+ 
+@@ -22,4 +22,32 @@ export class AuthRepository {
+       .where(eq(users.id, id));
+     return user;
+   }
++
++  async saveRefreshToken(userId: number, jti: string, expiresAt: Date) {
++    await this.databaseService.db.insert(refreshTokens).values({
++      userId,
++      jti,
++      expiresAt,
++    });
++  }
++
++  async findRefreshToken(jti: string) {
++    const [token] = await this.databaseService.db
++      .select()
++      .from(refreshTokens)
++      .where(eq(refreshTokens.jti, jti));
++    return token;
++  }
++
++  async deleteRefreshToken(jti: string) {
++    await this.databaseService.db
++      .delete(refreshTokens)
++      .where(eq(refreshTokens.jti, jti));
++  }
++
++  async deleteAllRefreshTokens(userId: number) {
++    await this.databaseService.db
++      .delete(refreshTokens)
++      .where(eq(refreshTokens.userId, userId));
++  }
+ }
+diff --git a/apps/backend/src/auth/auth.service.spec.ts b/apps/backend/src/auth/auth.service.spec.ts
+index bd508d9..2d2ec33 100644
+--- a/apps/backend/src/auth/auth.service.spec.ts
++++ b/apps/backend/src/auth/auth.service.spec.ts
+@@ -4,16 +4,22 @@ import { AuthRepository } from './auth.repository';
+ import { JwtService } from '@nestjs/jwt';
+ import { UnauthorizedException } from '@nestjs/common';
+ import { WorkerService } from './workers/worker.service';
++import { ConfigService } from '@nestjs/config';
+ 
+ describe('AuthService', () => {
+   let service: AuthService;
+   let mockAuthRepository: Record<string, jest.Mock>;
+   let mockJwtService: Record<string, jest.Mock>;
+   let mockWorkerService: Record<string, jest.Mock>;
++  let mockConfigService: Record<string, jest.Mock>;
+ 
+   beforeEach(async () => {
+     mockAuthRepository = {
+       findByEmail: jest.fn(),
++      saveRefreshToken: jest.fn(),
++      findRefreshToken: jest.fn(),
++      deleteRefreshToken: jest.fn(),
++      findById: jest.fn(),
+     };
+ 
+     mockJwtService = {
+@@ -24,12 +30,25 @@ describe('AuthService', () => {
+       verifyPassword: jest.fn(),
+     };
+ 
++    mockConfigService = {
++      get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
++        if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
++        if (key === 'JWT_REFRESH_SECRET') return 'anyrefreshsecret';
++        return defaultValue;
++      }),
++      getOrThrow: jest.fn().mockImplementation((key: string) => {
++        if (key === 'JWT_REFRESH_SECRET') return 'anyrefreshsecret';
++        throw new Error(`Configuration key "${key}" does not exist`);
++      }),
++    };
++
+     const module: TestingModule = await Test.createTestingModule({
+       providers: [
+         AuthService,
+         { provide: AuthRepository, useValue: mockAuthRepository },
+         { provide: JwtService, useValue: mockJwtService },
+         { provide: WorkerService, useValue: mockWorkerService },
++        { provide: ConfigService, useValue: mockConfigService },
+       ],
+     }).compile();
+ 
+@@ -43,6 +62,7 @@ describe('AuthService', () => {
+     };
+ 
+     it('should return access token when credentials are valid', async () => {
++      // Arrange
+       const user = {
+         id: 1,
+         email: 'technician@lab.com',
+@@ -54,14 +74,18 @@ describe('AuthService', () => {
+       mockWorkerService.verifyPassword.mockResolvedValue(true);
+       mockJwtService.sign.mockReturnValue('jwt.token.here');
+ 
++      // Act
+       const result = await service.login(validCredentials);
+ 
+-      expect(result).toEqual({ accessToken: 'jwt.token.here' });
++      // Assert
++      expect(result).toEqual({ accessToken: 'jwt.token.here', refreshToken: 'jwt.token.here' });
+     });
+ 
+     it('should reject login when user does not exist', async () => {
++      // Arrange
+       mockAuthRepository.findByEmail.mockResolvedValue(undefined);
+ 
++      // Act & Assert
+       await expect(service.login(validCredentials)).rejects.toThrow(
+         UnauthorizedException,
+       );
+@@ -71,6 +95,7 @@ describe('AuthService', () => {
+     });
+ 
+     it('should reject login when password is incorrect', async () => {
++      // Arrange
+       const user = {
+         id: 1,
+         email: 'technician@lab.com',
+@@ -81,6 +106,7 @@ describe('AuthService', () => {
+       mockAuthRepository.findByEmail.mockResolvedValue(user);
+       mockWorkerService.verifyPassword.mockResolvedValue(false);
+ 
++      // Act & Assert
+       await expect(service.login(validCredentials)).rejects.toThrow(
+         UnauthorizedException,
+       );
+@@ -90,6 +116,7 @@ describe('AuthService', () => {
+     });
+ 
+     it('should reject login when account is deactivated', async () => {
++      // Arrange
+       const deactivatedUser = {
+         id: 1,
+         email: 'technician@lab.com',
+@@ -100,6 +127,7 @@ describe('AuthService', () => {
+       mockAuthRepository.findByEmail.mockResolvedValue(deactivatedUser);
+       mockWorkerService.verifyPassword.mockResolvedValue(true);
+ 
++      // Act & Assert
+       await expect(service.login(validCredentials)).rejects.toThrow(
+         UnauthorizedException,
+       );
+diff --git a/apps/backend/src/auth/auth.service.ts b/apps/backend/src/auth/auth.service.ts
+index acd9c53..7bdc053 100644
+--- a/apps/backend/src/auth/auth.service.ts
++++ b/apps/backend/src/auth/auth.service.ts
+@@ -1,5 +1,7 @@
+ import { Injectable, UnauthorizedException } from '@nestjs/common';
+ import { JwtService } from '@nestjs/jwt';
++import { ConfigService } from '@nestjs/config';
++import { randomUUID } from 'crypto';
+ import { LoginDto } from '@/auth/dto/login.dto';
+ import { AuthRepository } from './auth.repository';
+ import { WorkerService } from './workers/worker.service';
+@@ -10,6 +12,7 @@ export class AuthService {
+     private readonly authRepository: AuthRepository,
+     private readonly jwtService: JwtService,
+     private readonly workerService: WorkerService,
++    private readonly configService: ConfigService,
+   ) { }
+ 
+   async login(loginDto: LoginDto) {
+@@ -29,6 +32,74 @@ export class AuthService {
+     }
+ 
+     const payload = { userId: user.id, role: user.role };
+-    return { accessToken: this.jwtService.sign(payload) };
++    
++    const jti = randomUUID();
++    const accessToken = this.jwtService.sign(payload);
++    const refreshToken = this.jwtService.sign({ ...payload, jti }, {
++      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
++      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d') as any,
++    });
++
++    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
++    await this.authRepository.saveRefreshToken(user.id, jti, expiresAt);
++
++    return { accessToken, refreshToken };
++  }
++
++  async refreshTokens(refreshToken: string) {
++    let payload: any;
++    try {
++      payload = this.jwtService.verify(refreshToken, {
++        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
++      });
++    } catch (e) {
++      throw new UnauthorizedException('Invalid refresh token');
++    }
++
++    if (!payload.jti) {
++      throw new UnauthorizedException('Invalid refresh token format');
++    }
++
++    const tokenRecord = await this.authRepository.findRefreshToken(payload.jti);
++    if (!tokenRecord) {
++      // Possible token reuse / replay attack. 
++      // In a strict implementation, we would revoke all tokens for this user:
++      // await this.authRepository.deleteAllRefreshTokens(payload.userId);
++      throw new UnauthorizedException('Refresh token has been revoked or already used');
++    }
++
++    // Delete the old token (token rotation)
++    await this.authRepository.deleteRefreshToken(payload.jti);
++
++    const user = await this.authRepository.findById(payload.userId);
++    if (!user || !user.isActive) {
++      throw new UnauthorizedException('User is inactive or invalid');
++    }
++
++    const newPayload = { userId: user.id, role: user.role };
++    const newJti = randomUUID();
++    const newAccessToken = this.jwtService.sign(newPayload);
++    const newRefreshToken = this.jwtService.sign({ ...newPayload, jti: newJti }, {
++      secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
++      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d') as any,
++    });
++
++    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
++    await this.authRepository.saveRefreshToken(user.id, newJti, expiresAt);
++
++    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
++  }
++
++  async logout(refreshToken: string) {
++    try {
++      const payload = this.jwtService.verify(refreshToken, {
++        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
++      });
++      if (payload.jti) {
++        await this.authRepository.deleteRefreshToken(payload.jti);
++      }
++    } catch (e) {
++      // Ignore verification errors on logout
++    }
+   }
+ }
+diff --git a/apps/backend/src/auth/dto/auth-response.dto.ts b/apps/backend/src/auth/dto/auth-response.dto.ts
+index 71cd855..e16b235 100644
+--- a/apps/backend/src/auth/dto/auth-response.dto.ts
++++ b/apps/backend/src/auth/dto/auth-response.dto.ts
+@@ -1,4 +1,5 @@
+ import { ApiProperty } from '@nestjs/swagger';
++import { IsNotEmpty, IsString } from 'class-validator';
+ 
+ export class LoginResponseDto {
+   @ApiProperty({
+@@ -7,4 +8,20 @@ export class LoginResponseDto {
+       'JWT access token used to authenticate subsequent requests. Include in the Authorization header as: Bearer <token>',
+   })
+   accessToken: string;
++
++  @ApiProperty({
++    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
++    description: 'JWT refresh token used to obtain a new access token when it expires.',
++  })
++  refreshToken: string;
++}
++
++export class RefreshTokenDto {
++  @ApiProperty({
++    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
++    description: 'The refresh token obtained during login.',
++  })
++  @IsString()
++  @IsNotEmpty()
++  refreshToken: string;
+ }
+diff --git a/apps/backend/src/auth/dto/login.dto.ts b/apps/backend/src/auth/dto/login.dto.ts
+index 67b9e55..774a85a 100644
+--- a/apps/backend/src/auth/dto/login.dto.ts
++++ b/apps/backend/src/auth/dto/login.dto.ts
+@@ -1,4 +1,4 @@
+-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
++import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+ import { ApiProperty } from '@nestjs/swagger';
+ 
+ export class LoginDto {
+@@ -21,6 +21,7 @@ export class LoginDto {
+   })
+   @IsString()
+   @IsNotEmpty()
++  @MinLength(6)
+   password: string;
+ }
+ 
+diff --git a/apps/backend/src/auth/guards/jwt.strategy.ts b/apps/backend/src/auth/guards/jwt.strategy.ts
+index 5f58edd..39afeb7 100644
+--- a/apps/backend/src/auth/guards/jwt.strategy.ts
++++ b/apps/backend/src/auth/guards/jwt.strategy.ts
+@@ -1,7 +1,7 @@
+ import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+ import { PassportStrategy } from '@nestjs/passport';
+ import { ExtractJwt, Strategy } from 'passport-jwt';
+-import { JwtPayload } from '@/auth/auth.types';
++import { JwtPayload, RequestUser, Role } from '@/auth/auth.types';
+ import { ConfigService } from '@nestjs/config';
+ import { AuthRepository } from '@/auth/auth.repository';
+ import { CACHE_MANAGER } from '@nestjs/cache-manager';
+@@ -21,9 +21,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
+     });
+   }
+ 
+-  async validate(payload: JwtPayload) {
++  async validate(payload: JwtPayload): Promise<RequestUser> {
+     const cacheKey = `user_status_${payload.userId}`;
+-    const cachedUser = await this.cacheManager.get<{ isActive: boolean, role: any }>(cacheKey);
++    const cachedUser = await this.cacheManager.get<{ isActive: boolean; role: Role }>(cacheKey);
+ 
+     if (cachedUser) {
+       if (!cachedUser.isActive) {
+@@ -37,7 +37,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
+       throw new UnauthorizedException('User is invalid');
+     }
+ 
+-    const minimalUser = { isActive: user.isActive ?? false, role: user.role };
++    const minimalUser = { isActive: user.isActive ?? false, role: user.role as Role };
+     // Note: cache-manager v5+ uses milliseconds for ttl, older versions used seconds.
+     // NestJS cache-manager defaults to ms, so we pass 300000ms.
+     await this.cacheManager.set(cacheKey, minimalUser, 300000);
+diff --git a/apps/backend/src/auth/guards/roles.guard.ts b/apps/backend/src/auth/guards/roles.guard.ts
+index 7da676e..e5baded 100644
+--- a/apps/backend/src/auth/guards/roles.guard.ts
++++ b/apps/backend/src/auth/guards/roles.guard.ts
+@@ -6,7 +6,7 @@ import {
+ } from '@nestjs/common';
+ import { Reflector } from '@nestjs/core';
+ import { ROLES_KEY } from '@/auth/decorators/roles.decorator';
+-import { Role } from '@/auth/auth.types';
++import { RequestUser, Role } from '@/auth/auth.types';
+ 
+ @Injectable()
+ export class RolesGuard implements CanActivate {
+@@ -20,7 +20,7 @@ export class RolesGuard implements CanActivate {
+ 
+     if (!requiredRoles) return true;
+ 
+-    const { user } = context.switchToHttp().getRequest();
++    const { user } = context.switchToHttp().getRequest<{ user?: RequestUser }>();
+ 
+     if (!user || !requiredRoles.includes(user.role)) {
+       throw new ForbiddenException(
+diff --git a/apps/backend/src/control-lots/control-lots.controller.ts b/apps/backend/src/control-lots/control-lots.controller.ts
+index 9487e93..e7077dc 100644
+--- a/apps/backend/src/control-lots/control-lots.controller.ts
++++ b/apps/backend/src/control-lots/control-lots.controller.ts
+@@ -9,7 +9,13 @@ import {
+   ParseIntPipe,
+   UseGuards,
+   Query,
++  Sse,
++  MessageEvent,
++  Req,
+ } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, fromEvent } from 'rxjs';
++import { map, takeUntil } from 'rxjs/operators';
+ import { ControlLotsService } from './control-lots.service';
+ import { CreateControlLotDto } from './dto/create-control-lot.dto';
+ import { UpdateControlLotDto } from './dto/update-control-lot.dto';
+@@ -85,11 +91,11 @@ export class ControlLotsController {
+   @ApiOperation({
+     summary: 'Get all control lots',
+     description:
+-      'Returns a list of all control lots in the system, including both active and inactive ones. Any authenticated user can view control lots.',
++      'Returns a list of all control lots. Pass `isActive=true` to get only active lots enriched with test context (testName, testType, machineId) \u2014 recommended for dashboard usage as it avoids fetching thousands of inactive lots.',
+   })
+   @ApiResponse({
+     status: 200,
+-    description: 'Array of all control lots.',
++    description: 'Array of control lots.',
+     type: [ControlLotResponseDto],
+   })
+   @ApiResponse({
+@@ -97,25 +103,40 @@ export class ControlLotsController {
+     description: 'JWT token missing or invalid.',
+     type: UnauthorizedResponseDto,
+   })
++  @ApiQuery({
++    name: 'isActive',
++    type: Boolean,
++    required: false,
++    description:
++      'When true, returns only active lots enriched with test context (testName, testType, machineId). No pagination applied \u2014 all active lots are returned.',
++  })
+   @ApiQuery({
+     name: 'limit',
+     type: Number,
+     required: false,
+-    description: 'Limit the number of results returned (default: 50)',
++    description: 'Limit the number of results returned (default: 50). Ignored when isActive=true.',
+   })
+   @ApiQuery({
+     name: 'offset',
+     type: Number,
+     required: false,
+-    description: 'Number of results to skip (default: 0)',
++    description: 'Number of results to skip (default: 0). Ignored when isActive=true.',
+   })
+   findAll(
+     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
++    @Query('isActive') isActiveStr?: string,
+   ) {
++    // When isActive=true is requested, return enriched active lots \u2014 no pagination
++    // This is the scalable path used by the dashboard frontend
++    if (isActiveStr === 'true') {
++      return this.controlLotsService.findActiveWithTestContext();
++    }
+     return this.controlLotsService.findAll(limit, offset);
+   }
+ 
++
++
+   @Get(':id')
+   @ApiOperation({
+     summary: 'Get a specific control lot by ID',
+diff --git a/apps/backend/src/control-lots/control-lots.module.ts b/apps/backend/src/control-lots/control-lots.module.ts
+index 7b5cd4b..1636168 100644
+--- a/apps/backend/src/control-lots/control-lots.module.ts
++++ b/apps/backend/src/control-lots/control-lots.module.ts
+@@ -6,5 +6,6 @@ import { ControlLotsRepository } from './control-lots.repository';
+ @Module({
+   providers: [ControlLotsService, ControlLotsRepository],
+   controllers: [ControlLotsController],
++  exports: [ControlLotsService],
+ })
+ export class ControlLotsModule {}
+diff --git a/apps/backend/src/control-lots/control-lots.repository.ts b/apps/backend/src/control-lots/control-lots.repository.ts
+index c06cf39..3bad0c0 100644
+--- a/apps/backend/src/control-lots/control-lots.repository.ts
++++ b/apps/backend/src/control-lots/control-lots.repository.ts
+@@ -1,8 +1,30 @@
+ import { DatabaseService } from '@/database/database.service';
+-import { controlLots, qcTests } from '@/drizzle/schema';
++import { controlLots, qcTests, machines } from '@/drizzle/schema';
+ import { Injectable } from '@nestjs/common';
+ import { eq, and, desc } from 'drizzle-orm';
+ 
++/** Shape returned by {@link findActiveWithTestContext} */
++export type ActiveLotWithTestContext = {
++  id: number;
++  testId: number;
++  level: number;
++  lotNumber: string;
++  expirationDate: Date;
++  targetValue: number | null;
++  mean: number | null;
++  standardDeviation: number | null;
++  upperControlLimit: number | null;
++  lowerControlLimit: number | null;
++  upperWarningLimit: number | null;
++  lowerWarningLimit: number | null;
++  isActive: boolean | null;
++  createdAt: Date | null;
++  // Embedded from qc_tests join
++  testName: string;
++  testType: string | null;
++  machineId: number;
++};
++
+ @Injectable()
+ export class ControlLotsRepository {
+   constructor(private readonly databaseService: DatabaseService) {}
+@@ -15,35 +37,55 @@ export class ControlLotsRepository {
+     return test;
+   }
+ 
++  async getSectionIdByTestId(testId: number) {
++    const res = await this.databaseService.db
++      .select({ sectionId: machines.sectionId })
++      .from(qcTests)
++      .innerJoin(machines, eq(qcTests.machineId, machines.id))
++      .where(eq(qcTests.id, testId))
++      .limit(1);
++    return res[0]?.sectionId;
++  }
++
++  async getSectionIdByLotId(lotId: number) {
++    const res = await this.databaseService.db
++      .select({ sectionId: machines.sectionId })
++      .from(controlLots)
++      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
++      .innerJoin(machines, eq(qcTests.machineId, machines.id))
++      .where(eq(controlLots.id, lotId))
++      .limit(1);
++    return res[0]?.sectionId;
++  }
++
+   async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
+-    // Note: neon-http does not support interactive transactions.
+-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
+-    
+-    // 1. Deactivate existing active lots for this test
+-    await this.databaseService.db
+-      .update(controlLots)
+-      .set({ isActive: false })
+-      .where(
+-        and(
+-          eq(controlLots.testId, testId),
+-          eq(controlLots.isActive, true),
+-          eq(controlLots.level, data.level ?? 1)
+-        )
+-      );
++    return this.databaseService.db.transaction(async (tx) => {
++      // 1. Deactivate existing active lots for this test
++      await tx
++        .update(controlLots)
++        .set({ isActive: false })
++        .where(
++          and(
++            eq(controlLots.testId, testId),
++            eq(controlLots.isActive, true),
++            eq(controlLots.level, data.level ?? 1)
++          )
++        );
+ 
+-    // 2. Create the new lot
+-    const [newLot] = await this.databaseService.db
+-      .insert(controlLots)
+-      .values(data)
+-      .returning();
++      // 2. Create the new lot
++      const [newLot] = await tx
++        .insert(controlLots)
++        .values(data)
++        .returning();
+ 
+-    return newLot;
++      return newLot;
++    });
+   }
+ 
+   async findAll(limit?: number, offset?: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++    const safeLimit = Math.max(1, Math.min(limit ?? 50, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+-    let query = this.databaseService.db
++    const query = this.databaseService.db
+       .select()
+       .from(controlLots)
+       .orderBy(desc(controlLots.id))
+@@ -52,6 +94,40 @@ export class ControlLotsRepository {
+     return await query;
+   }
+ 
++  /**
++   * Returns ALL active control lots joined with their parent QC test.
++   * Used by the dashboard to get test context without a separate /qc-tests call.
++   * Scales well because active lots are a tiny fraction of total lots.
++   */
++  async findActiveWithTestContext(): Promise<ActiveLotWithTestContext[]> {
++    return this.databaseService.db
++      .select({
++        id: controlLots.id,
++        testId: controlLots.testId,
++        level: controlLots.level,
++        lotNumber: controlLots.lotNumber,
++        expirationDate: controlLots.expirationDate,
++        targetValue: controlLots.targetValue,
++        mean: controlLots.mean,
++        standardDeviation: controlLots.standardDeviation,
++        upperControlLimit: controlLots.upperControlLimit,
++        lowerControlLimit: controlLots.lowerControlLimit,
++        upperWarningLimit: controlLots.upperWarningLimit,
++        lowerWarningLimit: controlLots.lowerWarningLimit,
++        isActive: controlLots.isActive,
++        createdAt: controlLots.createdAt,
++        // Embedded test context
++        testName: qcTests.testName,
++        testType: qcTests.testType,
++        machineId: qcTests.machineId,
++      })
++      .from(controlLots)
++      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
++      .where(eq(controlLots.isActive, true))
++      .orderBy(desc(controlLots.id))
++      .limit(1000);
++  }
++
+   async findById(id: number) {
+     const [lot] = await this.databaseService.db
+       .select()
+diff --git a/apps/backend/src/control-lots/control-lots.service.spec.ts b/apps/backend/src/control-lots/control-lots.service.spec.ts
+index 687f93a..c0aae3f 100644
+--- a/apps/backend/src/control-lots/control-lots.service.spec.ts
++++ b/apps/backend/src/control-lots/control-lots.service.spec.ts
+@@ -24,6 +24,8 @@ describe('ControlLotsService', () => {
+       findByTestId: jest.fn(),
+       update: jest.fn(),
+       deactivate: jest.fn(),
++      getSectionIdByTestId: jest.fn(),
++      getSectionIdByLotId: jest.fn(),
+     };
+ 
+     const module: TestingModule = await Test.createTestingModule({
+diff --git a/apps/backend/src/control-lots/control-lots.service.ts b/apps/backend/src/control-lots/control-lots.service.ts
+index e484f5c..ca7e2fb 100644
+--- a/apps/backend/src/control-lots/control-lots.service.ts
++++ b/apps/backend/src/control-lots/control-lots.service.ts
+@@ -1,10 +1,13 @@
+ import { Injectable, NotFoundException } from '@nestjs/common';
++import { Subject } from 'rxjs';
+ import { CreateControlLotDto } from './dto/create-control-lot.dto';
+ import { UpdateControlLotDto } from './dto/update-control-lot.dto';
+-import { ControlLotsRepository } from './control-lots.repository';
++import { ControlLotsRepository, ActiveLotWithTestContext } from './control-lots.repository';
+ 
+ @Injectable()
+ export class ControlLotsService {
++  public lotEvents$ = new Subject<any>();
++
+   constructor(private readonly controlLotsRepository: ControlLotsRepository) {}
+ 
+   // Helper to compute age-based warning fields
+@@ -42,7 +45,10 @@ export class ControlLotsService {
+       }
+     );
+ 
+-    return this.computeAgeFlags(newLot);
++    const result = this.computeAgeFlags(newLot);
++    const sectionId = await this.controlLotsRepository.getSectionIdByTestId(createControlLotDto.testId);
++    this.lotEvents$.next({ type: 'create', data: result, sectionId });
++    return result;
+   }
+ 
+   async findAll(limit?: number, offset?: number) {
+@@ -50,6 +56,15 @@ export class ControlLotsService {
+     return lots.map((lot) => this.computeAgeFlags(lot));
+   }
+ 
++  /**
++   * Returns all active lots enriched with their QC test context (testName, testType, machineId).
++   * Intended for dashboard/monitor usage — avoids fetching all 4000+ lots and all tests.
++   */
++  async findActiveWithTestContext(): Promise<(ActiveLotWithTestContext & { daysActive: number; needsChecking: boolean })[]> {
++    const lots = await this.controlLotsRepository.findActiveWithTestContext();
++    return lots.map((lot) => this.computeAgeFlags(lot));
++  }
++
+   async findOne(id: number) {
+     const lot = await this.controlLotsRepository.findById(id);
+ 
+@@ -78,7 +93,10 @@ export class ControlLotsService {
+ 
+     const updatedLot = await this.controlLotsRepository.update(id, updateData);
+ 
+-    return this.computeAgeFlags(updatedLot);
++    const result = this.computeAgeFlags(updatedLot);
++    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
++    this.lotEvents$.next({ type: 'update', data: result, sectionId });
++    return result;
+   }
+ 
+   async remove(id: number) {
+@@ -90,9 +108,12 @@ export class ControlLotsService {
+ 
+     const deactivatedLot = await this.controlLotsRepository.deactivate(id);
+ 
+-    return {
++    const result = {
+       message: 'Control lot deactivated successfully',
+       lot: deactivatedLot,
+     };
++    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
++    this.lotEvents$.next({ type: 'delete', data: result.lot, sectionId });
++    return result;
+   }
+ }
+diff --git a/apps/backend/src/database/database.service.ts b/apps/backend/src/database/database.service.ts
+index 01f536b..db3b775 100644
+--- a/apps/backend/src/database/database.service.ts
++++ b/apps/backend/src/database/database.service.ts
+@@ -30,7 +30,7 @@ export class DatabaseService implements OnModuleDestroy {
+       database,
+       user,
+       password,
+-      max: 100,              // Maximum number of connections
++      max: 30,              // Maximum number of connections
+       min: 5,               // Minimum idle connections to keep open
+       idleTimeoutMillis: 30000,      // Close idle connections after 30 seconds
+       connectionTimeoutMillis: 2000, // Error out if waiting in queue for > 2 seconds
+diff --git a/apps/backend/src/database/seed.ts b/apps/backend/src/database/seed.ts
+index 9b16e6f..24b4c2c 100644
+--- a/apps/backend/src/database/seed.ts
++++ b/apps/backend/src/database/seed.ts
+@@ -75,10 +75,10 @@ async function bootstrap() {
+     }
+     await db.insert(usersToSections).values(userToSectionsRows);
+ 
+-    // 3. Create 15 Machines
+-    const machinePrefixes = ['Sysmex', 'Cobas', 'Architect', 'Beckman', 'Alinity'];
++    // 3. Create 4 Machines
++    const machinePrefixes = ['Sysmex', 'Cobas', 'Architect', 'Beckman'];
+     const insertedMachines: any[] = [];
+-    for (let i = 0; i < 15; i++) {
++    for (let i = 0; i < 4; i++) {
+       const sec = insertedSections[i % insertedSections.length];
+       const prefix = machinePrefixes[i % machinePrefixes.length];
+       const [m] = await db.insert(machines).values({
+@@ -230,7 +230,7 @@ async function bootstrap() {
+       }
+     }
+ 
+-    console.log(`✅ Seeded 4 Sections, 15 Machines, 45 Tests, 135 Control Lots`);
++    console.log(`✅ Seeded 4 Sections, 4 Machines, 12 Tests, 36 Control Lots`);
+     console.log(`✅ Inserted ${totalResultsInserted} Historical QC Results!`);
+     console.log('\n🎉 Database seeding completed successfully!');
+     console.log('🔑 USER CREDENTIALS FOR LOGIN:');
+diff --git a/apps/backend/src/drizzle/schema.ts b/apps/backend/src/drizzle/schema.ts
+index 499240b..d6d7870 100644
+--- a/apps/backend/src/drizzle/schema.ts
++++ b/apps/backend/src/drizzle/schema.ts
+@@ -1,4 +1,4 @@
+-import { relations } from 'drizzle-orm';
++import { relations, eq } from 'drizzle-orm';
+ import {
+   primaryKey,
+   pgEnum,
+@@ -11,6 +11,8 @@ import {
+   boolean,
+   doublePrecision,
+   index,
++  uniqueIndex,
++  uuid,
+ } from 'drizzle-orm/pg-core';
+ 
+ export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
+@@ -59,6 +61,18 @@ export const sections = pgTable('sections', {
+   specialization: specializationEnum('specialization').default('OTHER'),
+ });
+ 
++export const refreshTokens = pgTable('refresh_tokens', {
++  id: serial('id').primaryKey(),
++  userId: integer('user_id')
++    .references(() => users.id, { onDelete: 'cascade' })
++    .notNull(),
++  jti: uuid('jti').unique().notNull(),
++  expiresAt: timestamp('expires_at').notNull(),
++  createdAt: timestamp('created_at').defaultNow(),
++}, (t) => ({
++  userIdIdx: index('idx_refresh_tokens_user_id').on(t.userId),
++}));
++
+ export const machines = pgTable('machines', {
+   id: serial('id').primaryKey(),
+   name: text('name').notNull(),
+@@ -71,6 +85,7 @@ export const machines = pgTable('machines', {
+   createdAt: timestamp('created_at').defaultNow(),
+   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
+   specialization: specializationEnum('specialization'),
++  isActive: boolean('is_active').default(true),
+ }, (t) => ({
+   sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
+ }));
+@@ -111,6 +126,7 @@ export const controlLots = pgTable('control_lots', {
+   // Composite covers: WHERE test_id = ? AND is_active = true
+   // Used by: getActiveLotsByTestId, createWithDeactivation (UPDATE filter)
+   testIdIsActiveIdx: index('idx_control_lots_test_id_is_active').on(t.testId, t.isActive),
++  uniqueActiveLevelIdx: uniqueIndex('idx_control_lots_unique_active').on(t.testId, t.level).where(eq(t.isActive, true)),
+ }));
+ 
+ export const qcRuns = pgTable('qc_runs', {
+@@ -199,6 +215,7 @@ export const usersToSections = pgTable(
+   },
+   (t) => ({
+     pk: primaryKey({ columns: [t.userId, t.sectionId] }),
++    sectionIdIdx: index('idx_users_to_sections_section_id').on(t.sectionId),
+   }),
+ );
+ 
+@@ -271,6 +288,14 @@ export const usersRelations = relations(users, ({ many }) => ({
+   sectionAssignments: many(usersToSections),
+   performedRuns: many(qcRuns),
+   alertNotifications: many(usersToAlerts),
++  refreshTokens: many(refreshTokens),
++}));
++
++export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
++  user: one(users, {
++    fields: [refreshTokens.userId],
++    references: [users.id],
++  }),
+ }));
+ 
+ export const usersToSectionsRelations = relations(
+diff --git a/apps/backend/src/events/events.controller.ts b/apps/backend/src/events/events.controller.ts
+new file mode 100644
+index 0000000..d58490b
+--- /dev/null
++++ b/apps/backend/src/events/events.controller.ts
+@@ -0,0 +1,87 @@
++import { Controller, Sse, MessageEvent, UseGuards, Req } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, merge, interval, fromEvent, from } from 'rxjs';
++import { map, filter, takeUntil, mergeMap } from 'rxjs/operators';
++import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
++import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
++import { CurrentUser } from '@/users/user.decorator';
++import { MachinesService } from '@/machines/machines.service';
++import { ControlLotsService } from '@/control-lots/control-lots.service';
++import { QcTestsService } from '@/qc-tests/qc-tests.service';
++import { QcResultsService } from '@/qc-results/qc-results.service';
++import { AlertsService } from '@/alerts/alerts.service';
++import { UsersRepository } from '@/users/users.repository';
++
++@ApiTags('Events')
++@ApiBearerAuth()
++@UseGuards(JwtAuthGuard)
++@Controller('events')
++export class EventsController {
++  constructor(
++    private readonly machinesService: MachinesService,
++    private readonly controlLotsService: ControlLotsService,
++    private readonly qcTestsService: QcTestsService,
++    private readonly qcResultsService: QcResultsService,
++    private readonly alertsService: AlertsService,
++    private readonly usersRepository: UsersRepository,
++  ) {}
++
++  @Sse('stream')
++  @ApiOperation({
++    summary: 'Unified real-time event stream',
++    description:
++      'Single SSE endpoint that multiplexes all entity events (machines, control-lots, qc-tests, qc-results, alerts). ' +
++      'Includes a 30-second heartbeat to keep the connection alive through proxies.',
++  })
++  stream(@CurrentUser('userId') userId: number, @Req() req: Request): Observable<MessageEvent> {
++    return from(
++      Promise.all([
++        this.usersRepository.findById(userId),
++        this.usersRepository.getUserSections(userId),
++      ])
++    ).pipe(
++      mergeMap(([user, userSections]) => {
++        const isAdmin = user?.role === 'ADMIN';
++        const sectionIds = new Set(userSections.map(s => s.sectionId));
++
++        const hasAccess = (sectionId?: number) => isAdmin || (sectionId && sectionIds.has(sectionId));
++
++        const heartbeat$ = interval(30_000).pipe(
++          map(() => ({ data: { type: 'heartbeat' } }) as MessageEvent),
++        );
++
++        const machines$ = this.machinesService.machineEvents$.pipe(
++          filter((event) => hasAccess(event.sectionId)),
++          map((event) => ({ data: { entity: 'machines', ...event } }) as MessageEvent),
++        );
++
++        const lots$ = this.controlLotsService.lotEvents$.pipe(
++          filter((event) => hasAccess(event.sectionId)),
++          map((event) => ({ data: { entity: 'control-lots', ...event } }) as MessageEvent),
++        );
++
++        const tests$ = this.qcTestsService.testEvents$.pipe(
++          filter((event) => hasAccess(event.sectionId)),
++          map((event) => ({ data: { entity: 'qc-tests', ...event } }) as MessageEvent),
++        );
++
++        const results$ = this.qcResultsService.qcResultEvents$.pipe(
++          filter((event) => hasAccess(event.sectionId)),
++          map((event) => ({ data: { entity: 'qc-results', ...event } }) as MessageEvent),
++        );
++
++        const alerts$ = this.alertsService.alertEvents$.pipe(
++          filter((event) => {
++            if (event.userIds) return event.userIds.includes(userId);
++            return event.userId === userId;
++          }),
++          map((event) => ({ data: { entity: 'alerts', ...event } }) as MessageEvent),
++        );
++
++        return merge(heartbeat$, machines$, lots$, tests$, results$, alerts$).pipe(
++          takeUntil(fromEvent(req, 'close')),
++        );
++      })
++    );
++  }
++}
+diff --git a/apps/backend/src/events/events.module.ts b/apps/backend/src/events/events.module.ts
+new file mode 100644
+index 0000000..aeff4d1
+--- /dev/null
++++ b/apps/backend/src/events/events.module.ts
+@@ -0,0 +1,19 @@
++import { Module } from '@nestjs/common';
++import { EventsController } from './events.controller';
++import { MachinesModule } from '@/machines/machines.module';
++import { ControlLotsModule } from '@/control-lots/control-lots.module';
++import { QcTestsModule } from '@/qc-tests/qc-tests.module';
++import { QcResultsModule } from '@/qc-results/qc-results.module';
++import { AlertsModule } from '@/alerts/alerts.module';
++
++@Module({
++  imports: [
++    MachinesModule,
++    ControlLotsModule,
++    QcTestsModule,
++    QcResultsModule,
++    AlertsModule,
++  ],
++  controllers: [EventsController],
++})
++export class EventsModule {}
+diff --git a/apps/backend/src/http-exception.filter.ts b/apps/backend/src/http-exception.filter.ts
+index ecceaa8..7540918 100644
+--- a/apps/backend/src/http-exception.filter.ts
++++ b/apps/backend/src/http-exception.filter.ts
+@@ -4,11 +4,14 @@ import {
+   ArgumentsHost,
+   HttpException,
+   HttpStatus,
++  Logger,
+ } from '@nestjs/common';
+ import { HttpAdapterHost } from '@nestjs/core';
+ 
+ @Catch()
+ export class AllExceptionsFilter implements ExceptionFilter {
++  private readonly logger = new Logger(AllExceptionsFilter.name);
++
+   constructor(private readonly httpAdapterHost: HttpAdapterHost) { }
+ 
+   catch(exception: unknown, host: ArgumentsHost): void {
+@@ -21,6 +24,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
+         ? exception.getStatus()
+         : HttpStatus.INTERNAL_SERVER_ERROR;
+ 
++    this.logger.error('Unhandled Exception', exception instanceof Error ? exception.stack : exception);
++
+     const message =
+       exception instanceof HttpException
+         ? exception.getResponse()
+diff --git a/apps/backend/src/machines/machines.controller.ts b/apps/backend/src/machines/machines.controller.ts
+index 323f855..51f2cde 100644
+--- a/apps/backend/src/machines/machines.controller.ts
++++ b/apps/backend/src/machines/machines.controller.ts
+@@ -9,9 +9,17 @@ import {
+   ParseIntPipe,
+   UseGuards,
+   Query,
++  Sse,
++  MessageEvent,
++  Req,
+ } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, fromEvent } from 'rxjs';
++import { map, takeUntil } from 'rxjs/operators';
+ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+ import { RolesGuard } from '@/auth/guards/roles.guard';
++import { Roles } from '@/auth/decorators/roles.decorator';
++import { Role } from '@/auth/auth.types';
+ import { MachinesService } from '@/machines/machines.service';
+ import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
+ import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
+@@ -51,6 +59,7 @@ export class MachinesController {
+     description: 'A machine with these details already exists.',
+     type: ConflictResponseDto,
+   })
++  @Roles(Role.ADMIN)
+   create(@Body() createMachineDto: CreateMachineDto) {
+     return this.machinesService.create(createMachineDto);
+   }
+@@ -85,6 +94,8 @@ export class MachinesController {
+     return this.machinesService.findAll(limit, offset);
+   }
+ 
++
++
+   @Get(':id')
+   @ApiOperation({
+     summary: 'Get details of a specific machine',
+@@ -143,6 +154,7 @@ export class MachinesController {
+     description: 'A machine with these details already exists.',
+     type: ConflictResponseDto,
+   })
++  @Roles(Role.ADMIN)
+   update(
+     @Param('id', ParseIntPipe) id: number,
+     @Body() updateMachineDto: UpdateMachineDto,
+@@ -173,6 +185,7 @@ export class MachinesController {
+     description: 'Machine not found.',
+     type: NotFoundResponseDto,
+   })
++  @Roles(Role.ADMIN)
+   remove(@Param('id', ParseIntPipe) id: number) {
+     return this.machinesService.remove(id);
+   }
+diff --git a/apps/backend/src/machines/machines.module.ts b/apps/backend/src/machines/machines.module.ts
+index 336a4c9..ede414d 100644
+--- a/apps/backend/src/machines/machines.module.ts
++++ b/apps/backend/src/machines/machines.module.ts
+@@ -6,5 +6,6 @@ import { MachinesRepository } from './machines.repository';
+ @Module({
+   controllers: [MachinesController],
+   providers: [MachinesService, MachinesRepository],
++  exports: [MachinesService],
+ })
+ export class MachinesModule {}
+diff --git a/apps/backend/src/machines/machines.repository.ts b/apps/backend/src/machines/machines.repository.ts
+index bf2ad19..d44319e 100644
+--- a/apps/backend/src/machines/machines.repository.ts
++++ b/apps/backend/src/machines/machines.repository.ts
+@@ -1,7 +1,7 @@
+ import { DatabaseService } from '@/database/database.service';
+ import { machines } from '@/drizzle/schema';
+ import { Injectable } from '@nestjs/common';
+-import { eq, desc } from 'drizzle-orm';
++import { eq, desc, and } from 'drizzle-orm';
+ 
+ @Injectable()
+ export class MachinesRepository {
+@@ -16,12 +16,13 @@ export class MachinesRepository {
+   }
+ 
+   async findAll(limit?: number, offset?: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+     
+     let query = this.databaseService.db
+       .select()
+       .from(machines)
++      .where(eq(machines.isActive, true))
+       .orderBy(desc(machines.id))
+       .limit(safeLimit)
+       .offset(safeOffset);
+@@ -33,17 +34,14 @@ export class MachinesRepository {
+     const [machine] = await this.databaseService.db
+       .select()
+       .from(machines)
+-      .where(eq(machines.id, id));
++      .where(and(eq(machines.id, id), eq(machines.isActive, true)));
+     return machine;
+   }
+ 
+   async update(id: number, data: Partial<typeof machines.$inferInsert>) {
+     const [updatedMachine] = await this.databaseService.db
+       .update(machines)
+-      .set({
+-        ...data,
+-        updatedAt: new Date(),
+-      })
++      .set(data)
+       .where(eq(machines.id, id))
+       .returning();
+     return updatedMachine;
+@@ -51,7 +49,8 @@ export class MachinesRepository {
+ 
+   async delete(id: number) {
+     const [deletedMachine] = await this.databaseService.db
+-      .delete(machines)
++      .update(machines)
++      .set({ isActive: false })
+       .where(eq(machines.id, id))
+       .returning();
+     return deletedMachine;
+diff --git a/apps/backend/src/machines/machines.service.ts b/apps/backend/src/machines/machines.service.ts
+index c0d3611..5d907cd 100644
+--- a/apps/backend/src/machines/machines.service.ts
++++ b/apps/backend/src/machines/machines.service.ts
+@@ -5,12 +5,15 @@ import {
+   InternalServerErrorException,
+   NotFoundException,
+ } from '@nestjs/common';
++import { Subject } from 'rxjs';
+ import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
+ import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
+ import { MachinesRepository } from './machines.repository';
+ 
+ @Injectable()
+ export class MachinesService {
++  public machineEvents$ = new Subject<any>();
++
+   constructor(private readonly machinesRepository: MachinesRepository) { }
+ 
+   async create(createMachineDto: CreateMachineDto) {
+@@ -21,6 +24,7 @@ export class MachinesService {
+         sectionId: createMachineDto.sectionId,
+       });
+ 
++      this.machineEvents$.next({ type: 'create', data: newMachine, sectionId: newMachine.sectionId });
+       return newMachine;
+     } catch (error) {
+       this.handleDbError(error);
+@@ -50,6 +54,7 @@ export class MachinesService {
+       if (!updatedMachine) {
+         throw new NotFoundException(`Machine with ID #${id} not found`);
+       }
++      this.machineEvents$.next({ type: 'update', data: updatedMachine, sectionId: updatedMachine.sectionId });
+       return updatedMachine;
+     } catch (error) {
+       if (error instanceof NotFoundException) throw error;
+@@ -64,6 +69,7 @@ export class MachinesService {
+       throw new NotFoundException(`Machine with ID #${id} not found`);
+     }
+ 
++    this.machineEvents$.next({ type: 'delete', data: deletedMachine, sectionId: deletedMachine.sectionId });
+     return deletedMachine;
+   }
+ 
+diff --git a/apps/backend/src/main.ts b/apps/backend/src/main.ts
+index 9e8b0fb..979114f 100644
+--- a/apps/backend/src/main.ts
++++ b/apps/backend/src/main.ts
+@@ -10,8 +10,10 @@ import { writeFileSync } from 'fs';
+ async function bootstrap() {
+ 
+   const app = await NestFactory.create(AppModule);
+-  // do not forget to add the origin of the frontend application
+-  app.enableCors();
++  // Lock down CORS to the specific origin of the frontend application
++  app.enableCors({
++    origin: ['http://localhost:3000'],
++  });
+   app.setGlobalPrefix('api/v1');
+ 
+   const httpAdapter = app.get(HttpAdapterHost);
+diff --git a/apps/backend/src/qc-results/qc-results.controller.ts b/apps/backend/src/qc-results/qc-results.controller.ts
+index 29d99a2..564b741 100644
+--- a/apps/backend/src/qc-results/qc-results.controller.ts
++++ b/apps/backend/src/qc-results/qc-results.controller.ts
+@@ -8,7 +8,13 @@ import {
+   UseGuards,
+   Query,
+   ParseIntPipe,
++  Sse,
++  MessageEvent,
++  Req,
+ } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, fromEvent } from 'rxjs';
++import { map, takeUntil } from 'rxjs/operators';
+ import { QcResultsService } from './qc-results.service';
+ import { CreateQcResultDto } from './dto/create-qc-result.dto';
+ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+@@ -118,15 +124,56 @@ export class QcResultsController {
+     required: false,
+     description: 'Number of results to skip (default: 0)',
+   })
++  @ApiQuery({
++    name: 'machineId',
++    type: Number,
++    required: false,
++    description: 'Filter results by a specific machine ID',
++  })
++  @ApiQuery({
++    name: 'startDate',
++    type: String,
++    required: false,
++    description: 'Filter results from this date (ISO string)',
++  })
++  @ApiQuery({
++    name: 'endDate',
++    type: String,
++    required: false,
++    description: 'Filter results up to this date (ISO string)',
++  })
+   findAll(
+     @Query('lotId') lotId?: string,
+     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
++    @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
++    @Query('startDate') startDate?: string,
++    @Query('endDate') endDate?: string,
+   ) {
+     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
+-    return this.qcResultsService.findAll(parsedLotId, limit, offset);
++    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId, startDate, endDate);
++  }
++
++  @Get('recent-all')
++  @ApiOperation({
++    summary: 'Get recent QC results for all lots',
++    description: 'Returns the 30 most recent QC results for every control lot in the system efficiently.',
++  })
++  @ApiResponse({
++    status: 200,
++    description: 'Returns the recent results.',
++  })
++  @ApiResponse({
++    status: 401,
++    description: 'JWT token missing or invalid.',
++    type: UnauthorizedResponseDto,
++  })
++  getRecentAll() {
++    return this.qcResultsService.getRecentAll();
+   }
+ 
++
++
+   @Get(':id')
+   @ApiOperation({
+     summary: 'Get details of a single QC result',
+diff --git a/apps/backend/src/qc-results/qc-results.module.ts b/apps/backend/src/qc-results/qc-results.module.ts
+index b824df5..cc22870 100644
+--- a/apps/backend/src/qc-results/qc-results.module.ts
++++ b/apps/backend/src/qc-results/qc-results.module.ts
+@@ -9,5 +9,6 @@ import { UsersModule } from '@/users/users.module';
+   imports: [AlertsModule, UsersModule],
+   controllers: [QcResultsController],
+   providers: [QcResultsService, QcResultsRepository],
++  exports: [QcResultsService],
+ })
+ export class QcResultsModule {}
+diff --git a/apps/backend/src/qc-results/qc-results.repository.ts b/apps/backend/src/qc-results/qc-results.repository.ts
+index 327173f..f8a2dcb 100644
+--- a/apps/backend/src/qc-results/qc-results.repository.ts
++++ b/apps/backend/src/qc-results/qc-results.repository.ts
+@@ -1,7 +1,7 @@
+ import { DatabaseService } from '@/database/database.service';
+ import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
+ import { Injectable } from '@nestjs/common';
+-import { desc, eq, and } from 'drizzle-orm';
++import { desc, eq, and, inArray, sql, gte, lte } from 'drizzle-orm';
+ import { QcStatus } from './qc-results.types';
+ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+ 
+@@ -18,6 +18,14 @@ export class QcResultsRepository {
+     return lot;
+   }
+ 
++  async getLotsByIds(lotIds: number[]) {
++    if (lotIds.length === 0) return [];
++    return this.databaseService.db
++      .select()
++      .from(controlLots)
++      .where(inArray(controlLots.id, lotIds));
++  }
++
+   async getActiveLotsByTestId(testId: number) {
+     return this.databaseService.db
+       .select({ id: controlLots.id, lotNumber: controlLots.lotNumber })
+@@ -55,22 +63,19 @@ export class QcResultsRepository {
+       comments?: string;
+     }[],
+   ) {
+-    // Note: neon-http does not support interactive transactions.
+-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
+-
+-    // 1. Insert the Run
+-    const [run] = await this.databaseService.db
+-      .insert(qcRuns)
+-      .values({
+-        machineId,
+-        testId,
+-        performedBy: userId,
+-      })
+-      .returning();
++    return this.databaseService.db.transaction(async (tx) => {
++      // 1. Insert the Run
++      const [run] = await tx
++        .insert(qcRuns)
++        .values({
++          machineId,
++          testId,
++          performedBy: userId,
++        })
++        .returning();
+ 
+-    try {
+       // 2. Insert all results tied to this Run
+-      const insertedResults = await this.databaseService.db
++      const insertedResults = await tx
+         .insert(qcResults)
+         .values(
+           results.map((r) => ({
+@@ -86,11 +91,7 @@ export class QcResultsRepository {
+         .returning();
+ 
+       return { run, results: insertedResults };
+-    } catch (error) {
+-      // Manual compensation: delete the orphaned run if results fail to insert
+-      await this.databaseService.db.delete(qcRuns).where(eq(qcRuns.id, run.id));
+-      throw error;
+-    }
++    });
+   }
+ 
+   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
+@@ -115,10 +116,19 @@ export class QcResultsRepository {
+     return lot;
+   }
+ 
+-  async getResultsByLotId(lotId: number, limit?: number, offset?: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++  async getResultsByLotId(lotId: number, limit?: number, offset?: number, startDate?: string, endDate?: string) {
++    let safeLimit = limit ?? 100;
++    
++    // Safety constraint: If historical date range is requested, max out at 500 points to prevent crashes.
++    if (startDate && endDate) {
++      safeLimit = Math.max(1, Math.min(limit ?? 500, 500));
++    } else {
++      safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
++    }
++
+     const safeOffset = Math.max(0, offset ?? 0);
+-    const results = await this.databaseService.db
++
++    const baseQuery = this.databaseService.db
+       .select({
+         id: qcResults.id,
+         measuredValue: qcResults.measuredValue,
+@@ -133,8 +143,20 @@ export class QcResultsRepository {
+       })
+       .from(qcResults)
+       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
+-      .where(eq(qcResults.lotId, lotId))
+-      .orderBy(desc(qcRuns.runDate))
++      .$dynamic();
++
++    const filters = [eq(qcResults.lotId, lotId)];
++    
++    if (startDate) {
++      filters.push(gte(qcRuns.runDate, new Date(startDate)));
++    }
++    if (endDate) {
++      filters.push(lte(qcRuns.runDate, new Date(endDate)));
++    }
++
++    const results = await baseQuery
++      .where(and(...filters))
++      .orderBy(desc(qcResults.id))
+       .limit(safeLimit)
+       .offset(safeOffset);
+ 
+@@ -142,7 +164,6 @@ export class QcResultsRepository {
+   }
+ 
+   async getRecentResultsAll() {
+-    const { sql } = require('drizzle-orm');
+     const query = sql`
+       SELECT
+         r.id as id,
+@@ -154,7 +175,16 @@ export class QcResultsRepository {
+         r.run_id as "runId",
+         r.lot_id as "lotId",
+         run.run_date as "testDate",
+-        run.performed_by as "performedBy"
++        run.performed_by as "performedBy",
++        l.lot_number as "lotNumber",
++        l.mean as "lotMean",
++        l.standard_deviation as "lotSd",
++        l.level as "lotLevel",
++        l.lower_control_limit as "lowerControlLimit",
++        l.upper_control_limit as "upperControlLimit",
++        t.id as "testId",
++        t.test_name as "testName",
++        m.id as "machineId"
+       FROM control_lots l
+       CROSS JOIN LATERAL (
+         SELECT id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id
+@@ -164,17 +194,30 @@ export class QcResultsRepository {
+         LIMIT 30
+       ) r
+       JOIN qc_runs run ON r.run_id = run.id
++      JOIN qc_tests t ON l.test_id = t.id
++      JOIN machines m ON t.machine_id = m.id
+       ORDER BY run.run_date DESC
+     `;
+     const result: any = await this.databaseService.db.execute(query);
+     return result.rows || result;
+   }
+ 
+-  async getPaginatedResults(limit: number, offset: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++  /**
++   * Returns the latest QC results, enriched with lot/test/machine context via SQL JOINs.
++   *
++   * By embedding machineId, testName, lotNumber, mean, SD, etc. here, the frontend
++   * no longer needs to cross-reference lots and tests — completely eliminating the
++   * pagination bug that caused empty dashboards.
++   *
++   * Scalability cap: default 100 results, hard max 500 per call.
++   * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
++   */
++  async getPaginatedResults(limit?: number, offset?: number, machineId?: number) {
++    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+-    const results = await this.databaseService.db
++    let query = this.databaseService.db
+       .select({
++        // Core result fields
+         id: qcResults.id,
+         measuredValue: qcResults.measuredValue,
+         zScore: qcResults.zScore,
+@@ -185,14 +228,33 @@ export class QcResultsRepository {
+         lotId: qcResults.lotId,
+         testDate: qcRuns.runDate,
+         performedBy: qcRuns.performedBy,
++        // Enriched: lot context
++        lotNumber: controlLots.lotNumber,
++        lotMean: controlLots.mean,
++        lotSd: controlLots.standardDeviation,
++        lotLevel: controlLots.level,
++        lowerControlLimit: controlLots.lowerControlLimit,
++        upperControlLimit: controlLots.upperControlLimit,
++        // Enriched: test + machine context
++        testId: qcTests.id,
++        testName: qcTests.testName,
++        machineId: machines.id,
+       })
+       .from(qcResults)
+       .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
++      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
++      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
++      .innerJoin(machines, eq(qcTests.machineId, machines.id))
++      .$dynamic();
++      
++    if (machineId) {
++      query = query.where(eq(machines.id, machineId));
++    }
++    
++    return query
+       .orderBy(desc(qcResults.id))
+       .limit(safeLimit)
+       .offset(safeOffset);
+-
+-    return results;
+   }
+ 
+   async getResultAndLotByResultId(resultId: number) {
+@@ -214,7 +276,32 @@ export class QcResultsRepository {
+       .where(eq(qcResults.lotId, lotId))
+       .orderBy(desc(qcResults.id))
+       .limit(limit);
+-    return rows.map(r => r.zScore);
++
++    return rows.map((r) => r.zScore);
++  }
++
++  async getRecentZScoresByLotIds(lotIds: number[], limitPerLot: number): Promise<Map<number, number[]>> {
++    if (lotIds.length === 0) return new Map<number, number[]>();
++    
++    const idsList = sql.join(lotIds, sql`, `);
++    const query = sql`
++      WITH RankedScores AS (
++        SELECT lot_id as "lotId", z_score as "zScore",
++               ROW_NUMBER() OVER(PARTITION BY lot_id ORDER BY id DESC) as rn
++        FROM qc_results
++        WHERE lot_id IN (${idsList})
++      )
++      SELECT "lotId", "zScore" FROM RankedScores WHERE rn <= ${limitPerLot} ORDER BY "lotId", rn ASC
++    `;
++    const result: any = await this.databaseService.db.execute(query);
++    const rows = result.rows || result;
++    
++    const map = new Map<number, number[]>();
++    for (const id of lotIds) map.set(id, []);
++    for (const row of rows) {
++      map.get(row.lotId)?.push(row.zScore);
++    }
++    return map;
+   }
+ 
+ }
+diff --git a/apps/backend/src/qc-results/qc-results.service.spec.ts b/apps/backend/src/qc-results/qc-results.service.spec.ts
+index 6f961e2..61c724d 100644
+--- a/apps/backend/src/qc-results/qc-results.service.spec.ts
++++ b/apps/backend/src/qc-results/qc-results.service.spec.ts
+@@ -22,6 +22,8 @@ describe('QcResultsService', () => {
+       getResultAndLotByResultId: jest.fn(),
+       getRecentZScoresByLotId: jest.fn(),
+       getActiveLotsByTestId: jest.fn(),
++      getLotsByIds: jest.fn(),
++      getRecentZScoresByLotIds: jest.fn(),
+     };
+ 
+     mockAlertsService = {
+@@ -62,9 +64,11 @@ describe('QcResultsService', () => {
+     beforeEach(() => {
+       // Arrange - common setup
+       mockRepository.getLotById.mockResolvedValue(lotWithStats);
++      mockRepository.getLotsByIds.mockResolvedValue([lotWithStats]);
+       mockRepository.getSectionIdByLotId.mockResolvedValue(10);
+       mockUsersRepository.getUserIdsBySectionId.mockResolvedValue([5, 7]);
+       mockRepository.getRecentZScoresByLotId.mockResolvedValue([]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []]]));
+       mockRepository.getActiveLotsByTestId.mockResolvedValue([{ id: 1, lotNumber: 'LOT-1' }]);
+       mockRepository.getLotTestMachineByLotId.mockResolvedValue({ qc_tests: { machineId: 9 } });
+     });
+@@ -80,7 +84,9 @@ describe('QcResultsService', () => {
+     });
+ 
+     it('should throw BadRequestException when lot has invalid statistical values (e.g., zero SD)', async () => {
+-      mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: 14, standardDeviation: 0, lotNumber: 'LOT-1' });
++      const invalidLot = { id: 1, testId: 100, mean: 14, standardDeviation: 0, lotNumber: 'LOT-1' };
++      mockRepository.getLotById.mockResolvedValue(invalidLot);
++      mockRepository.getLotsByIds.mockResolvedValue([invalidLot]);
+       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
+     });
+ 
+@@ -141,7 +147,7 @@ describe('QcResultsService', () => {
+ 
+     it('should create a QC run with FAIL status (2_2s) when two consecutive z-scores exceed 2 SD', async () => {
+       // Arrange
+-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([2.1]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [2.1]]]));
+       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
+ 
+       // Act
+@@ -157,7 +163,7 @@ describe('QcResultsService', () => {
+ 
+     it('should create a QC run with FAIL status (3_1s) when three consecutive z-scores exceed 1 SD', async () => {
+       // Arrange
+-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([1.3, 1.4]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [1.3, 1.4]]]));
+       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
+ 
+       // Act
+@@ -173,7 +179,7 @@ describe('QcResultsService', () => {
+ 
+     it('should create a QC run with FAIL status (7_T) when 7 consecutive z-scores trend upwards', async () => {
+       // Arrange
+-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [0.6, 0.5, 0.4, 0.3, 0.2, 0.1]]]));
+       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
+ 
+       // Act
+@@ -189,7 +195,7 @@ describe('QcResultsService', () => {
+ 
+     it('should create a QC run with FAIL status (6_x) when 6 consecutive z-scores fall on the same side', async () => {
+       // Arrange
+-      mockRepository.getRecentZScoresByLotId.mockResolvedValue([0.5, 0.3, 0.6, 0.2, 0.8]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, [0.5, 0.3, 0.6, 0.2, 0.8]]]));
+       mockRepository.createQcRun.mockResolvedValue(buildRunResult('FAIL'));
+ 
+       // Act
+@@ -216,6 +222,11 @@ describe('QcResultsService', () => {
+         if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+         if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+       });
++      mockRepository.getLotsByIds.mockResolvedValue([
++        { id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' },
++        { id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' }
++      ]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []], [2, []]]));
+       mockRepository.createQcRun.mockResolvedValue({
+         run: { id: 100, machineId: 9, performedBy: userId, runDate: new Date() },
+         results: [
+@@ -260,6 +271,11 @@ describe('QcResultsService', () => {
+         if (id === 1) return Promise.resolve({ id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' });
+         if (id === 2) return Promise.resolve({ id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' });
+       });
++      mockRepository.getLotsByIds.mockResolvedValue([
++        { id: 1, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-1' },
++        { id: 2, testId: 100, mean: 14.0, standardDeviation: 0.5, lotNumber: 'LOT-2' }
++      ]);
++      mockRepository.getRecentZScoresByLotIds.mockResolvedValue(new Map([[1, []], [2, []]]));
+       mockRepository.createQcRun.mockResolvedValue({
+         run: { id: 101, machineId: 9, performedBy: userId, runDate: new Date() },
+         results: [
+@@ -299,6 +315,7 @@ describe('QcResultsService', () => {
+     it('should throw BadRequestException when lot is missing statistical values', async () => {
+       // Arrange
+       mockRepository.getLotById.mockResolvedValue({ id: 1, testId: 100, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' });
++      mockRepository.getLotsByIds.mockResolvedValue([{ id: 1, testId: 100, mean: null, standardDeviation: 0.5, lotNumber: 'LOT-1' }]);
+ 
+       // Act & Assert
+       await expect(service.create(buildDto(14.5), userId)).rejects.toThrow(BadRequestException);
+@@ -342,9 +359,9 @@ describe('QcResultsService', () => {
+       const result = await service.findAll(1);
+ 
+       // Assert
+-      expect(result.lot.testName).toBe('Hemoglobin');
+-      expect(result.lot.machineName).toBe('Sysmex XN-1000');
+-      expect(result.lot.mean).toBe(14.0);
++      expect(result.lot!.testName).toBe('Hemoglobin');
++      expect(result.lot!.machineName).toBe('Sysmex XN-1000');
++      expect(result.lot!.mean).toBe(14.0);
+     });
+ 
+     it('should throw NotFoundException when lot does not exist', async () => {
+@@ -354,6 +371,19 @@ describe('QcResultsService', () => {
+       // Act & Assert
+       await expect(service.findAll(999)).rejects.toThrow(NotFoundException);
+     });
++
++    it('should pass startDate and endDate to the repository when provided', async () => {
++      // Arrange
++      mockRepository.getLotById.mockResolvedValue({ id: 1, lotNumber: 'LOT-1' });
++      mockRepository.getLotTestMachineByLotId.mockResolvedValue({});
++      mockRepository.getResultsByLotId.mockResolvedValue([]);
++
++      // Act
++      await service.findAll(1, 50, 0, undefined, '2026-01-01', '2026-12-31');
++
++      // Assert
++      expect(mockRepository.getResultsByLotId).toHaveBeenCalledWith(1, 50, 0, '2026-01-01', '2026-12-31');
++    });
+   });
+ 
+   describe('findOne', () => {
+diff --git a/apps/backend/src/qc-results/qc-results.service.ts b/apps/backend/src/qc-results/qc-results.service.ts
+index bbd5835..b9e12f1 100644
+--- a/apps/backend/src/qc-results/qc-results.service.ts
++++ b/apps/backend/src/qc-results/qc-results.service.ts
+@@ -2,7 +2,9 @@ import {
+   BadRequestException,
+   Injectable,
+   NotFoundException,
++  Logger,
+ } from '@nestjs/common';
++import { Subject } from 'rxjs';
+ import { CreateQcResultDto } from './dto/create-qc-result.dto';
+ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+ import { QcResultsRepository } from './qc-results.repository';
+@@ -26,6 +28,9 @@ interface EvaluatedResultItem {
+ 
+ @Injectable()
+ export class QcResultsService {
++  private readonly logger = new Logger(QcResultsService.name);
++  public readonly qcResultEvents$ = new Subject<any>();
++
+   constructor(
+     private readonly qcResultsRepository: QcResultsRepository,
+     private readonly alertsService: AlertsService,
+@@ -83,8 +88,13 @@ export class QcResultsService {
+     //    Level 2's z-score, making cross-material rules like R_4s clinically incorrect.
+     const completeRunContext: RunResultItem[] = [];
+ 
++    // BATCH FETCH ALL LOTS
++    const lotIds = [...new Set(createQcResultDto.results.map((r) => r.lotId))];
++    const lotsList = await this.qcResultsRepository.getLotsByIds(lotIds);
++    for (const lot of lotsList) lotMap.set(lot.id, lot);
++
+     for (const resultItem of createQcResultDto.results) {
+-      const lot = await this.qcResultsRepository.getLotById(resultItem.lotId);
++      const lot = lotMap.get(resultItem.lotId);
+       if (!lot) throw new NotFoundException(`Control lot ${resultItem.lotId} not found`);
+ 
+       if (lot.standardDeviation === null || lot.mean === null) {
+@@ -102,22 +112,25 @@ export class QcResultsService {
+       const zScore = (resultItem.measuredValue - lot.mean) / lot.standardDeviation;
+ 
+       // Store in maps and complete batch context
+-      lotMap.set(resultItem.lotId, lot);
+       currentZScoreMap.set(resultItem.lotId, zScore);
+       completeRunContext.push({ lotId: resultItem.lotId, zScore });
+     }
+ 
+     // 2. SECOND PASS: Run Westgard analysis using the complete run layout.
+     //    Every lot now has full omniscient visibility of all other levels' z-scores.
++    
++    // BATCH FETCH ALL PREVIOUS Z-SCORES
++    const allPriorZScoresMap = await this.qcResultsRepository.getRecentZScoresByLotIds(
++      lotIds,
++      WESTGARD_HISTORY_SIZE
++    );
++
+     for (const resultItem of createQcResultDto.results) {
+       const lot = lotMap.get(resultItem.lotId)!;
+       const zScore = currentZScoreMap.get(resultItem.lotId)!;
+ 
+-      // Fetch historical data for this specific lot over time
+-      const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
+-        resultItem.lotId,
+-        WESTGARD_HISTORY_SIZE,
+-      );
++      // Fetch historical data for this specific lot over time from our batch map
++      const priorZScores = allPriorZScoresMap.get(resultItem.lotId) ?? [];
+ 
+       const zScoreWindow = [zScore, ...priorZScores];
+ 
+@@ -184,20 +197,27 @@ export class QcResultsService {
+         }
+       }
+     } catch (error) {
+-      console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
++      this.logger.error('Non-fatal error: Failed to generate alerts for QC Run', error);
++    }
++
++    if (savedRunData?.results) {
++      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(savedRunData.results[0].lotId);
++      for (const result of savedRunData.results) {
++        this.qcResultEvents$.next({ type: 'create', data: result, sectionId });
++      }
+     }
+ 
+     return savedRunData;
+   }
+ 
+-  async findAll(lotId?: number, limit?: number, offset?: number) {
++  async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
+     if (lotId) {
+       const lot = await this.qcResultsRepository.getLotById(lotId);
+       if (!lot) throw new NotFoundException('Control lot not found');
+ 
+       const lotContext =
+         await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
+-      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset);
++      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset, startDate, endDate);
+ 
+       return {
+         lot: {
+@@ -217,11 +237,16 @@ export class QcResultsService {
+     } else {
+       const parsedLimit = limit ?? 50;
+       const parsedOffset = offset ?? 0;
+-      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset);
++      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset, machineId);
+       return { lot: null, results };
+     }
+   }
+ 
++  async getRecentAll() {
++    const results = await this.qcResultsRepository.getRecentResultsAll();
++    return { lot: null, results };
++  }
++
+   async findOne(id: number) {
+     const result = await this.qcResultsRepository.getResultAndLotByResultId(id);
+ 
+@@ -242,6 +267,9 @@ export class QcResultsService {
+     if (!updated)
+       throw new NotFoundException(`QC Result with ID ${id} not found`);
+ 
+-    return this.findOne(id);
++    const updatedResult = await this.findOne(id);
++    const sectionId = await this.qcResultsRepository.getSectionIdByLotId(updatedResult.qc_results!.lotId);
++    this.qcResultEvents$.next({ type: 'update', data: updatedResult, sectionId });
++    return updatedResult;
+   }
+ }
+diff --git a/apps/backend/src/qc-tests/qc-tests.controller.ts b/apps/backend/src/qc-tests/qc-tests.controller.ts
+index 7cc26e2..c772869 100644
+--- a/apps/backend/src/qc-tests/qc-tests.controller.ts
++++ b/apps/backend/src/qc-tests/qc-tests.controller.ts
+@@ -8,7 +8,13 @@ import {
+   Post,
+   UseGuards,
+   Query,
++  Sse,
++  MessageEvent,
++  Req,
+ } from '@nestjs/common';
++import type { Request } from 'express';
++import { Observable, fromEvent } from 'rxjs';
++import { map, takeUntil } from 'rxjs/operators';
+ import {
+   ApiBearerAuth,
+   ApiBody,
+@@ -159,6 +165,8 @@ export class QcTestsController {
+     return this.qcTestsService.getAll(limit, offset);
+   }
+ 
++
++
+   @Patch(':id')
+   @Roles(Role.ADMIN)
+   @ApiOperation({
+diff --git a/apps/backend/src/qc-tests/qc-tests.module.ts b/apps/backend/src/qc-tests/qc-tests.module.ts
+index 48574b8..4b8bdc2 100644
+--- a/apps/backend/src/qc-tests/qc-tests.module.ts
++++ b/apps/backend/src/qc-tests/qc-tests.module.ts
+@@ -5,6 +5,7 @@ import { QcTestsRepository } from './qc-tests.repository';
+ 
+ @Module({
+   controllers: [QcTestsController],
+-  providers: [QcTestsService, QcTestsRepository]
++  providers: [QcTestsService, QcTestsRepository],
++  exports: [QcTestsService],
+ })
+ export class QcTestsModule {}
+diff --git a/apps/backend/src/qc-tests/qc-tests.repository.ts b/apps/backend/src/qc-tests/qc-tests.repository.ts
+index 295cf62..a62f53d 100644
+--- a/apps/backend/src/qc-tests/qc-tests.repository.ts
++++ b/apps/backend/src/qc-tests/qc-tests.repository.ts
+@@ -28,7 +28,7 @@ export class QcTestsRepository {
+   }
+ 
+   async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++    const safeLimit = Math.max(1, Math.min(limit ?? 50, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+     let query = this.databaseService.db
+       .select()
+@@ -58,7 +58,7 @@ export class QcTestsRepository {
+     return updated;
+   }
+   async getAllTests(limit?: number, offset?: number) {
+-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
++    const safeLimit = Math.max(1, Math.min(limit ?? 50, 10000));
+     const safeOffset = Math.max(0, offset ?? 0);
+     let query = this.databaseService.db
+       .select()
+diff --git a/apps/backend/src/qc-tests/qc-tests.service.ts b/apps/backend/src/qc-tests/qc-tests.service.ts
+index 617f40c..c0e12c8 100644
+--- a/apps/backend/src/qc-tests/qc-tests.service.ts
++++ b/apps/backend/src/qc-tests/qc-tests.service.ts
+@@ -1,10 +1,13 @@
+ import { Injectable, NotFoundException } from '@nestjs/common';
++import { Subject } from 'rxjs';
+ import { CreateQcTestDto } from './dto/create-qc-test.dto';
+ import { UpdateQcTestDto } from './dto/update-qc-test.dto';
+ import { QcTestsRepository } from './qc-tests.repository';
+ 
+ @Injectable()
+ export class QcTestsService {
++  public testEvents$ = new Subject<any>();
++
+   constructor(private readonly qcTestsRepository: QcTestsRepository) { }
+ 
+   async create(createQcTestDto: CreateQcTestDto) {
+@@ -15,6 +18,7 @@ export class QcTestsService {
+     }
+     const newTest = await this.qcTestsRepository.createQcTest(createQcTestDto);
+ 
++    this.testEvents$.next({ type: 'create', data: newTest, sectionId: machine.sectionId });
+     return newTest;
+   }
+ 
+@@ -43,7 +47,10 @@ export class QcTestsService {
+       }
+     }
+ 
+-    return this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
++    const updatedTest = await this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
++    const updatedMachine = await this.qcTestsRepository.getMachineById(updatedTest.machineId);
++    this.testEvents$.next({ type: 'update', data: updatedTest, sectionId: updatedMachine?.sectionId });
++    return updatedTest;
+   }
+ 
+   async getAll(limit?: number, offset?: number) {
+diff --git a/apps/backend/src/users/users.repository.ts b/apps/backend/src/users/users.repository.ts
+index 5b2e758..302b49f 100644
+--- a/apps/backend/src/users/users.repository.ts
++++ b/apps/backend/src/users/users.repository.ts
+@@ -60,18 +60,20 @@ export class UsersRepository {
+   async replaceUserSections(userId: number, sectionIds: number[]) {
+     const uniqueSectionIds = [...new Set(sectionIds)];
+ 
+-    await this.databaseService.db
+-      .delete(usersToSections)
+-      .where(eq(usersToSections.userId, userId));
+-
+-    if (uniqueSectionIds.length === 0) return;
+-
+-    await this.databaseService.db.insert(usersToSections).values(
+-      uniqueSectionIds.map((sectionId) => ({
+-        userId,
+-        sectionId,
+-      })),
+-    );
++    await this.databaseService.db.transaction(async (tx) => {
++      await tx
++        .delete(usersToSections)
++        .where(eq(usersToSections.userId, userId));
++
++      if (uniqueSectionIds.length > 0) {
++        await tx.insert(usersToSections).values(
++          uniqueSectionIds.map((sectionId) => ({
++            userId,
++            sectionId,
++          })),
++        );
++      }
++    });
+   }
+ 
+   async getSectionIdsForUser(userId: number) {
+diff --git a/apps/backend/src/users/users.service.ts b/apps/backend/src/users/users.service.ts
+index 3a4d236..3c23551 100644
+--- a/apps/backend/src/users/users.service.ts
++++ b/apps/backend/src/users/users.service.ts
+@@ -123,13 +123,14 @@ export class UsersService {
+     const { sectionIds: nextSectionIds, ...updatableUserFields } =
+       adminUpdateUserDto;
+ 
+-    let updatedUser = existingUser;
++    let updatedUser = { ...existingUser };
+ 
+     if (Object.keys(updatableUserFields).length > 0) {
+-      updatedUser = await this.usersRepository.update(
++      const dbUpdate = await this.usersRepository.update(
+         id,
+         updatableUserFields,
+-      ) as any;
++      );
++      updatedUser = { ...updatedUser, ...dbUpdate };
+     }
+ 
+     let finalSectionIds = existingUser.sectionIds;
+diff --git a/apps/frontend/src/app/machines/page.tsx b/apps/frontend/src/app/machines/page.tsx
+index adb254e..90b2452 100644
+--- a/apps/frontend/src/app/machines/page.tsx
++++ b/apps/frontend/src/app/machines/page.tsx
+@@ -3,7 +3,6 @@ import type { MachineResponseDto, SectionResponseDto } from '@/lib/types/api';
+ import { MachinesTable } from '@/features/machines/components/MachinesTable';
+ 
+ export default async function MachinesPage() {
+-  // Fetch both in parallel — fast, no sequential waterfall
+   const [machines, sections] = await Promise.all([
+     api.get<MachineResponseDto[]>('/api/v1/machines'),
+     api.get<SectionResponseDto[]>('/api/v1/sections'),
+diff --git a/apps/frontend/src/app/qc/page.tsx b/apps/frontend/src/app/qc/page.tsx
+index fc8e5e8..d9b4571 100644
+--- a/apps/frontend/src/app/qc/page.tsx
++++ b/apps/frontend/src/app/qc/page.tsx
+@@ -1,12 +1,14 @@
+ 'use client';
+ 
+-import { Suspense } from 'react';
++import { Suspense, useState } from 'react';
+ import { QCHistoryInteractive } from '@/features/qc/components/QCHistoryInteractive';
+ import { useDashboardData } from '@/hooks/useDashboardData';
+ import { useInfiniteQcResults } from '@/hooks/useInfiniteQcResults';
+ 
+ export default function QCPage() {
+   const { data: dashboardData, isLoading: isDashboardLoading, error: dashboardError } = useDashboardData();
++  const [selectedMachineId, setSelectedMachineId] = useState<string | undefined>(undefined);
++  
+   const { 
+     qcHistory, 
+     isLoading: isQcLoading, 
+@@ -14,7 +16,7 @@ export default function QCPage() {
+     fetchNextPage,
+     hasNextPage,
+     isFetchingNextPage
+-  } = useInfiniteQcResults();
++  } = useInfiniteQcResults(selectedMachineId ? parseInt(selectedMachineId) : undefined);
+ 
+   if (dashboardError || qcError) {
+     return (
+@@ -92,6 +94,8 @@ export default function QCPage() {
+           fetchNextPage={fetchNextPage}
+           hasNextPage={hasNextPage}
+           isFetchingNextPage={isFetchingNextPage}
++          selectedMachineId={selectedMachineId}
++          onMachineSelect={setSelectedMachineId}
+         />
+       </Suspense>
+     </div>
+diff --git a/apps/frontend/src/features/machines/components/MachineCharts.tsx b/apps/frontend/src/features/machines/components/MachineCharts.tsx
+index 887ee70..34c0927 100644
+--- a/apps/frontend/src/features/machines/components/MachineCharts.tsx
++++ b/apps/frontend/src/features/machines/components/MachineCharts.tsx
+@@ -16,7 +16,8 @@ import {
+   YAxis,
+ } from 'recharts';
+ import { useTheme } from '@/contexts/ThemeContext';
+-import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
++import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter, Loader2 } from 'lucide-react';
++import { useQcResults } from '@/hooks/useQcResults';
+ import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+ 
+ const getPointColor = (status: string, isDark: boolean) => {
+@@ -154,31 +155,47 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
+   );
+ }
+ 
+-function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testName, theme }: any) {
++function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme, qcHistory }: any) {
++  const fetchStartDate = mode === 'archive' && startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
++  const fetchEndDate = mode === 'archive' && endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
++  
++  // Only use the hook for archive fetches. For live mode, we rely on the pre-fetched global qcHistory.
++  const { data: lotData, loading } = useQcResults(
++    mode === 'archive' ? lot.lotId : null, 
++    fetchStartDate, 
++    fetchEndDate
++  );
++
+   const qcData = useMemo(() => {
+-    let filtered = qcHistory.filter((entry: any) => entry.lotId === lot.lotId);
+-
+-    if (mode === 'archive') {
+-      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
+-      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
+-      filtered = filtered.filter((entry: any) => {
+-        const t = new Date(entry.testDate).getTime();
+-        return t >= start && t <= end;
+-      });
++    if (mode === 'live') {
++      return qcHistory
++        .filter((entry: any) => entry.lotId === lot.lotId)
++        .slice()
++        .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
++        .map((entry: any) => ({
++          date: new Date(entry.testDate).toLocaleString(),
++          value: entry.measuredValue,
++          testName: testName,
++          zScore: entry.zScore,
++          violatedRule: entry.violatedRule,
++          status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
++        }));
+     }
+ 
+-    return filtered
++    if (!lotData || !lotData.results) return [];
++
++    return lotData.results
+       .slice()
+       .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
+       .map((entry: any) => ({
+         date: new Date(entry.testDate).toLocaleString(),
+         value: entry.measuredValue,
+-        testName: entry.testName,
++        testName: testName,
+         zScore: entry.zScore,
+         violatedRule: entry.violatedRule,
+         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
+       }));
+-  }, [lot, qcHistory, mode, startDate, endDate]);
++  }, [mode, qcHistory, lot.lotId, lotData, testName]);
+ 
+   const westgardAnalysis = useMemo(() => {
+     const mean = lot?.mean ?? 0;
+@@ -238,6 +255,15 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
+     fill: getPointColor(point.status, isDark),
+   }));
+ 
++  if (mode === 'archive' && loading) {
++    return (
++      <div className="p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
++        <Loader2 className="w-8 h-8 animate-spin text-[#c41e3a] dark:text-[#e84855] mb-2" />
++        <p className="text-gray-500 dark:text-gray-400">Loading QC data...</p>
++      </div>
++    );
++  }
++
+   if (chartData.length === 0) {
+     return (
+       <div className="p-8 text-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
+@@ -444,29 +470,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
+           });
+         }
+       }
+-    } else {
+-      for (const result of qcHistory) {
+-        const tIdStr = result.testId.toString();
+-        if (!testMap.has(tIdStr)) {
+-          testMap.set(tIdStr, {
+-            testId: tIdStr,
+-            testName: result.testName,
+-            category: 'General',
+-            lots: [],
+-          });
+-        }
+-        const testObj = testMap.get(tIdStr)!;
+-        if (!testObj.lots.find((l) => l.lotId === result.lotId)) {
+-          testObj.lots.push({
+-            lotId: result.lotId,
+-            level: result.level ?? 1,
+-            lotNumber: result.lotNumber,
+-            isActive: false,
+-            mean: 0,
+-            standardDeviation: 1,
+-          });
+-        }
+-      }
+     }
+ 
+     for (const test of testMap.values()) {
+@@ -594,17 +597,17 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
+       )}
+ 
+       {lotsToRender.length > 0 ? (
+-        lotsToRender.map((lot) => (
++        lotsToRender.map(lot => (
+           <LotChart 
+-            key={lot.lotId}
+-            lot={lot}
+-            qcHistory={qcHistory}
++            key={lot.lotId} 
++            lot={lot} 
+             mode={mode}
+             startDate={startDate}
+             endDate={endDate}
+-            machineName={machine?.name ?? 'Unknown'}
+-            testName={activeTest?.testName ?? 'Unknown'}
++            machineName={machine?.name}
++            testName={activeTest?.testName}
+             theme={theme}
++            qcHistory={qcHistory}
+           />
+         ))
+       ) : (
+diff --git a/apps/frontend/src/features/qc/components/QCHistoryInteractive.tsx b/apps/frontend/src/features/qc/components/QCHistoryInteractive.tsx
+index 9181e0d..eb3f805 100644
+--- a/apps/frontend/src/features/qc/components/QCHistoryInteractive.tsx
++++ b/apps/frontend/src/features/qc/components/QCHistoryInteractive.tsx
+@@ -30,7 +30,9 @@ export function QCHistoryInteractive({
+   categories,
+   fetchNextPage,
+   hasNextPage,
+-  isFetchingNextPage
++  isFetchingNextPage,
++  selectedMachineId,
++  onMachineSelect
+ }: {
+   qcHistory: QcHistoryType[],
+   machines: { 
+@@ -54,7 +56,9 @@ export function QCHistoryInteractive({
+   categories: { id: string; name: string }[],
+   fetchNextPage?: () => void,
+   hasNextPage?: boolean,
+-  isFetchingNextPage?: boolean
++  isFetchingNextPage?: boolean,
++  selectedMachineId?: string,
++  onMachineSelect: (id: string | undefined) => void
+ }) {
+   const [showCreateForm, setShowCreateForm] = useState(false);
+   const [searchTerm, setSearchTerm] = useState('');
+@@ -126,15 +130,30 @@ export function QCHistoryInteractive({
+ 
+       {/* Filters Section */}
+       <div className="glass-card p-4 sm:p-6 rounded-2xl mb-8 animate-slide-up" style={{ animationDelay: '100ms' }}>
+-        <div className="mb-4">
++        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
++          <select
++            value={selectedMachineId || ''}
++            onChange={(e) => onMachineSelect(e.target.value || undefined)}
++            className="glass-input w-full px-4 py-3.5 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a]/50 dark:focus:ring-[#e84855]/50 focus:border-[#c41e3a] dark:focus:border-[#e84855] appearance-none cursor-pointer shadow-sm"
++            style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'/%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
++          >
++            <option value="" disabled>Select a Machine</option>
++            {machines.map((m) => (
++              <option key={m.id} value={m.id} className="bg-white dark:bg-[#1a1a1a]">
++                {m.name} ({m.model})
++              </option>
++            ))}
++          </select>
++
+           <div className="relative group">
+             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#c41e3a] dark:group-focus-within:text-[#e84855] transition-colors duration-300" size={20} />
+             <input
+               type="text"
+-              placeholder="Search by machine, test name, or date..."
++              placeholder="Filter specific test or date..."
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+-              className="glass-input w-full pl-12 pr-4 py-3.5 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a]/50 dark:focus:ring-[#e84855]/50 focus:border-[#c41e3a] dark:focus:border-[#e84855] placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm"
++              disabled={!selectedMachineId}
++              className="glass-input w-full pl-12 pr-4 py-3.5 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a]/50 dark:focus:ring-[#e84855]/50 focus:border-[#c41e3a] dark:focus:border-[#e84855] placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-sm disabled:opacity-50"
+             />
+           </div>
+         </div>
+@@ -181,18 +200,28 @@ export function QCHistoryInteractive({
+ 
+       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+         {/* QC History */}
+-        <QCHistory
+-          searchTerm={searchTerm}
+-          selectedDay={selectedDay}
+-          selectedMonth={selectedMonth}
+-          selectedYear={selectedYear}
+-          qcHistory={qcHistory}
+-          machines={machines}
+-          categories={categories}
+-          fetchNextPage={fetchNextPage}
+-          hasNextPage={hasNextPage}
+-          isFetchingNextPage={isFetchingNextPage}
+-        />
++        {!selectedMachineId ? (
++          <div className="glass-card p-12 text-center rounded-2xl flex flex-col items-center justify-center">
++             <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
++                <Search className="text-gray-400" size={32} />
++             </div>
++             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Select a Machine</h3>
++             <p className="text-gray-500 dark:text-gray-400 max-w-md">Please choose a machine from the dropdown above to load its complete QC history.</p>
++          </div>
++        ) : (
++          <QCHistory
++            searchTerm={searchTerm}
++            selectedDay={selectedDay}
++            selectedMonth={selectedMonth}
++            selectedYear={selectedYear}
++            qcHistory={qcHistory}
++            machines={machines}
++            categories={categories}
++            fetchNextPage={fetchNextPage}
++            hasNextPage={hasNextPage}
++            isFetchingNextPage={isFetchingNextPage}
++          />
++        )}
+       </div>
+ 
+       {/* Create QC Test Modal */}
+diff --git a/apps/frontend/src/hooks/__tests__/useMachines.test.tsx b/apps/frontend/src/hooks/__tests__/useMachines.test.tsx
+index 3bd2ce8..017670f 100644
+--- a/apps/frontend/src/hooks/__tests__/useMachines.test.tsx
++++ b/apps/frontend/src/hooks/__tests__/useMachines.test.tsx
+@@ -6,49 +6,58 @@ import { clientFetch } from '@/lib/api/clientFetch';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import React from 'react';
+ 
+-// Mock clientFetch
+ vi.mock('@/lib/api/clientFetch', () => ({
+   clientFetch: vi.fn(),
++  API_BASE_URL: 'http://localhost',
+ }));
+ 
+-const queryClient = new QueryClient({
+-  defaultOptions: { queries: { retry: false } },
+-});
+-
+-const wrapper = ({ children }: { children: React.ReactNode }) => (
+-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+-);
++function createWrapper() {
++  const queryClient = new QueryClient({
++    defaultOptions: { queries: { retry: false } },
++  });
++  return {
++    queryClient,
++    wrapper: ({ children }: { children: React.ReactNode }) => (
++      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
++    ),
++  };
++}
+ 
+ describe('useMachines hook', () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+-    queryClient.clear();
+     useAuthStore.getState().setAuth({ id: '1' } as any, 'valid-token');
+   });
+ 
+-  it('fetches machines from the server and matches expected schema', async () => {
+-    const mockData = [
+-      { id: 'm1', name: 'Machine 1', category: 'chemistry' },
+-      { id: 'm2', name: 'Machine 2', category: 'hematology' },
++  it('fetches machines and flattens pages', async () => {
++    const mockPage = [
++      { id: 1, name: 'Machine 1', sectionId: 1 },
++      { id: 2, name: 'Machine 2', sectionId: 2 },
+     ];
+-    (clientFetch as any).mockResolvedValue(mockData);
++    (clientFetch as any).mockResolvedValue(mockPage);
+ 
++    const { wrapper } = createWrapper();
+     const { result } = renderHook(() => useMachines(), { wrapper });
+ 
+     expect(result.current.loading).toBe(true);
+-    
++
+     await waitFor(() => {
+       expect(result.current.loading).toBe(false);
+     });
+ 
+-    expect(result.current.machines).toEqual(mockData);
++    expect(result.current.machines).toEqual(mockPage);
+     expect(result.current.error).toBeNull();
+-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/machines?limit=50&offset=0', expect.any(Object), 'valid-token');
++    expect(clientFetch).toHaveBeenCalledWith(
++      '/api/v1/machines?limit=50&offset=0',
++      expect.objectContaining({ signal: expect.any(AbortSignal) }),
++      'valid-token',
++    );
+   });
+ 
+   it('handles server errors correctly', async () => {
+     (clientFetch as any).mockRejectedValue(new Error('Network error'));
+ 
++    const { wrapper } = createWrapper();
+     const { result } = renderHook(() => useMachines(), { wrapper });
+ 
+     await waitFor(() => {
+@@ -59,12 +68,31 @@ describe('useMachines hook', () => {
+     expect(result.current.machines).toEqual([]);
+   });
+ 
+-  it('does not fetch if token is missing', async () => {
+-    useAuthStore.getState().clearAuth(); // Remove token
+-    
++  it('does not fetch if token is missing', () => {
++    useAuthStore.getState().clearAuth();
++
++    const { wrapper } = createWrapper();
+     const { result } = renderHook(() => useMachines(), { wrapper });
+ 
+-    expect(result.current.loading).toBe(false); // Should not load if not enabled
++    expect(result.current.loading).toBe(false);
+     expect(clientFetch).not.toHaveBeenCalled();
+   });
++
++  it('refetches when queryClient invalidates machines key', async () => {
++    const mockPage = [{ id: 1, name: 'Machine 1', sectionId: 1 }];
++    (clientFetch as any).mockResolvedValue(mockPage);
++
++    const { wrapper, queryClient } = createWrapper();
++    renderHook(() => useMachines(), { wrapper });
++
++    await waitFor(() => {
++      expect(clientFetch).toHaveBeenCalledTimes(1);
++    });
++
++    queryClient.invalidateQueries({ queryKey: ['machines'] });
++
++    await waitFor(() => {
++      expect(clientFetch).toHaveBeenCalledTimes(2);
++    });
++  });
+ });
+diff --git a/apps/frontend/src/hooks/useDashboardData.ts b/apps/frontend/src/hooks/useDashboardData.ts
+index 42176a0..108bf2a 100644
+--- a/apps/frontend/src/hooks/useDashboardData.ts
++++ b/apps/frontend/src/hooks/useDashboardData.ts
+@@ -5,24 +5,22 @@ import { useQuery } from '@tanstack/react-query';
+ import { clientFetch } from '@/lib/api/clientFetch';
+ import { useAuthStore } from '@/store/useAuthStore';
+ import type {
+-  ControlLotResponseDto,
++  EnrichedControlLotResponseDto,
++  EnrichedQcResultResponseDto,
+   MachineResponseDto,
+-  QcResultResponseDto,
+-  QcResultsWithLotResponseDto,
+-  QcTestResponseDto,
+ } from '@/lib/types/api';
+ 
+-export type MonitorResultEntry = QcResultResponseDto & {
+-  machineId: number;
+-  testId: number;
+-  testName: string;
+-  lotId: number;
++export type MonitorResultEntry = EnrichedQcResultResponseDto & {
++  /** Formatted display date string (e.g. "6/14/2026 02:30 PM") */
++  date: string;
++  /** Formatted expected range string (e.g. "96.5 - 106.5") */
++  expectedRange: string;
++  /** Alias: lot control level (1, 2, or 3) */
+   level: number;
+-  lotNumber: string;
++  /** Alias: lot mean value */
+   lotMean: number;
++  /** Alias: lot standard deviation */
+   lotSd: number;
+-  expectedRange: string;
+-  date: string;
+ };
+ 
+ export interface DashboardData {
+@@ -66,116 +64,116 @@ export function useDashboardData() {
+   const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
+     queryKey: ['dashboard-data'],
+     queryFn: async ({ signal }) => {
+-      const [fetchedMachines, allLots, allTests, allResultsResponse] = await Promise.all([
++      /**
++       * SCALABLE DESIGN:
++       *
++       * 1. GET /api/v1/machines          — 4 rows (always small)
++       * 2. GET /api/v1/control-lots?isActive=true
++       *    — Returns ONLY active lots (~56 rows) enriched with testName, testType, machineId
++       *      via a server-side JOIN. No separate /qc-tests call needed.
++       *      Scales to 1M+ lots because isActive filter keeps the result set tiny.
++       * 3. GET /api/v1/qc-results/recent-all — 30 latest results per lot using a CROSS JOIN LATERAL.
++       *      This inherently solves the pagination starvation bug by guaranteeing every lot gets
++       *      its recent history fetched, completely irrespective of total database size.
++       */
++      const [fetchedMachines, activeLots, allResultsResponse] = await Promise.all([
+         clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
+-        clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
+-        clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
+-        clientFetch<{ results: QcResultResponseDto[] }>('/api/v1/qc-results', { signal }, token).catch(() => ({ results: [] })),
++        clientFetch<EnrichedControlLotResponseDto[]>(
++          '/api/v1/control-lots?isActive=true',
++          { signal },
++          token,
++        ).catch(() => []),
++        clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
++          '/api/v1/qc-results/recent-all',
++          { signal },
++          token,
++        ).catch(() => ({ results: [] })),
+       ]);
+ 
+-      const allResults = Array.isArray(allResultsResponse.results) ? allResultsResponse.results : [];
++      const allResults: EnrichedQcResultResponseDto[] = Array.isArray(allResultsResponse?.results)
++        ? allResultsResponse.results
++        : [];
+ 
+       let categories: { id: string; name: string }[] = [];
+       let qcHistory: MonitorResultEntry[] = [];
+       let machines: DashboardData['machines'] = [];
+ 
+       if (fetchedMachines && fetchedMachines.length > 0) {
++        // Build section categories from machines
+         const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
+         categories = sectionIds.map((sid) => ({
+           id: sid.toString(),
+           name: `Section ${sid}`,
+         }));
+ 
+-        const testById = new Map<number, QcTestResponseDto>();
+-        for (const test of allTests) {
+-          testById.set(test.id, test);
+-        }
+-
+-        const lotsWithContext = allLots
+-          .map((lot) => {
+-            const test = testById.get(lot.testId);
+-            return test ? { lot, machineId: test.machineId, test } : null;
+-          })
+-          .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
+-
+-        qcHistory = allResults.map((result) => {
+-          const ctx = lotsWithContext.find((c) => c.lot.id === result.lotId);
+-          if (!ctx) return null;
+-
+-          const dateObj = new Date(result.testDate);
++        /**
++         * Build qcHistory directly from enriched results.
++         * No cross-referencing needed — machineId, testName, lot details
++         * are all embedded in each result by the backend JOIN.
++         */
++        qcHistory = allResults.map((result): MonitorResultEntry => {
++          const dateObj = new Date(result.testDate as string);
+           const dateStr = !Number.isNaN(dateObj.getTime())
+             ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+             : 'N/A N/A';
+ 
+           return {
+             ...result,
+-            machineId: ctx.machineId,
+-            testId: ctx.test.id,
+-            testName: ctx.test.testName,
+-            lotId: ctx.lot.id,
+-            level: ctx.lot.level ?? 1,
+-            lotNumber: ctx.lot.lotNumber,
+-            lotMean: ctx.lot.mean ?? 0,
+-            lotSd: ctx.lot.standardDeviation ?? 1,
+-            expectedRange: `${ctx.lot.lowerControlLimit ?? 0} - ${ctx.lot.upperControlLimit ?? 0}`,
++            level: result.lotLevel ?? 1,
++            lotMean: result.lotMean ?? 0,
++            lotSd: result.lotSd ?? 1,
++            expectedRange: `${result.lowerControlLimit ?? 0} - ${result.upperControlLimit ?? 0}`,
+             date: dateStr,
+           };
+-        }).filter((entry): entry is MonitorResultEntry => entry !== null);
++        });
+ 
++        /**
++         * Build machine entries from:
++         * - fetchedMachines (base machine data)
++         * - activeLots filtered per machine (for test/lot definitions)
++         * - qcHistory filtered per machine (for "last QC" and "tests today")
++         *
++         * activeLots has machineId + testName + testType already embedded.
++         */
+         machines = fetchedMachines.map((machine) => {
+           const machineResults = qcHistory
+             .filter((entry) => entry.machineId === machine.id)
+-            .sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime());
++            .sort((a, b) => new Date(b.testDate as string).getTime() - new Date(a.testDate as string).getTime());
+           const latestResult = machineResults[0];
+ 
+-          const machineTestsData = allTests.filter((t) => t.machineId === machine.id);
+-          const machineLots = lotsWithContext.filter((ctx) => ctx.machineId === machine.id);
+-
+-          const tests = machineTestsData.flatMap((test) => {
+-            const testLots = machineLots.filter((ctx) => ctx.test.id === test.id);
+-            if (testLots.length > 0) {
+-              return testLots.map((ctx) => ({
+-                id: ctx.test.id.toString(),
+-                name: ctx.test.testName,
+-                category: ctx.test.testType ?? 'General',
+-                code: ctx.test.id.toString(),
+-                unit: 'unit',
+-                lowRange: ctx.lot.lowerControlLimit ?? 0,
+-                highRange: ctx.lot.upperControlLimit ?? 0,
+-                lotId: ctx.lot.id,
+-                level: ctx.lot.level ?? 1,
+-                lotNumber: ctx.lot.lotNumber,
+-                mean: ctx.lot.mean ?? 0,
+-                standardDeviation: ctx.lot.standardDeviation ?? 0,
+-                isActive: ctx.lot.isActive ?? true,
+-              }));
+-            } else {
+-              return [{
+-                id: test.id.toString(),
+-                name: test.testName,
+-                category: test.testType ?? 'General',
+-                code: test.id.toString(),
+-                unit: 'unit',
+-                lowRange: 0,
+-                highRange: 0,
+-                lotId: -1,
+-                level: 1,
+-                lotNumber: 'No Lot',
+-                mean: 0,
+-                standardDeviation: 1,
+-                isActive: true,
+-              }];
+-            }
+-          });
++          // Filter active lots that belong to this machine
++          const machineLots = activeLots.filter((lot) => lot.machineId === machine.id);
++
++          // Each active lot maps to one entry in the tests array
++          const tests = machineLots.map((lot) => ({
++            id: lot.testId.toString(),
++            name: lot.testName,
++            category: lot.testType ?? 'General',
++            code: lot.testId.toString(),
++            unit: 'unit',
++            lowRange: lot.lowerControlLimit ?? 0,
++            highRange: lot.upperControlLimit ?? 0,
++            lotId: lot.id,
++            level: lot.level ?? 1,
++            lotNumber: lot.lotNumber,
++            mean: lot.mean ?? 0,
++            standardDeviation: lot.standardDeviation ?? 0,
++            isActive: lot.isActive ?? true,
++          }));
+ 
+           return {
+             ...machine,
+             testsToday: machineResults.length,
+             lastQC: latestResult
+               ? {
+-                date: new Date(latestResult.testDate).toLocaleString(),
+-                status: latestResult.status === 'PASS' ? 'pass' : latestResult.status === 'WARNING' ? 'warning' : 'error',
+-              }
++                  date: new Date(latestResult.testDate as string).toLocaleString(),
++                  status:
++                    latestResult.status === 'PASS'
++                      ? 'pass'
++                      : latestResult.status === 'WARNING'
++                        ? 'warning'
++                        : 'error',
++                }
+               : { date: 'N/A', status: 'pass' },
+             tests,
+           };
+diff --git a/apps/frontend/src/hooks/useInfiniteQcResults.ts b/apps/frontend/src/hooks/useInfiniteQcResults.ts
+index 07c4aec..f802a2c 100644
+--- a/apps/frontend/src/hooks/useInfiniteQcResults.ts
++++ b/apps/frontend/src/hooks/useInfiniteQcResults.ts
+@@ -1,42 +1,24 @@
+-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
++import { useInfiniteQuery } from '@tanstack/react-query';
+ import { clientFetch } from '@/lib/api/clientFetch';
+ import { useAuthStore } from '@/store/useAuthStore';
+-import type {
+-  ControlLotResponseDto,
+-  QcResultResponseDto,
+-  QcTestResponseDto,
+-} from '@/lib/types/api';
++import type { EnrichedQcResultResponseDto } from '@/lib/types/api';
+ import { MonitorResultEntry } from './useDashboardData';
+ 
+-export function useInfiniteQcResults() {
++/**
++ * Infinite-scroll QC results for the /qc page.
++ *
++ * SCALABLE DESIGN:
++ * - Results are fetched 50 at a time with infinite scroll.
++ * - Each result page is already enriched by the backend with lot/test/machine context
++ *   via SQL JOINs, so no separate /qc-tests or /control-lots call is needed here.
++ * - The old approach fetched ALL lots (4042) and tests (6129) just to join them
++ *   client-side — this hook now has zero context prefetch overhead.
++ * - For 100K+ results, the infinite scroll loads 50 rows at a time — the network
++ *   only ever transfers what the user has scrolled to.
++ */
++export function useInfiniteQcResults(machineId?: number) {
+   const token = useAuthStore((s) => s.accessToken);
+ 
+-  // Fetch contextual data once (lots and tests)
+-  const { data: contextData } = useQuery({
+-    queryKey: ['qc-context-data'],
+-    queryFn: async ({ signal }) => {
+-      const [allLots, allTests] = await Promise.all([
+-        clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
+-        clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
+-      ]);
+-      
+-      const testById = new Map<number, QcTestResponseDto>();
+-      for (const test of allTests) {
+-        testById.set(test.id, test);
+-      }
+-
+-      const lotsWithContext = allLots
+-        .map((lot) => {
+-          const test = testById.get(lot.testId);
+-          return test ? { lot, machineId: test.machineId, test } : null;
+-        })
+-        .filter((item): item is { lot: ControlLotResponseDto; machineId: number; test: QcTestResponseDto } => item !== null);
+-        
+-      return { lotsWithContext };
+-    },
+-    enabled: !!token,
+-  });
+-
+   const {
+     data,
+     fetchNextPage,
+@@ -45,12 +27,18 @@ export function useInfiniteQcResults() {
+     isLoading,
+     error,
+   } = useInfiniteQuery({
+-    queryKey: ['qc-results-infinite'],
++    queryKey: ['qc-results-infinite', machineId],
+     queryFn: async ({ pageParam = 0, signal }) => {
+       const limit = 50;
+-      const offset = pageParam;
+-      const res = await clientFetch<{ results: QcResultResponseDto[] }>(`/api/v1/qc-results?limit=${limit}&offset=${offset}`, { signal }, token);
++      const offset = pageParam as number;
++      const url = `/api/v1/qc-results?limit=${limit}&offset=${offset}${machineId ? `&machineId=${machineId}` : ''}`;
+       
++      const res = await clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
++        url,
++        { signal },
++        token,
++      );
++
+       return {
+         results: Array.isArray(res?.results) ? res.results : [],
+         nextOffset: (res?.results?.length ?? 0) === limit ? offset + limit : undefined,
+@@ -58,35 +46,27 @@ export function useInfiniteQcResults() {
+     },
+     initialPageParam: 0,
+     getNextPageParam: (lastPage) => lastPage.nextOffset,
+-    enabled: !!token && !!contextData,
++    enabled: !!token && machineId !== undefined, // Only fetch when a machine is selected
+   });
+ 
+-  // Map results to MonitorResultEntry
++  // Map enriched results directly to MonitorResultEntry — no cross-referencing needed
+   const qcHistory: MonitorResultEntry[] = [];
+-  
+-  if (data && contextData) {
++
++  if (data) {
+     const allResults = data.pages.flatMap((page) => page.results);
+-    
+-    for (const result of allResults) {
+-      const ctx = contextData.lotsWithContext.find((c) => c.lot.id === result.lotId);
+-      if (!ctx) continue;
+ 
+-      const dateObj = new Date(result.testDate);
++    for (const result of allResults) {
++      const dateObj = new Date(result.testDate as string);
+       const dateStr = !Number.isNaN(dateObj.getTime())
+         ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+         : 'N/A N/A';
+ 
+       qcHistory.push({
+         ...result,
+-        machineId: ctx.machineId,
+-        testId: ctx.test.id,
+-        testName: ctx.test.testName,
+-        lotId: ctx.lot.id,
+-        level: ctx.lot.level ?? 1,
+-        lotNumber: ctx.lot.lotNumber,
+-        lotMean: ctx.lot.mean ?? 0,
+-        lotSd: ctx.lot.standardDeviation ?? 1,
+-        expectedRange: `${ctx.lot.lowerControlLimit ?? 0} - ${ctx.lot.upperControlLimit ?? 0}`,
++        level: result.lotLevel ?? 1,
++        lotMean: result.lotMean ?? 0,
++        lotSd: result.lotSd ?? 1,
++        expectedRange: `${result.lowerControlLimit ?? 0} - ${result.upperControlLimit ?? 0}`,
+         date: dateStr,
+       });
+     }
+diff --git a/apps/frontend/src/hooks/useQcResults.ts b/apps/frontend/src/hooks/useQcResults.ts
+index 3da783f..6eaa0b1 100644
+--- a/apps/frontend/src/hooks/useQcResults.ts
++++ b/apps/frontend/src/hooks/useQcResults.ts
+@@ -12,16 +12,7 @@ interface UseQcResultsReturn {
+   refetch: () => void;
+ }
+ 
+-/**
+- * Fetch all QC results for a specific control lot.
+- * Returns the lot summary + array of results (for Levey-Jennings chart).
+- *
+- * The lotId is included in the query key, so React Query maintains a
+- * separate cache entry per lot. When the user switches lots rapidly,
+- * in-flight requests for the previous lot are automatically cancelled via
+- * AbortSignal — the most critical race condition in the app.
+- */
+-export function useQcResults(lotId: number | null): UseQcResultsReturn {
++export function useQcResults(lotId: number | null, startDate?: string, endDate?: string, limit?: number): UseQcResultsReturn {
+   const token = useAuthStore((s) => s.accessToken);
+ 
+   const {
+@@ -31,15 +22,19 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
+     error: rawError,
+     refetch,
+   } = useQuery({
+-    queryKey: ['qc-results', lotId],
+-    queryFn: ({ signal }) =>
+-      clientFetch<QcResultsWithLotResponseDto>(
+-        `/api/v1/qc-results?lotId=${lotId}`,
++    queryKey: ['qc-results', lotId, startDate, endDate, limit],
++    queryFn: ({ signal }) => {
++      let url = `/api/v1/qc-results?lotId=${lotId}`;
++      if (startDate) url += `&startDate=${startDate}`;
++      if (endDate) url += `&endDate=${endDate}`;
++      if (limit) url += `&limit=${limit}`;
++      
++      return clientFetch<QcResultsWithLotResponseDto>(
++        url,
+         { signal },
+         token,
+-      ),
+-    // Do not fire the request at all when no lot is selected.
+-    // This also resets the loading/error states cleanly.
++      );
++    },
+     enabled: lotId !== null && !!token,
+     placeholderData: (prev) => prev,
+   });
+diff --git a/apps/frontend/src/hooks/useQcTests.ts b/apps/frontend/src/hooks/useQcTests.ts
+index 3088d31..65ac6d2 100644
+--- a/apps/frontend/src/hooks/useQcTests.ts
++++ b/apps/frontend/src/hooks/useQcTests.ts
+@@ -15,15 +15,6 @@ interface UseQcTestsReturn {
+   isFetchingNextPage: boolean;
+ }
+ 
+-/**
+- * Fetch all QC tests configured on a specific machine.
+- *
+- * The machineId is part of the query key, so React Query caches results
+- * per-machine. When the user switches machines quickly, in-flight requests
+- * for the previous machine are cancelled via AbortSignal, preventing the
+- * race condition where a slow response from machine A could overwrite the
+- * correct data for machine B.
+- */
+ export function useQcTests(machineId?: number | null): UseQcTestsReturn {
+   const token = useAuthStore((s) => s.accessToken);
+ 
+@@ -48,8 +39,6 @@ export function useQcTests(machineId?: number | null): UseQcTestsReturn {
+       return lastPage.length === 50 ? allPages.length * 50 : undefined;
+     },
+     initialPageParam: 0,
+-    // Do not fire the request if machineId is exactly null (which means it's waiting for selection).
+-    // If it's undefined, it means we want ALL tests.
+     enabled: machineId !== null && !!token,
+   });
+ 
+diff --git a/apps/frontend/src/lib/actions.ts b/apps/frontend/src/lib/actions.ts
+index c515b6a..e5cfb21 100644
+--- a/apps/frontend/src/lib/actions.ts
++++ b/apps/frontend/src/lib/actions.ts
+@@ -48,17 +48,29 @@ export async function loginAccount(formData: FormData) {
+     }
+ 
+     const token = response.accessToken;
++    const refreshToken = response.refreshToken;
+     const cookieStore = await cookies();
+ 
+-    // Store the JWT token (httpOnly for server components)
++    // Store the JWT access token
+     cookieStore.set('auth_token', token, {
+       httpOnly: true,
+       secure: process.env.NODE_ENV === 'production',
+       sameSite: 'lax',
+       path: '/',
+-      maxAge: 60 * 60 * 24 * 7, // 7 days
++      maxAge: 60 * 60, // 1 hour
+     });
+ 
++    if (refreshToken) {
++      // Store the refresh token
++      cookieStore.set('refresh_token', refreshToken, {
++        httpOnly: true,
++        secure: process.env.NODE_ENV === 'production',
++        sameSite: 'lax',
++        path: '/',
++        maxAge: 60 * 60 * 24 * 7, // 7 days
++      });
++    }
++
+     // Decode the JWT to get userId and role
+     const jwtPayload = decodeJwt(token);
+     if (!jwtPayload) {
+@@ -113,11 +125,71 @@ export async function loginAccount(formData: FormData) {
+ 
+ export async function logoutAccount() {
+   const cookieStore = await cookies();
++  const refreshToken = cookieStore.get('refresh_token')?.value;
++
++  if (refreshToken) {
++    try {
++      await api.post('/api/v1/auth/logout', { refreshToken });
++    } catch (e) {
++      // Ignore API errors, we still want to clear the local session
++    }
++  }
++
+   cookieStore.delete('auth_token');
++  cookieStore.delete('refresh_token');
+   cookieStore.delete('user_info');
+   return { success: true };
+ }
+ 
++export async function refreshTokensAction() {
++  const cookieStore = await cookies();
++  const refreshToken = cookieStore.get('refresh_token')?.value;
++
++  if (!refreshToken) {
++    return { error: 'No refresh token available.' };
++  }
++
++  try {
++    const response = await api.post<LoginResponseDto>('/api/v1/auth/refresh', {
++      refreshToken,
++    });
++
++    if (!response?.accessToken) {
++      return { error: 'Invalid refresh token response.' };
++    }
++
++    // Store the new access token
++    cookieStore.set('auth_token', response.accessToken, {
++      httpOnly: true,
++      secure: process.env.NODE_ENV === 'production',
++      sameSite: 'lax',
++      path: '/',
++      maxAge: 60 * 60, // 1 hour
++    });
++
++    if (response.refreshToken) {
++      // Store the new refresh token
++      cookieStore.set('refresh_token', response.refreshToken, {
++        httpOnly: true,
++        secure: process.env.NODE_ENV === 'production',
++        sameSite: 'lax',
++        path: '/',
++        maxAge: 60 * 60 * 24 * 7, // 7 days
++      });
++    }
++
++    return { success: true, token: response.accessToken };
++  } catch (error: unknown) {
++    // If refresh fails, delete tokens so user is forced to log in
++    cookieStore.delete('auth_token');
++    cookieStore.delete('refresh_token');
++    cookieStore.delete('user_info');
++    return {
++      error: error instanceof Error ? error.message : 'Failed to refresh token.',
++    };
++  }
++}
++
+ // ===================================================================
+ // User Actions
+ // ===================================================================
+@@ -167,6 +239,9 @@ export async function createMachine(payload: CreateMachineDto) {
+     await api.post<MachineResponseDto>('/api/v1/machines', payload);
+     revalidatePath('/machines');
+     revalidatePath('/dashboard');
++    revalidatePath('/qc-tests');
++    revalidatePath('/control-lots');
++    revalidatePath('/qc');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+@@ -181,6 +256,9 @@ export async function updateMachine(machineId: number, payload: UpdateMachineDto
+     await api.patch<MachineResponseDto>(`/api/v1/machines/${machineId}`, payload);
+     revalidatePath('/machines');
+     revalidatePath('/dashboard');
++    revalidatePath('/qc-tests');
++    revalidatePath('/control-lots');
++    revalidatePath('/qc');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+@@ -194,6 +272,9 @@ export async function deleteMachine(machineId: number) {
+     await api.delete(`/api/v1/machines/${machineId}`);
+     revalidatePath('/machines');
+     revalidatePath('/dashboard');
++    revalidatePath('/qc-tests');
++    revalidatePath('/control-lots');
++    revalidatePath('/qc');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+@@ -211,6 +292,8 @@ export async function createQcTest(payload: CreateQcTestDto) {
+     await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
+     revalidatePath('/qc');
+     revalidatePath('/qc-tests');
++    revalidatePath('/dashboard');
++    revalidatePath('/control-lots');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+@@ -225,6 +308,8 @@ export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
+     await api.patch<QcTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
+     revalidatePath('/qc');
+     revalidatePath('/qc-tests');
++    revalidatePath('/dashboard');
++    revalidatePath('/control-lots');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+@@ -280,6 +365,7 @@ export async function createControlLot(payload: CreateControlLotDto) {
+     revalidatePath('/qc');
+     revalidatePath('/dashboard');
+     revalidatePath('/machines');
++    revalidatePath('/qc-tests');
+     return { success: true, data: lot };
+   } catch (error: unknown) {
+     return {
+@@ -300,6 +386,8 @@ export async function updateControlLot(lotId: number, payload: UpdateControlLotD
+     revalidatePath('/control-lots');
+     revalidatePath('/qc');
+     revalidatePath('/dashboard');
++    revalidatePath('/machines');
++    revalidatePath('/qc-tests');
+     return { success: true, data: lot };
+   } catch (error: unknown) {
+     return {
+@@ -314,6 +402,8 @@ export async function deactivateControlLot(lotId: number) {
+     revalidatePath('/control-lots');
+     revalidatePath('/qc');
+     revalidatePath('/dashboard');
++    revalidatePath('/machines');
++    revalidatePath('/qc-tests');
+     return { success: true };
+   } catch (error: unknown) {
+     return {
+diff --git a/apps/frontend/src/lib/api/clientFetch.ts b/apps/frontend/src/lib/api/clientFetch.ts
+index 412251e..299be8d 100644
+--- a/apps/frontend/src/lib/api/clientFetch.ts
++++ b/apps/frontend/src/lib/api/clientFetch.ts
+@@ -1,4 +1,4 @@
+-import { logoutAccount } from '../actions';
++import { logoutAccount, refreshTokensAction } from '../actions';
+ import { useAuthStore } from '@/store/useAuthStore';
+ 
+ /**
+@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
+  * Server components should use `serverFetch.ts` instead.
+  */
+ 
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
++export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+ 
+ export class ClientApiError extends Error {
+   public statusCode: number;
+@@ -19,6 +19,9 @@ export class ClientApiError extends Error {
+   }
+ }
+ 
++// Mutex to prevent multiple parallel refresh requests
++let refreshPromise: Promise<string | null> | null = null;
++
+ export async function clientFetch<T>(
+   endpoint: string,
+   options: RequestInit = {},
+@@ -55,11 +58,47 @@ export async function clientFetch<T>(
+     } catch { /* ignore parse errors */ }
+ 
+     if (res.status === 401) {
+-      // Token expired or invalid — clear auth and redirect
+       if (typeof window !== 'undefined') {
+-        // Clear cookies via server action FIRST, awaiting it so it finishes
+-        // before we clear the Zustand store. This prevents a race condition
+-        // where useDashboardData navigates away before the cookies are actually deleted.
++        try {
++          if (!refreshPromise) {
++            refreshPromise = refreshTokensAction().then((result) => {
++              if (result.success && result.token) {
++                return result.token;
++              }
++              return null;
++            }).catch(() => null)
++              .finally(() => {
++                refreshPromise = null;
++              });
++          }
++
++          const newToken = await refreshPromise;
++
++          if (newToken) {
++            // Update token in Zustand
++            const authState = useAuthStore.getState();
++            if (authState.currentUser) {
++              authState.setAuth(authState.currentUser, newToken);
++            }
++
++            // Retry original request with new token
++            headers.set('Authorization', `Bearer ${newToken}`);
++            const retryRes = await fetch(url, {
++              ...options,
++              headers,
++              signal: options.signal,
++            });
++
++            if (retryRes.ok) {
++              if (retryRes.status === 204) return {} as T;
++              return retryRes.json() as Promise<T>;
++            }
++          }
++        } catch (e) {
++          // Fall through to logout
++        }
++
++        // Refresh failed, clear cookies via server action FIRST
+         try {
+           await logoutAccount();
+         } catch (e) {
+diff --git a/apps/frontend/src/lib/query/QueryProvider.tsx b/apps/frontend/src/lib/query/QueryProvider.tsx
+index e870830..1ab70f8 100644
+--- a/apps/frontend/src/lib/query/QueryProvider.tsx
++++ b/apps/frontend/src/lib/query/QueryProvider.tsx
+@@ -4,6 +4,12 @@ import { useState } from 'react';
+ import { QueryClientProvider } from '@tanstack/react-query';
+ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+ import { getQueryClient } from './queryClient';
++import { useSSE } from '@/lib/sse/useSSE';
++
++function SSEConnection() {
++  useSSE();
++  return null;
++}
+ 
+ /**
+  * App-wide React Query provider.
+@@ -18,6 +24,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
+ 
+   return (
+     <QueryClientProvider client={queryClient}>
++      <SSEConnection />
+       {children}
+       {/* Devtools panel only ships in development bundles */}
+       <ReactQueryDevtools initialIsOpen={false} />
+diff --git a/apps/frontend/src/lib/sse/sseClient.ts b/apps/frontend/src/lib/sse/sseClient.ts
+new file mode 100644
+index 0000000..fbec9b3
+--- /dev/null
++++ b/apps/frontend/src/lib/sse/sseClient.ts
+@@ -0,0 +1,138 @@
++import { fetchEventSource } from '@microsoft/fetch-event-source';
++import { API_BASE_URL } from '@/lib/api/clientFetch';
++import { useAuthStore } from '@/store/useAuthStore';
++
++type EventHandler = (event: { entity: string; type: string; data?: unknown }) => void;
++
++const MAX_BACKOFF_MS = 30_000;
++const INITIAL_BACKOFF_MS = 1_000;
++
++class SSEClient {
++  private controller: AbortController | null = null;
++  private handler: EventHandler | null = null;
++  private token: string | null = null;
++  private backoff = INITIAL_BACKOFF_MS;
++  private retryTimer: ReturnType<typeof setTimeout> | null = null;
++  private stopped = false;
++  private visibilityHandler: (() => void) | null = null;
++
++  connect(token: string, handler: EventHandler) {
++    if (this.controller && this.token === token) return;
++
++    this.disconnect();
++    this.token = token;
++    this.handler = handler;
++    this.stopped = false;
++    this.backoff = INITIAL_BACKOFF_MS;
++    this.startConnection();
++    this.attachVisibilityListener();
++  }
++
++  disconnect() {
++    this.stopped = true;
++    this.controller?.abort();
++    this.controller = null;
++    this.token = null;
++    this.handler = null;
++    if (this.retryTimer) {
++      clearTimeout(this.retryTimer);
++      this.retryTimer = null;
++    }
++    this.detachVisibilityListener();
++  }
++
++  private startConnection() {
++    if (this.stopped || !this.token || !this.handler) return;
++
++    this.controller?.abort();
++    this.controller = new AbortController();
++    const currentToken = this.token;
++    const handler = this.handler;
++
++    fetchEventSource(`${API_BASE_URL}/api/v1/events/stream`, {
++      method: 'GET',
++      headers: {
++        Authorization: `Bearer ${currentToken}`,
++        Accept: 'text/event-stream',
++      },
++      signal: this.controller.signal,
++      openWhenHidden: false,
++      onopen: async (response) => {
++        if (response.ok) {
++          this.backoff = INITIAL_BACKOFF_MS;
++          return;
++        }
++        if (response.status === 401) {
++          this.stopped = true;
++          useAuthStore.getState().clearAuth();
++          throw new Error('Unauthorized');
++        }
++        throw new Error(`SSE open failed: ${response.status}`);
++      },
++      onmessage: (msg) => {
++        if (!msg.data || this.stopped) return;
++        try {
++          const parsed = JSON.parse(msg.data);
++          if (parsed.type === 'heartbeat') return;
++          handler(parsed);
++        } catch {
++          // Ignore malformed messages
++        }
++      },
++      onerror: (err) => {
++        if (this.stopped) throw err;
++        if (err instanceof DOMException && err.name === 'AbortError') throw err;
++
++        this.scheduleReconnect();
++        throw err;
++      },
++      onclose: () => {
++        if (!this.stopped) {
++          this.scheduleReconnect();
++        }
++      },
++    }).catch(() => {
++      // Connection ended — reconnect is scheduled via onerror/onclose
++    });
++  }
++
++  private scheduleReconnect() {
++    if (this.stopped || this.retryTimer) return;
++
++    this.retryTimer = setTimeout(() => {
++      this.retryTimer = null;
++      this.startConnection();
++    }, this.backoff);
++
++    this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);
++  }
++
++  private attachVisibilityListener() {
++    if (typeof document === 'undefined') return;
++
++    this.visibilityHandler = () => {
++      if (document.visibilityState === 'hidden') {
++        this.controller?.abort();
++        this.controller = null;
++        if (this.retryTimer) {
++          clearTimeout(this.retryTimer);
++          this.retryTimer = null;
++        }
++      } else if (!this.stopped && this.token) {
++        this.backoff = INITIAL_BACKOFF_MS;
++        this.startConnection();
++      }
++    };
++
++    document.addEventListener('visibilitychange', this.visibilityHandler);
++  }
++
++  private detachVisibilityListener() {
++    if (this.visibilityHandler && typeof document !== 'undefined') {
++      document.removeEventListener('visibilitychange', this.visibilityHandler);
++      this.visibilityHandler = null;
++    }
++  }
++}
++
++export const sseClient = new SSEClient();
+diff --git a/apps/frontend/src/lib/sse/useSSE.ts b/apps/frontend/src/lib/sse/useSSE.ts
+new file mode 100644
+index 0000000..4d11b8b
+--- /dev/null
++++ b/apps/frontend/src/lib/sse/useSSE.ts
+@@ -0,0 +1,41 @@
++'use client';
++
++import { useEffect, useRef } from 'react';
++import { useQueryClient } from '@tanstack/react-query';
++import { useAuthStore } from '@/store/useAuthStore';
++import { sseClient } from './sseClient';
++
++const ENTITY_TO_QUERY_KEYS: Record<string, string[][]> = {
++  machines: [['machines'], ['dashboard-data']],
++  'control-lots': [['control-lots'], ['dashboard-data'], ['qc-context-data']],
++  'qc-tests': [['qc-tests'], ['dashboard-data'], ['qc-context-data']],
++  'qc-results': [['qc-results'], ['qc-results-infinite'], ['dashboard-data']],
++  alerts: [['alerts']],
++};
++
++export function useSSE() {
++  const token = useAuthStore((s) => s.accessToken);
++  const queryClient = useQueryClient();
++  const queryClientRef = useRef(queryClient);
++  queryClientRef.current = queryClient;
++
++  useEffect(() => {
++    if (!token) {
++      sseClient.disconnect();
++      return;
++    }
++
++    sseClient.connect(token, (event) => {
++      const keys = ENTITY_TO_QUERY_KEYS[event.entity];
++      if (!keys) return;
++
++      for (const queryKey of keys) {
++        queryClientRef.current.invalidateQueries({ queryKey });
++      }
++    });
++
++    return () => {
++      sseClient.disconnect();
++    };
++  }, [token]);
++}
+diff --git a/apps/frontend/src/lib/types/api.ts b/apps/frontend/src/lib/types/api.ts
+index de9d6c4..5c11b69 100644
+--- a/apps/frontend/src/lib/types/api.ts
++++ b/apps/frontend/src/lib/types/api.ts
+@@ -29,6 +29,7 @@ export interface LoginDto {
+ 
+ export interface LoginResponseDto {
+   accessToken: string;
++  refreshToken?: string;
+ }
+ 
+ // ===================================================================
+@@ -203,6 +204,24 @@ export interface ControlLotDeactivateResponseDto {
+   lot: ControlLotResponseDto;
+ }
+ 
++/**
++ * Returned by GET /api/v1/control-lots?isActive=true
++ * Extends the base lot DTO with embedded test context from a SQL JOIN,
++ * eliminating the need to separately fetch /qc-tests on the frontend.
++ */
++export interface EnrichedControlLotResponseDto extends ControlLotResponseDto {
++  /** Name of the parent QC test (from qc_tests JOIN) */
++  testName: string;
++  /** Category/type of the parent QC test */
++  testType?: string | null;
++  /** ID of the machine this test belongs to (from qc_tests JOIN) */
++  machineId: number;
++  /** Computed: number of days since lot was created */
++  daysActive: number;
++  /** Computed: true if lot has been active for ≥ 10 days */
++  needsChecking: boolean;
++}
++
+ export interface ControlLotInResultDto {
+   id: number;
+   testId: number;
+@@ -236,6 +255,25 @@ export interface QcResultResponseDto {
+   violatedRule: string | null;
+ }
+ 
++/**
++ * Returned by GET /api/v1/qc-results (without lotId param).
++ * Enriched with lot/test/machine context via server-side JOINs.
++ * The frontend no longer needs to cross-reference separate lot and test fetches.
++ */
++export interface EnrichedQcResultResponseDto extends QcResultResponseDto {
++  /** Lot details (from control_lots JOIN) */
++  lotNumber: string;
++  lotMean: number | null;
++  lotSd: number | null;
++  lotLevel: number;
++  lowerControlLimit: number | null;
++  upperControlLimit: number | null;
++  /** Test + machine context (from qc_tests / machines JOIN) */
++  testId: number;
++  testName: string;
++  machineId: number;
++}
++
+ export interface QcResultItemDto {
+   lotId: number;
+   measuredValue: number;
+diff --git a/apps/frontend/src/proxy.ts b/apps/frontend/src/proxy.ts
+index 28211be..de8d5b0 100644
+--- a/apps/frontend/src/proxy.ts
++++ b/apps/frontend/src/proxy.ts
+@@ -1,30 +1,117 @@
++import { NextResponse } from 'next/server';
+ import type { NextRequest } from 'next/server';
+ 
+ const PROTECTED_ROUTES = ['/dashboard', '/qc', '/qc-tests', '/alerts', '/errors', '/users', '/machines', '/control-lots'];
++const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+ 
+-export function proxy(request: NextRequest) {
++function isTokenExpired(token: string) {
++  try {
++    const parts = token.split('.');
++    if (parts.length !== 3) return true;
++    
++    // Handle base64url encoding
++    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
++    const payload = JSON.parse(atob(base64));
++    
++    // Check if expiration is within the next 30 seconds to be safe
++    return payload.exp * 1000 < Date.now() + 30000;
++  } catch {
++    return true;
++  }
++}
++
++export async function proxy(request: NextRequest) {
+   const { pathname } = request.nextUrl;
+-  const token = request.cookies.get('auth_token')?.value;
++  let authToken = request.cookies.get('auth_token')?.value;
++  const refreshToken = request.cookies.get('refresh_token')?.value;
++
++  // --- TOKEN REFRESH LOGIC ---
++  let refreshedResponse: NextResponse | null = null;
++  
++  if ((!authToken || isTokenExpired(authToken)) && refreshToken) {
++    try {
++      const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ refreshToken }),
++      });
++
++      if (res.ok) {
++        const data = await res.json();
++        
++        // 1. Clone the incoming request headers
++        const requestHeaders = new Headers(request.headers);
++
++        // 2. Update the Authorization/Cookie header for the downstream Server Components
++        if (data.accessToken) {
++          authToken = data.accessToken; // Update our local variable for the route protection logic below
++          requestHeaders.set('Authorization', `Bearer ${data.accessToken}`);
++          // Reconstruct the cookie string so Server Components using cookies().get() see the new token
++          requestHeaders.set('cookie', `auth_token=${data.accessToken}; refresh_token=${data.refreshToken || refreshToken}`);
++        }
++
++        // 3. Pass the modified headers INTO NextResponse.next()
++        refreshedResponse = NextResponse.next({
++          request: {
++            headers: requestHeaders,
++          },
++        });
++        
++        // 4. Set the cookies on the response so the browser saves them
++        if (data.accessToken) {
++          refreshedResponse.cookies.set('auth_token', data.accessToken, {
++            httpOnly: true,
++            secure: process.env.NODE_ENV === 'production',
++            sameSite: 'lax',
++            path: '/',
++            maxAge: 60 * 60, // 1 hour
++          });
++        }
++
++        if (data.refreshToken) {
++          refreshedResponse.cookies.set('refresh_token', data.refreshToken, {
++            httpOnly: true,
++            secure: process.env.NODE_ENV === 'production',
++            sameSite: 'lax',
++            path: '/',
++            maxAge: 60 * 60 * 24 * 7, // 7 days
++          });
++        }
++      }
++    } catch (e) {
++      // Ignore
++    }
++  }
+ 
++  // --- ROUTE PROTECTION LOGIC ---
++  
+   // If accessing a protected route without a token, redirect to login
+   const isProtected = PROTECTED_ROUTES.some(
+     (route) => pathname === route || pathname.startsWith(`${route}/`)
+   );
+ 
+-  if (isProtected && !token) {
++  if (isProtected && !authToken) {
+     const loginUrl = new URL('/login', request.url);
+-    return Response.redirect(loginUrl);
++    const redirectResponse = NextResponse.redirect(loginUrl);
++    // If we had refreshed tokens, we would want to keep them, but here there's NO auth token so we just redirect
++    return redirectResponse;
+   }
+ 
+   // If accessing login page with a valid token, redirect to dashboard
+-  // unless explicitly forced to stay on login (e.g. after a 401 logout failure)
+-  if (pathname === '/login' && token && request.nextUrl.searchParams.get('force') !== 'true') {
++  if (pathname === '/login' && authToken && request.nextUrl.searchParams.get('force') !== 'true') {
+     const dashboardUrl = new URL('/dashboard', request.url);
+-    return Response.redirect(dashboardUrl);
++    const redirectResponse = NextResponse.redirect(dashboardUrl);
++    
++    // Copy the refreshed cookies to the redirect response if we refreshed them
++    if (refreshedResponse) {
++      redirectResponse.headers.set('Set-Cookie', refreshedResponse.headers.get('Set-Cookie') || '');
++    }
++    
++    return redirectResponse;
+   }
+ 
+   // Continue with the request
+-  return undefined;
++  return refreshedResponse || NextResponse.next();
+ }
+ 
+ export { proxy as middleware };

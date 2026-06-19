@@ -64,7 +64,7 @@ export class AuthService {
     if (!tokenRecord) {
       // Possible token reuse / replay attack. 
       // In a strict implementation, we would revoke all tokens for this user:
-      // await this.authRepository.deleteAllRefreshTokens(payload.userId);
+      await this.authRepository.deleteAllRefreshTokens(payload.userId);
       throw new UnauthorizedException('Refresh token has been revoked or already used');
     }
 
@@ -92,14 +92,13 @@ export class AuthService {
 
   async logout(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      });
-      if (payload.jti) {
+      // Use decode so we can clean up even if the token is expired
+      const payload = this.jwtService.decode(refreshToken) as any;
+      if (payload && payload.jti) {
         await this.authRepository.deleteRefreshToken(payload.jti);
       }
     } catch (e) {
-      // Ignore verification errors on logout
+      // Ignore decode errors on logout
     }
   }
 }
