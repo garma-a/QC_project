@@ -5,21 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type {
-  EnrichedControlLotResponseDto,
-  EnrichedQcResultResponseDto,
   MachineResponseDto,
+  EnrichedQcResultResponseDto,
 } from '@/lib/types/api';
 
 export type MonitorResultEntry = EnrichedQcResultResponseDto & {
-  /** Formatted display date string (e.g. "6/14/2026 02:30 PM") */
   date: string;
-  /** Formatted expected range string (e.g. "96.5 - 106.5") */
   expectedRange: string;
-  /** Alias: lot control level (1, 2, or 3) */
   level: number;
-  /** Alias: lot mean value */
   lotMean: number;
-  /** Alias: lot standard deviation */
   lotSd: number;
 };
 
@@ -65,132 +59,29 @@ export function useDashboardData() {
     queryKey: ['dashboard-data'],
     queryFn: async ({ signal }) => {
       /**
-       * SCALABLE DESIGN:
-       *
-       * 1. GET /api/v1/machines          — 4 rows (always small)
-       * 2. GET /api/v1/control-lots?isActive=true
-       *    — Returns ONLY active lots (~56 rows) enriched with testName, testType, machineId
-       *      via a server-side JOIN. No separate /qc-tests call needed.
-       *      Scales to 1M+ lots because isActive filter keeps the result set tiny.
-       * 3. GET /api/v1/qc-results/recent-all — 30 latest results per lot using a CROSS JOIN LATERAL.
-       *      This inherently solves the pagination starvation bug by guaranteeing every lot gets
-       *      its recent history fetched, completely irrespective of total database size.
+       * BFF DESIGN:
+       * 1 request. That's it.
        */
-      const [fetchedMachines, activeLots, allResultsResponse] = await Promise.all([
-        clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
-        clientFetch<EnrichedControlLotResponseDto[]>(
-          '/api/v1/control-lots?isActive=true',
-          { signal },
-          token,
-        ).catch(() => []),
-        clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
-          '/api/v1/qc-results/recent-all',
-          { signal },
-          token,
-        ).catch(() => ({ results: [] })),
-      ]);
+      const response = await clientFetch<DashboardData>('/api/v1/bff/dashboard', { signal }, token).catch((e) => {
+        console.error('BFF Fetch Error:', e);
+        return null;
+      });
 
-      const allResults: EnrichedQcResultResponseDto[] = Array.isArray(allResultsResponse?.results)
-        ? allResultsResponse.results
-        : [];
-
-      let categories: { id: string; name: string }[] = [];
-      let qcHistory: MonitorResultEntry[] = [];
-      let machines: DashboardData['machines'] = [];
-
-      if (fetchedMachines && fetchedMachines.length > 0) {
-        // Build section categories from machines
-        const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
-        categories = sectionIds.map((sid) => ({
-          id: sid.toString(),
-          name: `Section ${sid}`,
-        }));
-
-        /**
-         * Build qcHistory directly from enriched results.
-         * No cross-referencing needed — machineId, testName, lot details
-         * are all embedded in each result by the backend JOIN.
-         */
-        qcHistory = allResults.map((result): MonitorResultEntry => {
-          const dateObj = new Date(result.testDate as string);
-          const dateStr = !Number.isNaN(dateObj.getTime())
-            ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'N/A N/A';
-
-          return {
-            ...result,
-            level: result.lotLevel ?? 1,
-            lotMean: result.lotMean ?? 0,
-            lotSd: result.lotSd ?? 1,
-            expectedRange: `${result.lowerControlLimit ?? 0} - ${result.upperControlLimit ?? 0}`,
-            date: dateStr,
-          };
-        });
-
-        /**
-         * Build machine entries from:
-         * - fetchedMachines (base machine data)
-         * - activeLots filtered per machine (for test/lot definitions)
-         * - qcHistory filtered per machine (for "last QC" and "tests today")
-         *
-         * activeLots has machineId + testName + testType already embedded.
-         */
-        machines = fetchedMachines.map((machine) => {
-          const machineResults = qcHistory
-            .filter((entry) => entry.machineId === machine.id)
-            .sort((a, b) => new Date(b.testDate as string).getTime() - new Date(a.testDate as string).getTime());
-          const latestResult = machineResults[0];
-
-          // Filter active lots that belong to this machine
-          const machineLots = activeLots.filter((lot) => lot.machineId === machine.id);
-
-          // Each active lot maps to one entry in the tests array
-          const tests = machineLots.map((lot) => ({
-            id: lot.testId.toString(),
-            name: lot.testName,
-            category: lot.testType ?? 'General',
-            code: lot.testId.toString(),
-            unit: 'unit',
-            lowRange: lot.lowerControlLimit ?? 0,
-            highRange: lot.upperControlLimit ?? 0,
-            lotId: lot.id,
-            level: lot.level ?? 1,
-            lotNumber: lot.lotNumber,
-            mean: lot.mean ?? 0,
-            standardDeviation: lot.standardDeviation ?? 0,
-            isActive: lot.isActive ?? true,
-          }));
-
-          return {
-            ...machine,
-            testsToday: machineResults.length,
-            lastQC: latestResult
-              ? {
-                  date: new Date(latestResult.testDate as string).toLocaleString(),
-                  status:
-                    latestResult.status === 'PASS'
-                      ? 'pass'
-                      : latestResult.status === 'WARNING'
-                        ? 'warning'
-                        : 'error',
-                }
-              : { date: 'N/A', status: 'pass' },
-            tests,
-          };
-        });
+      if (!response) {
+        throw new Error('Failed to fetch dashboard data from BFF');
       }
 
-      return { machines, categories, qcHistory };
+      return response;
     },
-    enabled: !!token,
-    placeholderData: (prev) => prev,
-    refetchInterval: 30_000,
+    enabled: isHydrated && !!token,
+    staleTime: 1000 * 60, // 1 minute
+    refetchInterval: 30000, // 30 seconds
   });
 
   return {
-    data,
-    isLoading: isLoading || !token,
+    data: data || null,
+    isLoading,
     isFetching,
-    error: token ? error?.message || null : null,
+    error: error instanceof Error ? error.message : null,
   };
 }
