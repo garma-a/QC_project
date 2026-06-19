@@ -24,6 +24,8 @@ describe('ControlLotsService', () => {
       findByTestId: jest.fn(),
       update: jest.fn(),
       deactivate: jest.fn(),
+      getSectionIdByTestId: jest.fn(),
+      getSectionIdByLotId: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

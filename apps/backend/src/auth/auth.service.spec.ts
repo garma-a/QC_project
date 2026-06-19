@@ -16,6 +16,10 @@ describe('AuthService', () => {
   beforeEach(async () => {
     mockAuthRepository = {
       findByEmail: jest.fn(),
+      saveRefreshToken: jest.fn(),
+      findRefreshToken: jest.fn(),
+      deleteRefreshToken: jest.fn(),
+      findById: jest.fn(),
     };
 
     mockJwtService = {
