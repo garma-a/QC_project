@@ -11,7 +11,9 @@ import {
   Sse,
   MessageEvent,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
@@ -85,6 +87,8 @@ export class QcTestsController {
   }
 
   @Get('machine/:machineId')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(5 * 60 * 1000)
   @ApiOperation({
     summary: 'Get QC tests by machine ID',
     description:

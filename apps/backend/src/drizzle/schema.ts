@@ -61,17 +61,7 @@ export const sections = pgTable('sections', {
   specialization: specializationEnum('specialization').default('OTHER'),
 });
 
-export const refreshTokens = pgTable('refresh_tokens', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .references(() => users.id, { onDelete: 'cascade' })
-    .notNull(),
-  jti: uuid('jti').unique().notNull(),
-  expiresAt: timestamp('expires_at').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-}, (t) => ({
-  userIdIdx: index('idx_refresh_tokens_user_id').on(t.userId),
-}));
+
 
 export const machines = pgTable('machines', {
   id: serial('id').primaryKey(),
@@ -288,15 +278,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   sectionAssignments: many(usersToSections),
   performedRuns: many(qcRuns),
   alertNotifications: many(usersToAlerts),
-  refreshTokens: many(refreshTokens),
 }));
 
-export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
-  user: one(users, {
-    fields: [refreshTokens.userId],
-    references: [users.id],
-  }),
-}));
+
 
 export const usersToSectionsRelations = relations(
   usersToSections,

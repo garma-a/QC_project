@@ -13,7 +13,9 @@ import {
   Sse,
   MessageEvent,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
@@ -89,6 +91,8 @@ export class ControlLotsController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60 * 1000)
   @ApiOperation({
     summary: 'Get all control lots',
     description:
