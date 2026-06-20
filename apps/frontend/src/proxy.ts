@@ -10,7 +10,10 @@ function isTokenExpired(token: string) {
     if (parts.length !== 3) return true;
     
     // Handle base64url encoding
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
     const payload = JSON.parse(atob(base64));
     
     // Check if expiration is within the next 30 seconds to be safe
