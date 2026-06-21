@@ -6,6 +6,8 @@ import { QcTestsModule } from '@/qc-tests/qc-tests.module';
 import { QcResultsModule } from '@/qc-results/qc-results.module';
 import { AlertsModule } from '@/alerts/alerts.module';
 
+import { UsersModule } from '@/users/users.module';
+
 @Module({
   imports: [
     MachinesModule,
@@ -13,6 +15,7 @@ import { AlertsModule } from '@/alerts/alerts.module';
     QcTestsModule,
     QcResultsModule,
     AlertsModule,
+    UsersModule,
   ],
   controllers: [EventsController],
 })

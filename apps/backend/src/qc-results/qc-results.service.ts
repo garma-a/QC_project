@@ -201,8 +201,9 @@ export class QcResultsService {
     }
 
     if (savedRunData?.results) {
+      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(savedRunData.results[0].lotId);
       for (const result of savedRunData.results) {
-        this.qcResultEvents$.next({ type: 'create', data: result });
+        this.qcResultEvents$.next({ type: 'create', data: result, sectionId });
       }
     }
 
@@ -267,7 +268,8 @@ export class QcResultsService {
       throw new NotFoundException(`QC Result with ID ${id} not found`);
 
     const updatedResult = await this.findOne(id);
-    this.qcResultEvents$.next({ type: 'update', data: updatedResult });
+    const sectionId = await this.qcResultsRepository.getSectionIdByLotId(updatedResult.qc_results!.lotId);
+    this.qcResultEvents$.next({ type: 'update', data: updatedResult, sectionId });
     return updatedResult;
   }
 }

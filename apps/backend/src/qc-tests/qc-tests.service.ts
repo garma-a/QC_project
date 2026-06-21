@@ -18,7 +18,7 @@ export class QcTestsService {
     }
     const newTest = await this.qcTestsRepository.createQcTest(createQcTestDto);
 
-    this.testEvents$.next({ type: 'create', data: newTest });
+    this.testEvents$.next({ type: 'create', data: newTest, sectionId: machine.sectionId });
     return newTest;
   }
 
@@ -48,7 +48,8 @@ export class QcTestsService {
     }
 
     const updatedTest = await this.qcTestsRepository.updateQcTest(testId, updateQcTestDto);
-    this.testEvents$.next({ type: 'update', data: updatedTest });
+    const updatedMachine = await this.qcTestsRepository.getMachineById(updatedTest.machineId);
+    this.testEvents$.next({ type: 'update', data: updatedTest, sectionId: updatedMachine?.sectionId });
     return updatedTest;
   }
 

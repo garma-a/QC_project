@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { X, Heart } from 'lucide-react';
 import { submitQcResult } from '@/lib/actions';
@@ -33,6 +34,7 @@ interface RecordQcResultProps {
 }
 
 export function RecordQcResult({ onClose, machines, categories }: RecordQcResultProps) {
+  const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMachine, setSelectedMachine] = useState('');
@@ -45,12 +47,14 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
     setMounted(true);
   }, []);
 
+  // Step 1: Filter machines by selected category. If no category chosen yet, show nothing.
   const filteredMachines = selectedCategory
-    ? machines.filter(m => m.category === selectedCategory)
-    : [];
+    ? machines.filter((m) => m.category === selectedCategory)
+    : machines; // show all until a category is chosen
 
-  const selectedMachineObj = machines.find(m => m.id === selectedMachine);
-  const activeLots = selectedMachineObj?.tests?.filter(t => t.lotId !== -1 && t.isActive) || [];
+  // Step 2: Filter lots to only active lots belonging to the selected machine.
+  const selectedMachineObj = machines.find((m) => m.id === selectedMachine);
+  const activeLots = selectedMachineObj?.tests?.filter((t) => t.isActive) || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +86,10 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
     if (res.error) {
       alert("Failed: " + res.error);
     } else {
+      // Bust the React Query client-side cache so the history table
+      // refetches immediately without a hard page refresh.
+      await queryClient.invalidateQueries({ queryKey: ['qc-results-infinite'] });
+      await queryClient.invalidateQueries({ queryKey: ['qc-context-data'] });
       onClose();
     }
   };
@@ -162,15 +170,15 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select a control lot</option>
-              {activeLots.map(lot => (
+              {activeLots.map((lot) => (
                 <option key={`${lot.id}-${lot.lotId}`} value={lot.lotId}>
-                  {lot.name} - Lot {lot.lotNumber} (Level {lot.level})
+                  {lot.name} — Lot {lot.lotNumber} (Level {lot.level})
                 </option>
               ))}
             </select>
             {selectedMachine && activeLots.length === 0 && (
               <p className="text-[#c41e3a] dark:text-[#e84855] text-sm mt-2 font-medium">
-                No active control lots found for this machine.
+                No active control lots found for this machine. Please add a control lot first.
               </p>
             )}
           </div>

@@ -7,12 +7,15 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  ParseBoolPipe,
   UseGuards,
   Query,
   Sse,
   MessageEvent,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
@@ -88,6 +91,8 @@ export class ControlLotsController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60 * 1000)
   @ApiOperation({
     summary: 'Get all control lots',
     description:
@@ -125,11 +130,11 @@ export class ControlLotsController {
   findAll(
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
-    @Query('isActive') isActiveStr?: string,
+    @Query('isActive', new ParseBoolPipe({ optional: true })) isActive?: boolean,
   ) {
     // When isActive=true is requested, return enriched active lots \u2014 no pagination
     // This is the scalable path used by the dashboard frontend
-    if (isActiveStr === 'true') {
+    if (isActive) {
       return this.controlLotsService.findActiveWithTestContext();
     }
     return this.controlLotsService.findAll(limit, offset);

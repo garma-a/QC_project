@@ -17,11 +17,11 @@ export class LoginDto {
     description: 'User password',
     example: 'strongPassword123',
     type: String,
-    minLength: 6
+    minLength: 8
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
   password: string;
 }
 

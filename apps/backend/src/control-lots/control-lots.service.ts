@@ -46,7 +46,8 @@ export class ControlLotsService {
     );
 
     const result = this.computeAgeFlags(newLot);
-    this.lotEvents$.next({ type: 'create', data: result });
+    const sectionId = await this.controlLotsRepository.getSectionIdByTestId(createControlLotDto.testId);
+    this.lotEvents$.next({ type: 'create', data: result, sectionId });
     return result;
   }
 
@@ -93,7 +94,8 @@ export class ControlLotsService {
     const updatedLot = await this.controlLotsRepository.update(id, updateData);
 
     const result = this.computeAgeFlags(updatedLot);
-    this.lotEvents$.next({ type: 'update', data: result });
+    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
+    this.lotEvents$.next({ type: 'update', data: result, sectionId });
     return result;
   }
 
@@ -110,7 +112,8 @@ export class ControlLotsService {
       message: 'Control lot deactivated successfully',
       lot: deactivatedLot,
     };
-    this.lotEvents$.next({ type: 'delete', data: result.lot });
+    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
+    this.lotEvents$.next({ type: 'delete', data: result.lot, sectionId });
     return result;
   }
 }

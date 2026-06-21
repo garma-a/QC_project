@@ -4,11 +4,14 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   constructor(private readonly httpAdapterHost: HttpAdapterHost) { }
 
   catch(exception: unknown, host: ArgumentsHost): void {
@@ -21,12 +24,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    console.error('Unhandled Exception:', exception);
-
     const message =
       exception instanceof HttpException
         ? exception.getResponse()
         : 'Internal Server Error';
+
+    this.logger.error(
+      `Unhandled Exception: ${JSON.stringify(message)}`,
+      exception instanceof Error ? exception.stack : exception,
+    );
 
     const errorResponse = typeof message === 'string'
       ? { message }

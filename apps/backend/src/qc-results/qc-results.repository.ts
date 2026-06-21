@@ -123,7 +123,7 @@ export class QcResultsRepository {
     if (startDate && endDate) {
       safeLimit = Math.max(1, Math.min(limit ?? 500, 500));
     } else {
-      safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+      safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     }
 
     const safeOffset = Math.max(0, offset ?? 0);
@@ -213,7 +213,7 @@ export class QcResultsRepository {
    * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
    */
   async getPaginatedResults(limit?: number, offset?: number, machineId?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
       .select({

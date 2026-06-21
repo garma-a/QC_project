@@ -1,5 +1,5 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, qcTests } from '@/drizzle/schema';
+import { controlLots, qcTests, machines } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -37,6 +37,27 @@ export class ControlLotsRepository {
     return test;
   }
 
+  async getSectionIdByTestId(testId: number) {
+    const res = await this.databaseService.db
+      .select({ sectionId: machines.sectionId })
+      .from(qcTests)
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .where(eq(qcTests.id, testId))
+      .limit(1);
+    return res[0]?.sectionId;
+  }
+
+  async getSectionIdByLotId(lotId: number) {
+    const res = await this.databaseService.db
+      .select({ sectionId: machines.sectionId })
+      .from(controlLots)
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .where(eq(controlLots.id, lotId))
+      .limit(1);
+    return res[0]?.sectionId;
+  }
+
   async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
     return this.databaseService.db.transaction(async (tx) => {
       // 1. Deactivate existing active lots for this test
@@ -62,7 +83,7 @@ export class ControlLotsRepository {
   }
 
   async findAll(limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 10000));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     const query = this.databaseService.db
       .select()
@@ -103,7 +124,8 @@ export class ControlLotsRepository {
       .from(controlLots)
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .where(eq(controlLots.isActive, true))
-      .orderBy(desc(controlLots.id));
+      .orderBy(desc(controlLots.id))
+      .limit(1000);
   }
 
   async findById(id: number) {

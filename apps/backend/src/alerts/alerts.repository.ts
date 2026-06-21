@@ -34,7 +34,7 @@ export class AlertsRepository {
       .orderBy(desc(alerts.createdAt))
       .$dynamic();
 
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 10000));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
 
     query = query.limit(safeLimit).offset(safeOffset);

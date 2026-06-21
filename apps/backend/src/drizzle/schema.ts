@@ -12,6 +12,7 @@ import {
   doublePrecision,
   index,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
@@ -59,6 +60,8 @@ export const sections = pgTable('sections', {
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   specialization: specializationEnum('specialization').default('OTHER'),
 });
+
+
 
 export const machines = pgTable('machines', {
   id: serial('id').primaryKey(),
@@ -276,6 +279,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   performedRuns: many(qcRuns),
   alertNotifications: many(usersToAlerts),
 }));
+
+
 
 export const usersToSectionsRelations = relations(
   usersToSections,

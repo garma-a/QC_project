@@ -24,7 +24,7 @@ export class MachinesService {
         sectionId: createMachineDto.sectionId,
       });
 
-      this.machineEvents$.next({ type: 'create', data: newMachine });
+      this.machineEvents$.next({ type: 'create', data: newMachine, sectionId: newMachine.sectionId });
       return newMachine;
     } catch (error) {
       this.handleDbError(error);
@@ -54,7 +54,7 @@ export class MachinesService {
       if (!updatedMachine) {
         throw new NotFoundException(`Machine with ID #${id} not found`);
       }
-      this.machineEvents$.next({ type: 'update', data: updatedMachine });
+      this.machineEvents$.next({ type: 'update', data: updatedMachine, sectionId: updatedMachine.sectionId });
       return updatedMachine;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -69,7 +69,7 @@ export class MachinesService {
       throw new NotFoundException(`Machine with ID #${id} not found`);
     }
 
-    this.machineEvents$.next({ type: 'delete', data: deletedMachine });
+    this.machineEvents$.next({ type: 'delete', data: deletedMachine, sectionId: deletedMachine.sectionId });
     return deletedMachine;
   }
 

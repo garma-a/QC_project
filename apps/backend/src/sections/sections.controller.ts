@@ -1,4 +1,5 @@
-import { ParseIntPipe, Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { ParseIntPipe, Controller, Get, UseGuards, Query, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -17,6 +18,8 @@ export class SectionsController {
   constructor(private readonly sectionsService: SectionsService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(5 * 60 * 1000)
   @ApiOperation({
     summary: 'Get all lab sections',
     description:
