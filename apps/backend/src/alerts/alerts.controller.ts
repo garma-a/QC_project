@@ -7,7 +7,15 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  Sse,
+  MessageEvent,
+  Req,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import type { Request } from 'express';
+import { Observable, fromEvent } from 'rxjs';
+import { map, filter, takeUntil } from 'rxjs/operators';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -38,6 +46,8 @@ export class AlertsController {
   constructor(private readonly alertsService: AlertsService) { }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30 * 1000)
   @ApiOperation({
     summary: 'List current user alerts',
     description:
@@ -147,5 +157,6 @@ export class AlertsController {
       resolveAlertDto?.resolutionNote,
     );
   }
+
 
 }

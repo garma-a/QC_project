@@ -29,6 +29,7 @@ export interface LoginDto {
 
 export interface LoginResponseDto {
   accessToken: string;
+  refreshToken?: string;
 }
 
 // ===================================================================
@@ -203,6 +204,24 @@ export interface ControlLotDeactivateResponseDto {
   lot: ControlLotResponseDto;
 }
 
+/**
+ * Returned by GET /api/v1/control-lots?isActive=true
+ * Extends the base lot DTO with embedded test context from a SQL JOIN,
+ * eliminating the need to separately fetch /qc-tests on the frontend.
+ */
+export interface EnrichedControlLotResponseDto extends ControlLotResponseDto {
+  /** Name of the parent QC test (from qc_tests JOIN) */
+  testName: string;
+  /** Category/type of the parent QC test */
+  testType?: string | null;
+  /** ID of the machine this test belongs to (from qc_tests JOIN) */
+  machineId: number;
+  /** Computed: number of days since lot was created */
+  daysActive: number;
+  /** Computed: true if lot has been active for ≥ 10 days */
+  needsChecking: boolean;
+}
+
 export interface ControlLotInResultDto {
   id: number;
   testId: number;
@@ -234,6 +253,25 @@ export interface QcResultResponseDto {
   performedBy: number;
   zScore: number;
   violatedRule: string | null;
+}
+
+/**
+ * Returned by GET /api/v1/qc-results (without lotId param).
+ * Enriched with lot/test/machine context via server-side JOINs.
+ * The frontend no longer needs to cross-reference separate lot and test fetches.
+ */
+export interface EnrichedQcResultResponseDto extends QcResultResponseDto {
+  /** Lot details (from control_lots JOIN) */
+  lotNumber: string;
+  lotMean: number | null;
+  lotSd: number | null;
+  lotLevel: number;
+  lowerControlLimit: number | null;
+  upperControlLimit: number | null;
+  /** Test + machine context (from qc_tests / machines JOIN) */
+  testId: number;
+  testName: string;
+  machineId: number;
 }
 
 export interface QcResultItemDto {

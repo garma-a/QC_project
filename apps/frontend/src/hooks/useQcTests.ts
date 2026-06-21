@@ -15,15 +15,6 @@ interface UseQcTestsReturn {
   isFetchingNextPage: boolean;
 }
 
-/**
- * Fetch all QC tests configured on a specific machine.
- *
- * The machineId is part of the query key, so React Query caches results
- * per-machine. When the user switches machines quickly, in-flight requests
- * for the previous machine are cancelled via AbortSignal, preventing the
- * race condition where a slow response from machine A could overwrite the
- * correct data for machine B.
- */
 export function useQcTests(machineId?: number | null): UseQcTestsReturn {
   const token = useAuthStore((s) => s.accessToken);
 
@@ -48,8 +39,6 @@ export function useQcTests(machineId?: number | null): UseQcTestsReturn {
       return lastPage.length === 50 ? allPages.length * 50 : undefined;
     },
     initialPageParam: 0,
-    // Do not fire the request if machineId is exactly null (which means it's waiting for selection).
-    // If it's undefined, it means we want ALL tests.
     enabled: machineId !== null && !!token,
   });
 

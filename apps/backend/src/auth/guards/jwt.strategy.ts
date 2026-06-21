@@ -1,7 +1,7 @@
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { JwtPayload } from '@/auth/auth.types';
+import { JwtPayload, RequestUser, Role } from '@/auth/auth.types';
 import { ConfigService } from '@nestjs/config';
 import { AuthRepository } from '@/auth/auth.repository';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -21,9 +21,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<RequestUser> {
     const cacheKey = `user_status_${payload.userId}`;
-    const cachedUser = await this.cacheManager.get<{ isActive: boolean, role: any }>(cacheKey);
+    const cachedUser = await this.cacheManager.get<{ isActive: boolean; role: Role }>(cacheKey);
 
     if (cachedUser) {
       if (!cachedUser.isActive) {
@@ -37,7 +37,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User is invalid');
     }
 
-    const minimalUser = { isActive: user.isActive ?? false, role: user.role };
+    const minimalUser = { isActive: user.isActive ?? false, role: user.role as Role };
     // Note: cache-manager v5+ uses milliseconds for ttl, older versions used seconds.
     // NestJS cache-manager defaults to ms, so we pass 300000ms.
     await this.cacheManager.set(cacheKey, minimalUser, 300000);

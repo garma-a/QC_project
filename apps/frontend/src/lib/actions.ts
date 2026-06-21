@@ -48,16 +48,28 @@ export async function loginAccount(formData: FormData) {
     }
 
     const token = response.accessToken;
+    const refreshToken = response.refreshToken;
     const cookieStore = await cookies();
 
-    // Store the JWT token (httpOnly for server components)
+    // Store the JWT access token
     cookieStore.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60, // 1 hour
     });
+
+    if (refreshToken) {
+      // Store the refresh token
+      cookieStore.set('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
 
     // Decode the JWT to get userId and role
     const jwtPayload = decodeJwt(token);
@@ -113,9 +125,69 @@ export async function loginAccount(formData: FormData) {
 
 export async function logoutAccount() {
   const cookieStore = await cookies();
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+
+  if (refreshToken) {
+    try {
+      await api.post('/api/v1/auth/logout', { refreshToken });
+    } catch (e) {
+      // Ignore API errors, we still want to clear the local session
+    }
+  }
+
   cookieStore.delete('auth_token');
+  cookieStore.delete('refresh_token');
   cookieStore.delete('user_info');
   return { success: true };
+}
+
+export async function refreshTokensAction() {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get('refresh_token')?.value;
+
+  if (!refreshToken) {
+    return { error: 'No refresh token available.' };
+  }
+
+  try {
+    const response = await api.post<LoginResponseDto>('/api/v1/auth/refresh', {
+      refreshToken,
+    });
+
+    if (!response?.accessToken) {
+      return { error: 'Invalid refresh token response.' };
+    }
+
+    // Store the new access token
+    cookieStore.set('auth_token', response.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+    });
+
+    if (response.refreshToken) {
+      // Store the new refresh token
+      cookieStore.set('refresh_token', response.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      });
+    }
+
+    return { success: true, token: response.accessToken };
+  } catch (error: unknown) {
+    // If refresh fails, delete tokens so user is forced to log in
+    cookieStore.delete('auth_token');
+    cookieStore.delete('refresh_token');
+    cookieStore.delete('user_info');
+    return {
+      error: error instanceof Error ? error.message : 'Failed to refresh token.',
+    };
+  }
 }
 
 // ===================================================================
@@ -167,6 +239,9 @@ export async function createMachine(payload: CreateMachineDto) {
     await api.post<MachineResponseDto>('/api/v1/machines', payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -181,6 +256,9 @@ export async function updateMachine(machineId: number, payload: UpdateMachineDto
     await api.patch<MachineResponseDto>(`/api/v1/machines/${machineId}`, payload);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -194,6 +272,9 @@ export async function deleteMachine(machineId: number) {
     await api.delete(`/api/v1/machines/${machineId}`);
     revalidatePath('/machines');
     revalidatePath('/dashboard');
+    revalidatePath('/qc-tests');
+    revalidatePath('/control-lots');
+    revalidatePath('/qc');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -211,6 +292,8 @@ export async function createQcTest(payload: CreateQcTestDto) {
     await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
+    revalidatePath('/dashboard');
+    revalidatePath('/control-lots');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -225,6 +308,8 @@ export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
     await api.patch<QcTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
+    revalidatePath('/dashboard');
+    revalidatePath('/control-lots');
     return { success: true };
   } catch (error: unknown) {
     return {
@@ -280,6 +365,7 @@ export async function createControlLot(payload: CreateControlLotDto) {
     revalidatePath('/qc');
     revalidatePath('/dashboard');
     revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
@@ -300,6 +386,8 @@ export async function updateControlLot(lotId: number, payload: UpdateControlLotD
     revalidatePath('/control-lots');
     revalidatePath('/qc');
     revalidatePath('/dashboard');
+    revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true, data: lot };
   } catch (error: unknown) {
     return {
@@ -314,6 +402,8 @@ export async function deactivateControlLot(lotId: number) {
     revalidatePath('/control-lots');
     revalidatePath('/qc');
     revalidatePath('/dashboard');
+    revalidatePath('/machines');
+    revalidatePath('/qc-tests');
     return { success: true };
   } catch (error: unknown) {
     return {

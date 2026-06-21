@@ -16,7 +16,8 @@ import {
   YAxis,
 } from 'recharts';
 import { useTheme } from '@/contexts/ThemeContext';
-import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter, Loader2 } from 'lucide-react';
+import { useQcResults } from '@/hooks/useQcResults';
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
 const getPointColor = (status: string, isDark: boolean) => {
@@ -154,31 +155,47 @@ function WestgardTooltip({ active, payload, tooltipBorder }: WestgardTooltipProp
   );
 }
 
-function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testName, theme }: any) {
-  const qcData = useMemo(() => {
-    let filtered = qcHistory.filter((entry: any) => entry.lotId === lot.lotId);
+function LotChart({ lot, mode, startDate, endDate, machineName, testName, theme, qcHistory }: any) {
+  const fetchStartDate = mode === 'archive' && startDate ? new Date(startDate + 'T00:00:00').toISOString() : undefined;
+  const fetchEndDate = mode === 'archive' && endDate ? new Date(endDate + 'T23:59:59').toISOString() : undefined;
+  
+  // Only use the hook for archive fetches. For live mode, we rely on the pre-fetched global qcHistory.
+  const { data: lotData, loading } = useQcResults(
+    mode === 'archive' ? lot.lotId : null, 
+    fetchStartDate, 
+    fetchEndDate
+  );
 
-    if (mode === 'archive') {
-      const start = startDate ? new Date(startDate + 'T00:00:00').getTime() : 0;
-      const end = endDate ? new Date(endDate + 'T23:59:59').getTime() : Infinity;
-      filtered = filtered.filter((entry: any) => {
-        const t = new Date(entry.testDate).getTime();
-        return t >= start && t <= end;
-      });
+  const qcData = useMemo(() => {
+    if (mode === 'live') {
+      return qcHistory
+        .filter((entry: any) => entry.lotId === lot.lotId)
+        .slice()
+        .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
+        .map((entry: any) => ({
+          date: new Date(entry.testDate).toLocaleString(),
+          value: entry.measuredValue,
+          testName: testName,
+          zScore: entry.zScore,
+          violatedRule: entry.violatedRule,
+          status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
+        }));
     }
 
-    return filtered
+    if (!lotData || !lotData.results) return [];
+
+    return lotData.results
       .slice()
       .sort((a: any, b: any) => new Date(a.testDate).getTime() - new Date(b.testDate).getTime())
       .map((entry: any) => ({
         date: new Date(entry.testDate).toLocaleString(),
         value: entry.measuredValue,
-        testName: entry.testName,
+        testName: testName,
         zScore: entry.zScore,
         violatedRule: entry.violatedRule,
         status: entry.status === 'FAIL' ? 'reject' : entry.status === 'WARNING' ? 'warning' : 'normal',
       }));
-  }, [lot, qcHistory, mode, startDate, endDate]);
+  }, [mode, qcHistory, lot.lotId, lotData, testName]);
 
   const westgardAnalysis = useMemo(() => {
     const mean = lot?.mean ?? 0;
@@ -237,6 +254,15 @@ function LotChart({ lot, qcHistory, mode, startDate, endDate, machineName, testN
     violations: point.violations.join(', '),
     fill: getPointColor(point.status, isDark),
   }));
+
+  if (mode === 'archive' && loading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#1e1e1e] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-6">
+        <Loader2 className="w-8 h-8 animate-spin text-[#c41e3a] dark:text-[#e84855] mb-2" />
+        <p className="text-gray-500 dark:text-gray-400">Loading QC data...</p>
+      </div>
+    );
+  }
 
   if (chartData.length === 0) {
     return (
@@ -444,29 +470,6 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
           });
         }
       }
-    } else {
-      for (const result of qcHistory) {
-        const tIdStr = result.testId.toString();
-        if (!testMap.has(tIdStr)) {
-          testMap.set(tIdStr, {
-            testId: tIdStr,
-            testName: result.testName,
-            category: 'General',
-            lots: [],
-          });
-        }
-        const testObj = testMap.get(tIdStr)!;
-        if (!testObj.lots.find((l) => l.lotId === result.lotId)) {
-          testObj.lots.push({
-            lotId: result.lotId,
-            level: result.level ?? 1,
-            lotNumber: result.lotNumber,
-            isActive: false,
-            mean: 0,
-            standardDeviation: 1,
-          });
-        }
-      }
     }
 
     for (const test of testMap.values()) {
@@ -594,17 +597,17 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
       )}
 
       {lotsToRender.length > 0 ? (
-        lotsToRender.map((lot) => (
+        lotsToRender.map(lot => (
           <LotChart 
-            key={lot.lotId}
-            lot={lot}
-            qcHistory={qcHistory}
+            key={lot.lotId} 
+            lot={lot} 
             mode={mode}
             startDate={startDate}
             endDate={endDate}
-            machineName={machine?.name ?? 'Unknown'}
-            testName={activeTest?.testName ?? 'Unknown'}
+            machineName={machine?.name}
+            testName={activeTest?.testName}
             theme={theme}
+            qcHistory={qcHistory}
           />
         ))
       ) : (

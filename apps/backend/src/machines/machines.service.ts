@@ -5,12 +5,15 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { CreateMachineDto } from '@/machines/dto/create-machine.dto';
 import { UpdateMachineDto } from '@/machines/dto/update-machine.dto';
 import { MachinesRepository } from './machines.repository';
 
 @Injectable()
 export class MachinesService {
+  public machineEvents$ = new Subject<any>();
+
   constructor(private readonly machinesRepository: MachinesRepository) { }
 
   async create(createMachineDto: CreateMachineDto) {
@@ -21,6 +24,7 @@ export class MachinesService {
         sectionId: createMachineDto.sectionId,
       });
 
+      this.machineEvents$.next({ type: 'create', data: newMachine, sectionId: newMachine.sectionId });
       return newMachine;
     } catch (error) {
       this.handleDbError(error);
@@ -50,6 +54,7 @@ export class MachinesService {
       if (!updatedMachine) {
         throw new NotFoundException(`Machine with ID #${id} not found`);
       }
+      this.machineEvents$.next({ type: 'update', data: updatedMachine, sectionId: updatedMachine.sectionId });
       return updatedMachine;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -64,6 +69,7 @@ export class MachinesService {
       throw new NotFoundException(`Machine with ID #${id} not found`);
     }
 
+    this.machineEvents$.next({ type: 'delete', data: deletedMachine, sectionId: deletedMachine.sectionId });
     return deletedMachine;
   }
 

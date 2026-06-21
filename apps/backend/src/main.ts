@@ -10,8 +10,10 @@ import { writeFileSync } from 'fs';
 async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
-  // do not forget to add the origin of the frontend application
-  app.enableCors();
+  // Lock down CORS to the specific origin of the frontend application
+  app.enableCors({
+    origin: ['http://localhost:3000'],
+  });
   app.setGlobalPrefix('api/v1');
 
   const httpAdapter = app.get(HttpAdapterHost);

@@ -8,7 +8,13 @@ import {
   UseGuards,
   Query,
   ParseIntPipe,
+  Sse,
+  MessageEvent,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
+import { Observable, fromEvent } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { QcResultsService } from './qc-results.service';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
@@ -118,14 +124,55 @@ export class QcResultsController {
     required: false,
     description: 'Number of results to skip (default: 0)',
   })
+  @ApiQuery({
+    name: 'machineId',
+    type: Number,
+    required: false,
+    description: 'Filter results by a specific machine ID',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    type: String,
+    required: false,
+    description: 'Filter results from this date (ISO string)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    type: String,
+    required: false,
+    description: 'Filter results up to this date (ISO string)',
+  })
   findAll(
     @Query('lotId') lotId?: string,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, limit, offset);
+    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId, startDate, endDate);
   }
+
+  @Get('recent-all')
+  @ApiOperation({
+    summary: 'Get recent QC results for all lots',
+    description: 'Returns the 30 most recent QC results for every control lot in the system efficiently.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the recent results.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  getRecentAll() {
+    return this.qcResultsService.getRecentAll();
+  }
+
+
 
   @Get(':id')
   @ApiOperation({

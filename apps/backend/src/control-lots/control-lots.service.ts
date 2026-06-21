@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { CreateControlLotDto } from './dto/create-control-lot.dto';
 import { UpdateControlLotDto } from './dto/update-control-lot.dto';
-import { ControlLotsRepository } from './control-lots.repository';
+import { ControlLotsRepository, ActiveLotWithTestContext } from './control-lots.repository';
 
 @Injectable()
 export class ControlLotsService {
+  public lotEvents$ = new Subject<any>();
+
   constructor(private readonly controlLotsRepository: ControlLotsRepository) {}
 
   // Helper to compute age-based warning fields
@@ -42,11 +45,23 @@ export class ControlLotsService {
       }
     );
 
-    return this.computeAgeFlags(newLot);
+    const result = this.computeAgeFlags(newLot);
+    const sectionId = await this.controlLotsRepository.getSectionIdByTestId(createControlLotDto.testId);
+    this.lotEvents$.next({ type: 'create', data: result, sectionId });
+    return result;
   }
 
   async findAll(limit?: number, offset?: number) {
     const lots = await this.controlLotsRepository.findAll(limit, offset);
+    return lots.map((lot) => this.computeAgeFlags(lot));
+  }
+
+  /**
+   * Returns all active lots enriched with their QC test context (testName, testType, machineId).
+   * Intended for dashboard/monitor usage — avoids fetching all 4000+ lots and all tests.
+   */
+  async findActiveWithTestContext(): Promise<(ActiveLotWithTestContext & { daysActive: number; needsChecking: boolean })[]> {
+    const lots = await this.controlLotsRepository.findActiveWithTestContext();
     return lots.map((lot) => this.computeAgeFlags(lot));
   }
 
@@ -78,7 +93,10 @@ export class ControlLotsService {
 
     const updatedLot = await this.controlLotsRepository.update(id, updateData);
 
-    return this.computeAgeFlags(updatedLot);
+    const result = this.computeAgeFlags(updatedLot);
+    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
+    this.lotEvents$.next({ type: 'update', data: result, sectionId });
+    return result;
   }
 
   async remove(id: number) {
@@ -90,9 +108,12 @@ export class ControlLotsService {
 
     const deactivatedLot = await this.controlLotsRepository.deactivate(id);
 
-    return {
+    const result = {
       message: 'Control lot deactivated successfully',
       lot: deactivatedLot,
     };
+    const sectionId = await this.controlLotsRepository.getSectionIdByLotId(id);
+    this.lotEvents$.next({ type: 'delete', data: result.lot, sectionId });
+    return result;
   }
 }

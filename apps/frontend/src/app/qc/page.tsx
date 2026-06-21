@@ -1,12 +1,14 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { QCHistoryInteractive } from '@/features/qc/components/QCHistoryInteractive';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useInfiniteQcResults } from '@/hooks/useInfiniteQcResults';
 
 export default function QCPage() {
   const { data: dashboardData, isLoading: isDashboardLoading, error: dashboardError } = useDashboardData();
+  const [selectedMachineId, setSelectedMachineId] = useState<string | undefined>(undefined);
+  
   const { 
     qcHistory, 
     isLoading: isQcLoading, 
@@ -14,7 +16,7 @@ export default function QCPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
-  } = useInfiniteQcResults();
+  } = useInfiniteQcResults(selectedMachineId ? parseInt(selectedMachineId) : undefined);
 
   if (dashboardError || qcError) {
     return (
@@ -92,6 +94,8 @@ export default function QCPage() {
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          selectedMachineId={selectedMachineId}
+          onMachineSelect={setSelectedMachineId}
         />
       </Suspense>
     </div>

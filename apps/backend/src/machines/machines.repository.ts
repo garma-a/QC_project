@@ -1,7 +1,7 @@
 import { DatabaseService } from '@/database/database.service';
 import { machines } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 
 @Injectable()
 export class MachinesRepository {
@@ -16,12 +16,13 @@ export class MachinesRepository {
   }
 
   async findAll(limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     
     let query = this.databaseService.db
       .select()
       .from(machines)
+      .where(eq(machines.isActive, true))
       .orderBy(desc(machines.id))
       .limit(safeLimit)
       .offset(safeOffset);
@@ -33,17 +34,14 @@ export class MachinesRepository {
     const [machine] = await this.databaseService.db
       .select()
       .from(machines)
-      .where(eq(machines.id, id));
+      .where(and(eq(machines.id, id), eq(machines.isActive, true)));
     return machine;
   }
 
   async update(id: number, data: Partial<typeof machines.$inferInsert>) {
     const [updatedMachine] = await this.databaseService.db
       .update(machines)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set(data)
       .where(eq(machines.id, id))
       .returning();
     return updatedMachine;
@@ -51,7 +49,8 @@ export class MachinesRepository {
 
   async delete(id: number) {
     const [deletedMachine] = await this.databaseService.db
-      .delete(machines)
+      .update(machines)
+      .set({ isActive: false })
       .where(eq(machines.id, id))
       .returning();
     return deletedMachine;

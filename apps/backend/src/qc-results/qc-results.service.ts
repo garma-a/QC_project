@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
+import { Subject } from 'rxjs';
 import { CreateQcResultDto } from './dto/create-qc-result.dto';
 import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 import { QcResultsRepository } from './qc-results.repository';
@@ -26,6 +28,9 @@ interface EvaluatedResultItem {
 
 @Injectable()
 export class QcResultsService {
+  private readonly logger = new Logger(QcResultsService.name);
+  public readonly qcResultEvents$ = new Subject<any>();
+
   constructor(
     private readonly qcResultsRepository: QcResultsRepository,
     private readonly alertsService: AlertsService,
@@ -83,8 +88,13 @@ export class QcResultsService {
     //    Level 2's z-score, making cross-material rules like R_4s clinically incorrect.
     const completeRunContext: RunResultItem[] = [];
 
+    // BATCH FETCH ALL LOTS
+    const lotIds = [...new Set(createQcResultDto.results.map((r) => r.lotId))];
+    const lotsList = await this.qcResultsRepository.getLotsByIds(lotIds);
+    for (const lot of lotsList) lotMap.set(lot.id, lot);
+
     for (const resultItem of createQcResultDto.results) {
-      const lot = await this.qcResultsRepository.getLotById(resultItem.lotId);
+      const lot = lotMap.get(resultItem.lotId);
       if (!lot) throw new NotFoundException(`Control lot ${resultItem.lotId} not found`);
 
       if (lot.standardDeviation === null || lot.mean === null) {
@@ -102,22 +112,25 @@ export class QcResultsService {
       const zScore = (resultItem.measuredValue - lot.mean) / lot.standardDeviation;
 
       // Store in maps and complete batch context
-      lotMap.set(resultItem.lotId, lot);
       currentZScoreMap.set(resultItem.lotId, zScore);
       completeRunContext.push({ lotId: resultItem.lotId, zScore });
     }
 
     // 2. SECOND PASS: Run Westgard analysis using the complete run layout.
     //    Every lot now has full omniscient visibility of all other levels' z-scores.
+    
+    // BATCH FETCH ALL PREVIOUS Z-SCORES
+    const allPriorZScoresMap = await this.qcResultsRepository.getRecentZScoresByLotIds(
+      lotIds,
+      WESTGARD_HISTORY_SIZE
+    );
+
     for (const resultItem of createQcResultDto.results) {
       const lot = lotMap.get(resultItem.lotId)!;
       const zScore = currentZScoreMap.get(resultItem.lotId)!;
 
-      // Fetch historical data for this specific lot over time
-      const priorZScores = await this.qcResultsRepository.getRecentZScoresByLotId(
-        resultItem.lotId,
-        WESTGARD_HISTORY_SIZE,
-      );
+      // Fetch historical data for this specific lot over time from our batch map
+      const priorZScores = allPriorZScoresMap.get(resultItem.lotId) ?? [];
 
       const zScoreWindow = [zScore, ...priorZScores];
 
@@ -184,20 +197,27 @@ export class QcResultsService {
         }
       }
     } catch (error) {
-      console.error('Non-fatal error: Failed to generate alerts for QC Run', error);
+      this.logger.error('Non-fatal error: Failed to generate alerts for QC Run', error);
+    }
+
+    if (savedRunData?.results) {
+      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(savedRunData.results[0].lotId);
+      for (const result of savedRunData.results) {
+        this.qcResultEvents$.next({ type: 'create', data: result, sectionId });
+      }
     }
 
     return savedRunData;
   }
 
-  async findAll(lotId?: number, limit?: number, offset?: number) {
+  async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
     if (lotId) {
       const lot = await this.qcResultsRepository.getLotById(lotId);
       if (!lot) throw new NotFoundException('Control lot not found');
 
       const lotContext =
         await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset);
+      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset, startDate, endDate);
 
       return {
         lot: {
@@ -217,9 +237,14 @@ export class QcResultsService {
     } else {
       const parsedLimit = limit ?? 50;
       const parsedOffset = offset ?? 0;
-      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset);
+      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset, machineId);
       return { lot: null, results };
     }
+  }
+
+  async getRecentAll() {
+    const results = await this.qcResultsRepository.getRecentResultsAll();
+    return { lot: null, results };
   }
 
   async findOne(id: number) {
@@ -242,6 +267,9 @@ export class QcResultsService {
     if (!updated)
       throw new NotFoundException(`QC Result with ID ${id} not found`);
 
-    return this.findOne(id);
+    const updatedResult = await this.findOne(id);
+    const sectionId = await this.qcResultsRepository.getSectionIdByLotId(updatedResult.qc_results!.lotId);
+    this.qcResultEvents$.next({ type: 'update', data: updatedResult, sectionId });
+    return updatedResult;
   }
 }

@@ -2,7 +2,7 @@ import { ParseIntPipe, Body, Controller, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from '@/auth/auth.service';
 import { LoginDto } from '@/auth/dto/login.dto';
-import { LoginResponseDto } from '@/auth/dto/auth-response.dto';
+import { LoginResponseDto, RefreshTokenDto } from '@/auth/dto/auth-response.dto';
 import {
   UnauthorizedResponseDto,
   ValidationErrorResponseDto,
@@ -38,5 +38,39 @@ export class AuthController {
   })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Provide a valid refresh token to obtain a new access token.',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Refresh successful. Returns a new access token and refresh token.',
+    type: LoginResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired refresh token.',
+    type: UnauthorizedResponseDto,
+  })
+  refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+  }
+
+  @Post('logout')
+  @ApiOperation({
+    summary: 'Logout user',
+    description: 'Invalidates the provided refresh token.',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 204,
+    description: 'Logout successful.',
+  })
+  async logout(@Body() refreshTokenDto: RefreshTokenDto) {
+    await this.authService.logout(refreshTokenDto.refreshToken);
   }
 }

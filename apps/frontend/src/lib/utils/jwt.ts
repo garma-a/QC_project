@@ -17,7 +17,10 @@ export function decodeJwt(token: string): JwtPayload | null {
 
     const payload = parts[1];
     // Handle base64url encoding
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
     const jsonStr = atob(base64);
     return JSON.parse(jsonStr) as JwtPayload;
   } catch {

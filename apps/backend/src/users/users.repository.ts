@@ -60,18 +60,20 @@ export class UsersRepository {
   async replaceUserSections(userId: number, sectionIds: number[]) {
     const uniqueSectionIds = [...new Set(sectionIds)];
 
-    await this.databaseService.db
-      .delete(usersToSections)
-      .where(eq(usersToSections.userId, userId));
+    await this.databaseService.db.transaction(async (tx) => {
+      await tx
+        .delete(usersToSections)
+        .where(eq(usersToSections.userId, userId));
 
-    if (uniqueSectionIds.length === 0) return;
-
-    await this.databaseService.db.insert(usersToSections).values(
-      uniqueSectionIds.map((sectionId) => ({
-        userId,
-        sectionId,
-      })),
-    );
+      if (uniqueSectionIds.length > 0) {
+        await tx.insert(usersToSections).values(
+          uniqueSectionIds.map((sectionId) => ({
+            userId,
+            sectionId,
+          })),
+        );
+      }
+    });
   }
 
   async getSectionIdsForUser(userId: number) {

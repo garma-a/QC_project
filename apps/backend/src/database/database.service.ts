@@ -30,7 +30,7 @@ export class DatabaseService implements OnModuleDestroy {
       database,
       user,
       password,
-      max: 100,              // Maximum number of connections
+      max: 30,              // Maximum number of connections
       min: 5,               // Minimum idle connections to keep open
       idleTimeoutMillis: 30000,      // Close idle connections after 30 seconds
       connectionTimeoutMillis: 2000, // Error out if waiting in queue for > 2 seconds
