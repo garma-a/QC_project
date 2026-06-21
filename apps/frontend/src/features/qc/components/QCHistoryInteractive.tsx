@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Plus, Search } from 'lucide-react';
 import { RecordQcResult } from '@/features/qc/components/RecordQcResult';
 import { QCHistory } from '@/features/qc/components/QCHistory';
@@ -62,6 +63,7 @@ export function QCHistoryInteractive({
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedDay, setSelectedDay] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedYear, setSelectedYear] = useState('all');
@@ -149,7 +151,7 @@ export function QCHistoryInteractive({
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-[#c41e3a] dark:group-focus-within:text-[#e84855] transition-colors duration-300" size={20} />
             <input
               type="text"
-              placeholder="Filter specific test or date..."
+              placeholder="Search by machine or test name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={!selectedMachineId}
@@ -200,28 +202,18 @@ export function QCHistoryInteractive({
 
       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
         {/* QC History */}
-        {!selectedMachineId ? (
-          <div className="glass-card p-12 text-center rounded-2xl flex flex-col items-center justify-center">
-             <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                <Search className="text-gray-400" size={32} />
-             </div>
-             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Select a Machine</h3>
-             <p className="text-gray-500 dark:text-gray-400 max-w-md">Please choose a machine from the dropdown above to load its complete QC history.</p>
-          </div>
-        ) : (
-          <QCHistory
-            searchTerm={searchTerm}
-            selectedDay={selectedDay}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            qcHistory={qcHistory}
-            machines={machines}
-            categories={categories}
-            fetchNextPage={fetchNextPage}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-          />
-        )}
+        <QCHistory
+          searchTerm={debouncedSearchTerm}
+          selectedDay={selectedDay}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          qcHistory={qcHistory}
+          machines={machines}
+          categories={categories}
+          fetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+        />
       </div>
 
       {/* Create QC Test Modal */}

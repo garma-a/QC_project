@@ -12,30 +12,41 @@ export class DatabaseService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
 
   constructor(private configService: ConfigService) {
+    const connectionString = this.configService.get<string>('DATABASE_URL');
     const host = this.configService.get<string>('DB_HOST') ?? 'localhost';
     const port = parseInt(this.configService.get<string>('DB_PORT') ?? '5432', 10);
     const database = this.configService.get<string>('DB_NAME');
     const user = this.configService.get<string>('DB_USER');
     const password = this.configService.get<string>('DB_PASSWORD');
 
-    if (!database || !user || !password) {
-      throw new Error(
-        'Missing required DB environment variables: DB_NAME, DB_USER, DB_PASSWORD',
-      );
-    }
-
-    this.pool = new Pool({
-      host,
-      port,
-      database,
-      user,
-      password,
-      max: 30,              // Maximum number of connections
+    const poolConfig: any = {
+      max: 100,              // Maximum number of connections
       min: 5,               // Minimum idle connections to keep open
       idleTimeoutMillis: 30000,      // Close idle connections after 30 seconds
       connectionTimeoutMillis: 2000, // Error out if waiting in queue for > 2 seconds
       maxUses: 7500,         // Close a connection after 7500 uses (prevents memory leaks)
-    });
+    };
+
+    if (connectionString) {
+      poolConfig.connectionString = connectionString;
+      // Neon requires SSL
+      if (connectionString.includes('neon.tech')) {
+        poolConfig.ssl = { rejectUnauthorized: false };
+      }
+    } else {
+      if (!database || !user || !password) {
+        throw new Error(
+          'Missing required DB environment variables: DATABASE_URL or (DB_NAME, DB_USER, DB_PASSWORD)',
+        );
+      }
+      poolConfig.host = host;
+      poolConfig.port = port;
+      poolConfig.database = database;
+      poolConfig.user = user;
+      poolConfig.password = password;
+    }
+
+    this.pool = new Pool(poolConfig);
 
     this.pool.on('error', (err) => {
       this.logger.error('Unexpected error on idle client', err);

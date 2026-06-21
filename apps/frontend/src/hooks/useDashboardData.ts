@@ -8,6 +8,11 @@ import type {
   EnrichedControlLotResponseDto,
   EnrichedQcResultResponseDto,
   MachineResponseDto,
+  QcResultResponseDto,
+  QcResultsWithLotResponseDto,
+  QcTestResponseDto,
+  SectionResponseDto,
+
 } from '@/lib/types/api';
 
 export type MonitorResultEntry = EnrichedQcResultResponseDto & {
@@ -64,30 +69,12 @@ export function useDashboardData() {
   const { data, isLoading, isFetching, error } = useQuery<DashboardData>({
     queryKey: ['dashboard-data'],
     queryFn: async ({ signal }) => {
-      /**
-       * SCALABLE DESIGN:
-       *
-       * 1. GET /api/v1/machines          — 4 rows (always small)
-       * 2. GET /api/v1/control-lots?isActive=true
-       *    — Returns ONLY active lots (~56 rows) enriched with testName, testType, machineId
-       *      via a server-side JOIN. No separate /qc-tests call needed.
-       *      Scales to 1M+ lots because isActive filter keeps the result set tiny.
-       * 3. GET /api/v1/qc-results/recent-all — 30 latest results per lot using a CROSS JOIN LATERAL.
-       *      This inherently solves the pagination starvation bug by guaranteeing every lot gets
-       *      its recent history fetched, completely irrespective of total database size.
-       */
-      const [fetchedMachines, activeLots, allResultsResponse] = await Promise.all([
+      const [fetchedMachines, allLots, allTests, allResultsResponse, fetchedSections] = await Promise.all([
         clientFetch<MachineResponseDto[]>('/api/v1/machines', { signal }, token).catch(() => []),
-        clientFetch<EnrichedControlLotResponseDto[]>(
-          '/api/v1/control-lots?isActive=true',
-          { signal },
-          token,
-        ).catch(() => []),
-        clientFetch<{ results: EnrichedQcResultResponseDto[] }>(
-          '/api/v1/qc-results/recent-all',
-          { signal },
-          token,
-        ).catch(() => ({ results: [] })),
+        clientFetch<ControlLotResponseDto[]>('/api/v1/control-lots', { signal }, token).catch(() => []),
+        clientFetch<QcTestResponseDto[]>('/api/v1/qc-tests', { signal }, token).catch(() => []),
+        clientFetch<{ results: QcResultResponseDto[] }>('/api/v1/qc-results', { signal }, token).catch(() => ({ results: [] })),
+        clientFetch<SectionResponseDto[]>('/api/v1/sections', { signal }, token).catch(() => []),
       ]);
 
       const allResults: EnrichedQcResultResponseDto[] = Array.isArray(allResultsResponse?.results)
@@ -99,11 +86,16 @@ export function useDashboardData() {
       let machines: DashboardData['machines'] = [];
 
       if (fetchedMachines && fetchedMachines.length > 0) {
-        // Build section categories from machines
+        // Build a lookup map from section ID → real section name
+        const sectionNameById = new Map<number, string>();
+        for (const section of fetchedSections) {
+          sectionNameById.set(section.id, section.name);
+        }
+
         const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
         categories = sectionIds.map((sid) => ({
           id: sid.toString(),
-          name: `Section ${sid}`,
+          name: sectionNameById.get(sid) ?? `Section ${sid}`,
         }));
 
         /**
