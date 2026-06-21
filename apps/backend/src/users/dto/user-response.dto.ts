@@ -1,6 +1,7 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class UserResponseDto {
+export class UserResponseDto implements SharedTypes.UserResponseDto {
   @ApiProperty({ example: 1, description: 'Unique user identifier' })
   id: number;
 
@@ -27,7 +28,7 @@ export class UserResponseDto {
     enum: ['TECHNICIAN', 'ADMIN'],
     description: 'User role',
   })
-  role: string;
+  role: SharedTypes.Role;
 
   @ApiProperty({
     example: true,
@@ -53,16 +54,16 @@ export class UserResponseDto {
     example: '2026-03-15T10:30:00.000Z',
     description: 'Account creation timestamp',
   })
-  createdAt: Date;
+  createdAt: Date | string;
 
   @ApiPropertyOptional({
     example: '2026-03-15T12:00:00.000Z',
     description: 'Last update timestamp',
   })
-  updatedAt: Date | null;
+  updatedAt: Date | string | null;
 }
 
-export class UserListItemDto {
+export class UserListItemDto implements SharedTypes.UserListItemDto {
   @ApiProperty({ example: 1 })
   id: number;
 
@@ -76,10 +77,17 @@ export class UserListItemDto {
   email: string;
 
   @ApiProperty({ example: 'TECHNICIAN', enum: ['TECHNICIAN', 'ADMIN'] })
-  role: string;
+  role: SharedTypes.Role;
 
   @ApiProperty({ example: true })
   isActive: boolean;
+
+  @ApiPropertyOptional({
+    example: [1, 3],
+    description: 'IDs of lab sections assigned to this user',
+    type: [Number],
+  })
+  sectionIds: number[];
 
   @ApiPropertyOptional({
     example: ['Hematology', 'Chemistry'],
@@ -89,7 +97,7 @@ export class UserListItemDto {
   sectionNames: string[];
 }
 
-export class DeactivateUserResponseDto {
+export class DeactivateUserResponseDto implements SharedTypes.DeactivateUserResponseDto {
   @ApiProperty({ example: 'User deactivated successfully' })
   message: string;
 }

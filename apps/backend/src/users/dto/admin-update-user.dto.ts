@@ -1,3 +1,4 @@
+import * as SharedTypes from '@qc/shared';
 import {
   IsArray,
   IsBoolean,
@@ -10,7 +11,7 @@ import {
 import { Role } from '@/auth/auth.types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class AdminUpdateUserDto {
+export class AdminUpdateUserDto implements SharedTypes.AdminUpdateUserDto {
   /** User's first name */
   @ApiPropertyOptional({
     description: "User's first name",

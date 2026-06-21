@@ -1,6 +1,7 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class ControlLotResponseDto {
+export class ControlLotResponseDto implements SharedTypes.ControlLotResponseDto {
   @ApiProperty({ example: 1, description: 'Unique control lot identifier' })
   id: number;
 
@@ -9,6 +10,8 @@ export class ControlLotResponseDto {
     description: 'ID of the QC test this lot belongs to',
   })
   testId: number;
+  @ApiProperty({ example: 1 })
+  level: number;
 
   @ApiProperty({
     example: 'LOT-HGB-2026-A',
@@ -20,7 +23,7 @@ export class ControlLotResponseDto {
     example: '2027-12-31T00:00:00.000Z',
     description: 'Expiration date of the control material',
   })
-  expirationDate: Date;
+  expirationDate: Date | string;
 
   @ApiPropertyOptional({
     example: 14.0,
@@ -68,7 +71,7 @@ export class ControlLotResponseDto {
     example: '2026-03-15T10:30:00.000Z',
     description: 'Creation timestamp',
   })
-  createdAt: Date;
+  createdAt: Date | string;
 
   @ApiPropertyOptional({
     example: 5,
@@ -83,7 +86,7 @@ export class ControlLotResponseDto {
   needsChecking?: boolean;
 }
 
-export class ControlLotDeactivateResponseDto {
+export class ControlLotDeactivateResponseDto implements SharedTypes.ControlLotDeactivateResponseDto {
   @ApiProperty({ example: 'Control lot deactivated successfully' })
   message: string;
 

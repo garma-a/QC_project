@@ -1,8 +1,9 @@
+import * as SharedTypes from '@qc/shared';
 import { PartialType, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateQcResultDto } from './create-qc-result.dto';
 import { IsString, IsOptional } from 'class-validator';
 
-export class UpdateQcResultDto {
+export class UpdateQcResultDto implements SharedTypes.UpdateQcResultDto {
   @ApiPropertyOptional({
     description: 'Updated comments/notes from the technician',
     example: 'Sample was slightly hemolyzed',

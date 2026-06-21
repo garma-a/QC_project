@@ -1,7 +1,7 @@
 import { defineConfig } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
+import 'dotenv/config';
 
-dotenv.config();
+
 
 const host = process.env.DB_HOST ?? 'localhost';
 const port = process.env.DB_PORT ?? '5432';

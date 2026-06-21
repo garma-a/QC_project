@@ -1,6 +1,5 @@
 import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
-dotenv.config();
+import 'dotenv/config';
 
 async function run() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

@@ -1,8 +1,9 @@
+import * as SharedTypes from '@qc/shared';
 import { Type } from 'class-transformer';
 import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcResultItemDto {
+export class QcResultItemDto implements SharedTypes.QcResultItemDto {
   @ApiProperty({
     description: 'The ID of the active control lot this measurement belongs to',
     example: 1,
@@ -28,7 +29,7 @@ export class QcResultItemDto {
   comments?: string;
 }
 
-export class CreateQcResultDto {
+export class CreateQcResultDto implements SharedTypes.CreateQcResultDto {
   @ApiProperty({
     description: 'The ID of the machine running this QC batch',
     example: 1,

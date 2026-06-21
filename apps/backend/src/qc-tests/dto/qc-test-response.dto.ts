@@ -1,6 +1,7 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcTestResponseDto {
+export class QcTestResponseDto implements SharedTypes.QcTestResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC test identifier' })
   id: number;
 
@@ -26,5 +27,5 @@ export class QcTestResponseDto {
     example: '2026-03-15T12:00:00.000Z',
     description: 'Last update timestamp',
   })
-  updatedAt: Date | null;
+  updatedAt: Date | string | null;
 }

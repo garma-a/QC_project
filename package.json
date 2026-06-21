@@ -1,5 +1,9 @@
 {
   "name": "my-monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",

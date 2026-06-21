@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
-export class ResolveAlertDto {
+export class ResolveAlertDto implements SharedTypes.ResolveAlertDto {
   @ApiPropertyOptional({
     description: 'Optional note describing how the alert was resolved',
     example: 'Instrument recalibrated and control passed on rerun.',

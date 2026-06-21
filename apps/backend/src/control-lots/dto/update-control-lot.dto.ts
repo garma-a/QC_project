@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { IsDateString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class UpdateControlLotDto {
+export class UpdateControlLotDto implements SharedTypes.UpdateControlLotDto {
   @ApiPropertyOptional({
     description:
       'Updated expiration date of the control material (ISO 8601 format)',

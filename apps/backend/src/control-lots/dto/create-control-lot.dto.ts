@@ -1,3 +1,4 @@
+import * as SharedTypes from '@qc/shared';
 import {
   IsInt,
   IsNotEmpty,
@@ -8,7 +9,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CreateControlLotDto {
+export class CreateControlLotDto implements SharedTypes.CreateControlLotDto {
   @ApiProperty({
     description: 'The ID of the QC test this control lot belongs to',
     example: 1,
@@ -31,7 +32,7 @@ export class CreateControlLotDto {
   })
   @IsInt()
   @IsOptional()
-  level?: number;
+  level: number;
 
   @ApiProperty({
     description:

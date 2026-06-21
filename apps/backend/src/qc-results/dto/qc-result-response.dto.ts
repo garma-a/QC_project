@@ -1,6 +1,7 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcResultResponseDto {
+export class QcResultResponseDto implements SharedTypes.QcResultResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC result identifier' })
   id: number;
 
@@ -14,14 +15,14 @@ export class QcResultResponseDto {
     example: '2026-03-15T08:00:00.000Z',
     description: 'Date and time the measurement was taken',
   })
-  testDate: Date;
+  testDate: Date | string;
 
   @ApiProperty({
     example: 'PASS',
     enum: ['PASS', 'FAIL', 'WARNING'],
     description: 'Auto-calculated status based on Z-Score evaluation',
   })
-  status: string;
+  status: SharedTypes.QcResultStatus;
 
   @ApiPropertyOptional({
     example: 'Morning QC run',
@@ -80,7 +81,7 @@ class LotSummaryDto {
   machineName: string;
 }
 
-export class QcResultsWithLotResponseDto {
+export class QcResultsWithLotResponseDto implements SharedTypes.QcResultsWithLotResponseDto {
   @ApiProperty({
     type: () => LotSummaryDto,
     description: 'Control lot parameters and test/machine info',
@@ -105,7 +106,7 @@ class ControlLotInResultDto {
   lotNumber: string;
 
   @ApiProperty({ example: '2027-12-31T00:00:00.000Z' })
-  expirationDate: Date;
+  expirationDate: Date | string;
 
   @ApiPropertyOptional({ example: 14.0 })
   targetValue: number | null;
@@ -132,7 +133,7 @@ class ControlLotInResultDto {
   isActive: boolean;
 
   @ApiProperty({ example: '2026-03-15T10:30:00.000Z' })
-  createdAt: Date;
+  createdAt: Date | string;
 }
 
 export class QcResultDetailResponseDto extends QcResultResponseDto {
@@ -143,7 +144,7 @@ export class QcResultDetailResponseDto extends QcResultResponseDto {
   controlLot: ControlLotInResultDto;
 }
 
-export class QcRunDto {
+export class QcRunDto implements SharedTypes.QcRunDto {
   @ApiProperty({ example: 1, description: 'Unique QC run identifier' })
   id: number;
 
@@ -160,10 +161,10 @@ export class QcRunDto {
     example: '2026-03-15T08:00:00.000Z',
     description: 'Date and time the run was performed',
   })
-  runDate: Date;
+  runDate: Date | string;
 }
 
-export class QcRunResultResponseDto {
+export class QcRunResultResponseDto implements SharedTypes.QcRunResultResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC result identifier' })
   id: number;
 
@@ -181,7 +182,7 @@ export class QcRunResultResponseDto {
     enum: ['PASS', 'FAIL', 'WARNING'],
     description: 'Auto-calculated status based on Westgard evaluation',
   })
-  status: string;
+  status: SharedTypes.QcResultStatus;
 
   @ApiPropertyOptional({ example: 'Morning QC run', description: 'Technician comments or notes' })
   comments: string | null;
@@ -193,7 +194,7 @@ export class QcRunResultResponseDto {
   lotId: number;
 }
 
-export class QcRunResponseDto {
+export class QcRunResponseDto implements SharedTypes.QcRunResponseDto {
   @ApiProperty({ type: () => QcRunDto, description: 'The created QC run metadata' })
   run: QcRunDto;
 

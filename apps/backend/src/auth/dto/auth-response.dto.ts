@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class LoginResponseDto {
+export class LoginResponseDto implements SharedTypes.LoginResponseDto {
   @ApiProperty({
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     description:

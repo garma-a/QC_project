@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
-export class CreateMachineDto {
+export class CreateMachineDto implements SharedTypes.CreateMachineDto {
   @ApiProperty({
     description: 'The operational name of the machine. Must be at least 2 characters.',
     example: 'Cobas 6000',

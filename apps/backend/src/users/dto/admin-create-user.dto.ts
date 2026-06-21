@@ -1,3 +1,4 @@
+import * as SharedTypes from '@qc/shared';
 import {
   IsArray,
   IsBoolean,
@@ -11,7 +12,7 @@ import {
 import { Role } from '@/auth/auth.types';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class AdminCreateUserDto {
+export class AdminCreateUserDto implements SharedTypes.AdminCreateUserDto {
   @ApiProperty({
     description: 'First name of the user',
     example: 'John',

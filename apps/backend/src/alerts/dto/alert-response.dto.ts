@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AlertPriority } from '@/alerts/alerts.types';
 
-export class AlertResponseDto {
+export class AlertResponseDto implements SharedTypes.AlertResponseDto {
   @ApiProperty({ example: 12, description: 'Unique alert identifier' })
   id: number;
 
@@ -48,26 +49,26 @@ export class AlertResponseDto {
     example: '2026-03-15T10:30:00.000Z',
     description: 'Alert creation timestamp',
   })
-  createdAt: Date | null;
+  createdAt: Date | string | null;
 
   @ApiProperty({
     example: 'UNSEEN',
     enum: ['UNSEEN', 'SEEN', 'RESOLVED'],
     description: 'Current alert status for the authenticated user',
   })
-  status: string;
+  status: SharedTypes.UserAlertStatus;
 
   @ApiPropertyOptional({
     example: '2026-03-15T10:35:00.000Z',
     description: 'When the alert was first seen by the authenticated user',
   })
-  seenAt: Date | null;
+  seenAt: Date | string | null;
 
   @ApiPropertyOptional({
     example: '2026-03-15T11:05:00.000Z',
     description: 'When the alert was marked resolved by the authenticated user',
   })
-  resolvedAt: Date | null;
+  resolvedAt: Date | string | null;
 
   @ApiPropertyOptional({
     example: 'Instrument recalibrated and control passed on rerun.',
@@ -76,7 +77,7 @@ export class AlertResponseDto {
   resolutionNote: string | null;
 }
 
-export class UserAlertStatusResponseDto {
+export class UserAlertStatusResponseDto implements SharedTypes.UserAlertStatusResponseDto {
   @ApiProperty({ example: 5, description: 'Recipient user ID' })
   userId: number;
 
@@ -88,19 +89,19 @@ export class UserAlertStatusResponseDto {
     enum: ['UNSEEN', 'SEEN', 'RESOLVED'],
     description: 'Per-user alert status',
   })
-  status: string;
+  status: SharedTypes.UserAlertStatus;
 
   @ApiPropertyOptional({
     example: '2026-03-15T10:35:00.000Z',
     description: 'When the alert was first seen by the user',
   })
-  seenAt: Date | null;
+  seenAt: Date | string | null;
 
   @ApiPropertyOptional({
     example: '2026-03-15T11:05:00.000Z',
     description: 'When the alert was marked resolved by the user',
   })
-  resolvedAt: Date | null;
+  resolvedAt: Date | string | null;
 
   @ApiPropertyOptional({
     example: 'Instrument recalibrated and control passed on rerun.',

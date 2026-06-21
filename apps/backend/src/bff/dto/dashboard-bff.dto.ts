@@ -1,3 +1,4 @@
+import * as SharedTypes from "@qc/shared";
 import { ApiProperty } from '@nestjs/swagger';
 
 export class DashboardMachineTestDto {
@@ -19,7 +20,7 @@ export class DashboardMachineTestDto {
 export class DashboardMachineDto {
   id: number;
   name: string;
-  status: string;
+  status: SharedTypes.QcResultStatus | SharedTypes.UserAlertStatus;
   model: string;
   serialNumber: string;
   location: string;
@@ -49,7 +50,7 @@ export class DashboardQcHistoryDto {
   testDate: string;
   value: number;
   zScore: number;
-  status: string;
+  status: SharedTypes.QcResultStatus | SharedTypes.UserAlertStatus;
   violatedRule: string;
   comments: string;
   createdAt: string;

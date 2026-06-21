@@ -1,7 +1,8 @@
+import * as SharedTypes from '@qc/shared';
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class LoginDto {
+export class LoginDto implements SharedTypes.LoginDto {
 
   @ApiProperty({
     description: 'User email address',
