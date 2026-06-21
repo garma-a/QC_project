@@ -13,6 +13,7 @@ import { QcTestsModule } from '@/qc-tests/qc-tests.module';
 import { AlertsModule } from '@/alerts/alerts.module';
 import { SectionsModule } from '@/sections/sections.module';
 import { EventsModule } from '@/events/events.module';
+import { BffModule } from './bff/bff.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { EventsModule } from '@/events/events.module';
     AlertsModule,
     SectionsModule,
     EventsModule,
+    BffModule,
   ],
   controllers: [AppController],
   providers: [AppService],
