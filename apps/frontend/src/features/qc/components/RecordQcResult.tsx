@@ -38,8 +38,8 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
   const [isPending, setIsPending] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMachine, setSelectedMachine] = useState('');
-  const [selectedLot, setSelectedLot] = useState('');
-  const [measuredValue, setMeasuredValue] = useState('');
+  const [selectedTest, setSelectedTest] = useState('');
+  const [measuredValues, setMeasuredValues] = useState<Record<number, string>>({});
   const [comments, setComments] = useState('');
 
   const [mounted, setMounted] = useState(false);
@@ -54,30 +54,34 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
 
   // Step 2: Filter lots to only active lots belonging to the selected machine.
   const selectedMachineObj = machines.find((m) => m.id === selectedMachine);
-  const activeLots = selectedMachineObj?.tests?.filter((t) => t.isActive) || [];
+  const allActiveLots = selectedMachineObj?.tests?.filter((t) => t.isActive) || [];
+
+  const uniqueTests = Array.from(new Set(allActiveLots.map(t => t.id))).map(testId => {
+    return allActiveLots.find(t => t.id === testId)!;
+  });
+
+  const testLots = allActiveLots.filter(t => t.id === selectedTest);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const numericMachineId = parseInt(selectedMachine, 10);
-    const numericLotId = parseInt(selectedLot, 10);
-    const numericValue = parseFloat(measuredValue);
 
-    if (isNaN(numericMachineId) || isNaN(numericLotId) || isNaN(numericValue)) {
-      alert("Please ensure Machine, Lot, and Measured Value are correctly filled.");
+    const results = testLots.map(lot => ({
+      lotId: lot.lotId,
+      measuredValue: parseFloat(measuredValues[lot.lotId]),
+      comments: comments || undefined,
+    }));
+
+    if (isNaN(numericMachineId) || results.length === 0 || results.some(r => isNaN(r.measuredValue))) {
+      alert("Please ensure Machine and all Measured Values are correctly filled.");
       return;
     }
 
     setIsPending(true);
     const payload: CreateQcResultDto = {
       machineId: numericMachineId,
-      results: [
-        {
-          lotId: numericLotId,
-          measuredValue: numericValue,
-          comments: comments || undefined,
-        }
-      ]
+      results
     };
     
     const res = await submitQcResult(payload);
@@ -123,7 +127,8 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
               onChange={(e) => {
                 setSelectedCategory(e.target.value);
                 setSelectedMachine('');
-                setSelectedLot('');
+                setSelectedTest('');
+                setMeasuredValues({});
               }}
               required
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
@@ -144,7 +149,8 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
               value={selectedMachine}
               onChange={(e) => {
                 setSelectedMachine(e.target.value);
-                setSelectedLot('');
+                setSelectedTest('');
+                setMeasuredValues({});
               }}
               required
               disabled={!selectedCategory}
@@ -159,44 +165,55 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
             </select>
           </div>
 
-          {/* Lot Selection */}
+          {/* Test Selection */}
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Select Control Lot (Test Type)</label>
+            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Select Test</label>
             <select
-              value={selectedLot}
-              onChange={(e) => setSelectedLot(e.target.value)}
+              value={selectedTest}
+              onChange={(e) => {
+                setSelectedTest(e.target.value);
+                setMeasuredValues({});
+              }}
               required
               disabled={!selectedMachine}
               className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Select a control lot</option>
-              {activeLots.map((lot) => (
-                <option key={`${lot.id}-${lot.lotId}`} value={lot.lotId}>
-                  {lot.name} — Lot {lot.lotNumber} (Level {lot.level})
+              <option value="">Select a test</option>
+              {uniqueTests.map((test) => (
+                <option key={test.id} value={test.id}>
+                  {test.name}
                 </option>
               ))}
             </select>
-            {selectedMachine && activeLots.length === 0 && (
+            {selectedMachine && uniqueTests.length === 0 && (
               <p className="text-[#c41e3a] dark:text-[#e84855] text-sm mt-2 font-medium">
-                No active control lots found for this machine. Please add a control lot first.
+                No active tests found for this machine. Please add control lots first.
               </p>
             )}
           </div>
 
-          {/* Measured Value */}
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">Measured Value</label>
-            <input
-              type="number"
-              step="any"
-              value={measuredValue}
-              onChange={(e) => setMeasuredValue(e.target.value)}
-              required
-              disabled={!selectedLot}
-              placeholder="e.g., 95.5"
-              className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          </div>
+          {/* Measured Values */}
+          {selectedTest && testLots.length > 0 && (
+            <div className="space-y-3">
+              <label className="block text-gray-700 dark:text-gray-300 font-semibold">Measured Values</label>
+              {testLots.map((lot) => (
+                <div key={lot.lotId} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 bg-gray-50 dark:bg-[#2a2a2a] p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-48 shrink-0">
+                    Level {lot.level} (Lot: {lot.lotNumber})
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={measuredValues[lot.lotId] || ''}
+                    onChange={(e) => setMeasuredValues({ ...measuredValues, [lot.lotId]: e.target.value })}
+                    required
+                    placeholder={`e.g., ${lot.mean}`}
+                    className="w-full px-4 py-2 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -221,7 +238,7 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
             </button>
             <button
               type="submit"
-              disabled={isPending || !selectedLot || !measuredValue}
+              disabled={isPending || !selectedTest || testLots.length === 0 || testLots.some(lot => !measuredValues[lot.lotId])}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white rounded-xl hover:from-[#8b1e3f] hover:to-[#c41e3a] dark:hover:from-[#c75b7a] dark:hover:to-[#e84855] transition-all shadow-lg hover:shadow-xl shadow-[#c41e3a]/30 dark:shadow-[#e84855]/30 font-semibold ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending ? 'Submitting...' : 'Submit Result'}
