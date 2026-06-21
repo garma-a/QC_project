@@ -28,7 +28,7 @@ export class QcTestsRepository {
   }
 
   async getTestsByMachine(machineId: number, limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
       .select()
@@ -58,7 +58,7 @@ export class QcTestsRepository {
     return updated;
   }
   async getAllTests(limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
       .select()

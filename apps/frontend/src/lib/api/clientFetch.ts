@@ -1,4 +1,4 @@
-import { logoutAccount } from '../actions';
+import { logoutAccount, refreshTokensAction } from '../actions';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /**
@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore';
  * Server components should use `serverFetch.ts` instead.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export class ClientApiError extends Error {
   public statusCode: number;
@@ -18,6 +18,9 @@ export class ClientApiError extends Error {
     this.statusCode = statusCode;
   }
 }
+
+// Mutex to prevent multiple parallel refresh requests
+let refreshPromise: Promise<string | null> | null = null;
 
 export async function clientFetch<T>(
   endpoint: string,
@@ -55,11 +58,47 @@ export async function clientFetch<T>(
     } catch { /* ignore parse errors */ }
 
     if (res.status === 401) {
-      // Token expired or invalid — clear auth and redirect
       if (typeof window !== 'undefined') {
-        // Clear cookies via server action FIRST, awaiting it so it finishes
-        // before we clear the Zustand store. This prevents a race condition
-        // where useDashboardData navigates away before the cookies are actually deleted.
+        try {
+          if (!refreshPromise) {
+            refreshPromise = refreshTokensAction().then((result) => {
+              if (result.success && result.token) {
+                return result.token;
+              }
+              return null;
+            }).catch(() => null)
+              .finally(() => {
+                refreshPromise = null;
+              });
+          }
+
+          const newToken = await refreshPromise;
+
+          if (newToken) {
+            // Update token in Zustand
+            const authState = useAuthStore.getState();
+            if (authState.currentUser) {
+              authState.setAuth(authState.currentUser, newToken);
+            }
+
+            // Retry original request with new token
+            headers.set('Authorization', `Bearer ${newToken}`);
+            const retryRes = await fetch(url, {
+              ...options,
+              headers,
+              signal: options.signal,
+            });
+
+            if (retryRes.ok) {
+              if (retryRes.status === 204) return {} as T;
+              return retryRes.json() as Promise<T>;
+            }
+          }
+        } catch (e) {
+          // Fall through to logout
+        }
+
+        // Refresh failed, clear cookies via server action FIRST
         try {
           await logoutAccount();
         } catch (e) {

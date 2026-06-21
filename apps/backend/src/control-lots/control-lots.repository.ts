@@ -1,7 +1,29 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, qcTests } from '@/drizzle/schema';
+import { controlLots, qcTests, machines } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { eq, and, desc } from 'drizzle-orm';
+
+/** Shape returned by {@link findActiveWithTestContext} */
+export type ActiveLotWithTestContext = {
+  id: number;
+  testId: number;
+  level: number;
+  lotNumber: string;
+  expirationDate: Date;
+  targetValue: number | null;
+  mean: number | null;
+  standardDeviation: number | null;
+  upperControlLimit: number | null;
+  lowerControlLimit: number | null;
+  upperWarningLimit: number | null;
+  lowerWarningLimit: number | null;
+  isActive: boolean | null;
+  createdAt: Date | null;
+  // Embedded from qc_tests join
+  testName: string;
+  testType: string | null;
+  machineId: number;
+};
 
 @Injectable()
 export class ControlLotsRepository {
@@ -15,41 +37,95 @@ export class ControlLotsRepository {
     return test;
   }
 
+  async getSectionIdByTestId(testId: number) {
+    const res = await this.databaseService.db
+      .select({ sectionId: machines.sectionId })
+      .from(qcTests)
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .where(eq(qcTests.id, testId))
+      .limit(1);
+    return res[0]?.sectionId;
+  }
+
+  async getSectionIdByLotId(lotId: number) {
+    const res = await this.databaseService.db
+      .select({ sectionId: machines.sectionId })
+      .from(controlLots)
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .where(eq(controlLots.id, lotId))
+      .limit(1);
+    return res[0]?.sectionId;
+  }
+
   async createWithDeactivation(testId: number, data: typeof controlLots.$inferInsert) {
-    // Note: neon-http does not support interactive transactions.
-    // We execute these sequentially. In a standard PG environment, this would be wrapped in tx.
-    
-    // 1. Deactivate existing active lots for this test
-    await this.databaseService.db
-      .update(controlLots)
-      .set({ isActive: false })
-      .where(
-        and(
-          eq(controlLots.testId, testId),
-          eq(controlLots.isActive, true),
-          eq(controlLots.level, data.level ?? 1)
-        )
-      );
+    return this.databaseService.db.transaction(async (tx) => {
+      // 1. Deactivate existing active lots for this test
+      await tx
+        .update(controlLots)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(controlLots.testId, testId),
+            eq(controlLots.isActive, true),
+            eq(controlLots.level, data.level ?? 1)
+          )
+        );
 
-    // 2. Create the new lot
-    const [newLot] = await this.databaseService.db
-      .insert(controlLots)
-      .values(data)
-      .returning();
+      // 2. Create the new lot
+      const [newLot] = await tx
+        .insert(controlLots)
+        .values(data)
+        .returning();
 
-    return newLot;
+      return newLot;
+    });
   }
 
   async findAll(limit?: number, offset?: number) {
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
-    let query = this.databaseService.db
+    const query = this.databaseService.db
       .select()
       .from(controlLots)
       .orderBy(desc(controlLots.id))
       .limit(safeLimit)
       .offset(safeOffset);
     return await query;
+  }
+
+  /**
+   * Returns ALL active control lots joined with their parent QC test.
+   * Used by the dashboard to get test context without a separate /qc-tests call.
+   * Scales well because active lots are a tiny fraction of total lots.
+   */
+  async findActiveWithTestContext(): Promise<ActiveLotWithTestContext[]> {
+    return this.databaseService.db
+      .select({
+        id: controlLots.id,
+        testId: controlLots.testId,
+        level: controlLots.level,
+        lotNumber: controlLots.lotNumber,
+        expirationDate: controlLots.expirationDate,
+        targetValue: controlLots.targetValue,
+        mean: controlLots.mean,
+        standardDeviation: controlLots.standardDeviation,
+        upperControlLimit: controlLots.upperControlLimit,
+        lowerControlLimit: controlLots.lowerControlLimit,
+        upperWarningLimit: controlLots.upperWarningLimit,
+        lowerWarningLimit: controlLots.lowerWarningLimit,
+        isActive: controlLots.isActive,
+        createdAt: controlLots.createdAt,
+        // Embedded test context
+        testName: qcTests.testName,
+        testType: qcTests.testType,
+        machineId: qcTests.machineId,
+      })
+      .from(controlLots)
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .where(eq(controlLots.isActive, true))
+      .orderBy(desc(controlLots.id))
+      .limit(1000);
   }
 
   async findById(id: number) {

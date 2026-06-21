@@ -31,12 +31,13 @@ export class AlertsRepository {
       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .where(eq(usersToAlerts.userId, userId))
-      .orderBy(desc(usersToAlerts.alertId));
+      .orderBy(desc(alerts.createdAt))
+      .$dynamic();
 
-    const safeLimit = Math.max(1, Math.min(limit ?? 50, 100));
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
 
-    query = query.limit(safeLimit).offset(safeOffset) as any;
+    query = query.limit(safeLimit).offset(safeOffset);
 
     return await query;
   }

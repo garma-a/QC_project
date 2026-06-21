@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, eq } from 'drizzle-orm';
 import {
   primaryKey,
   pgEnum,
@@ -11,6 +11,8 @@ import {
   boolean,
   doublePrecision,
   index,
+  uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role_enum', ['TECHNICIAN', 'ADMIN']);
@@ -59,6 +61,8 @@ export const sections = pgTable('sections', {
   specialization: specializationEnum('specialization').default('OTHER'),
 });
 
+
+
 export const machines = pgTable('machines', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
@@ -71,6 +75,7 @@ export const machines = pgTable('machines', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   specialization: specializationEnum('specialization'),
+  isActive: boolean('is_active').default(true),
 }, (t) => ({
   sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
 }));
@@ -111,6 +116,7 @@ export const controlLots = pgTable('control_lots', {
   // Composite covers: WHERE test_id = ? AND is_active = true
   // Used by: getActiveLotsByTestId, createWithDeactivation (UPDATE filter)
   testIdIsActiveIdx: index('idx_control_lots_test_id_is_active').on(t.testId, t.isActive),
+  uniqueActiveLevelIdx: uniqueIndex('idx_control_lots_unique_active').on(t.testId, t.level).where(eq(t.isActive, true)),
 }));
 
 export const qcRuns = pgTable('qc_runs', {
@@ -199,6 +205,7 @@ export const usersToSections = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.sectionId] }),
+    sectionIdIdx: index('idx_users_to_sections_section_id').on(t.sectionId),
   }),
 );
 
@@ -272,6 +279,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   performedRuns: many(qcRuns),
   alertNotifications: many(usersToAlerts),
 }));
+
+
 
 export const usersToSectionsRelations = relations(
   usersToSections,

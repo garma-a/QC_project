@@ -22,6 +22,27 @@
       "when": 1780683287421,
       "tag": "0002_needy_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781772507937,
+      "tag": "0003_faithful_the_professor",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781838256301,
+      "tag": "0004_add_refresh_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781903173406,
+      "tag": "0005_drop_refresh_tokens_table",
+      "breakpoints": true
     }
   ]
 }

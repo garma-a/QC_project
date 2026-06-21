@@ -12,6 +12,7 @@ import { ControlLotsModule } from '@/control-lots/control-lots.module';
 import { QcTestsModule } from '@/qc-tests/qc-tests.module';
 import { AlertsModule } from '@/alerts/alerts.module';
 import { SectionsModule } from '@/sections/sections.module';
+import { EventsModule } from '@/events/events.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SectionsModule } from '@/sections/sections.module';
     QcTestsModule,
     AlertsModule,
     SectionsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

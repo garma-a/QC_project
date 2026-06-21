@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { getQueryClient } from './queryClient';
+import { useSSE } from '@/lib/sse/useSSE';
+
+function SSEConnection() {
+  useSSE();
+  return null;
+}
 
 /**
  * App-wide React Query provider.
@@ -18,6 +24,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SSEConnection />
       {children}
       {/* Devtools panel only ships in development bundles */}
       <ReactQueryDevtools initialIsOpen={false} />

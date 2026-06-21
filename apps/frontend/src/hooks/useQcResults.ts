@@ -12,16 +12,7 @@ interface UseQcResultsReturn {
   refetch: () => void;
 }
 
-/**
- * Fetch all QC results for a specific control lot.
- * Returns the lot summary + array of results (for Levey-Jennings chart).
- *
- * The lotId is included in the query key, so React Query maintains a
- * separate cache entry per lot. When the user switches lots rapidly,
- * in-flight requests for the previous lot are automatically cancelled via
- * AbortSignal — the most critical race condition in the app.
- */
-export function useQcResults(lotId: number | null): UseQcResultsReturn {
+export function useQcResults(lotId: number | null, startDate?: string, endDate?: string, limit?: number): UseQcResultsReturn {
   const token = useAuthStore((s) => s.accessToken);
 
   const {
@@ -31,15 +22,19 @@ export function useQcResults(lotId: number | null): UseQcResultsReturn {
     error: rawError,
     refetch,
   } = useQuery({
-    queryKey: ['qc-results', lotId],
-    queryFn: ({ signal }) =>
-      clientFetch<QcResultsWithLotResponseDto>(
-        `/api/v1/qc-results?lotId=${lotId}`,
+    queryKey: ['qc-results', lotId, startDate, endDate, limit],
+    queryFn: ({ signal }) => {
+      let url = `/api/v1/qc-results?lotId=${lotId}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+      if (limit) url += `&limit=${limit}`;
+      
+      return clientFetch<QcResultsWithLotResponseDto>(
+        url,
         { signal },
         token,
-      ),
-    // Do not fire the request at all when no lot is selected.
-    // This also resets the loading/error states cleanly.
+      );
+    },
     enabled: lotId !== null && !!token,
     placeholderData: (prev) => prev,
   });

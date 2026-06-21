@@ -5,6 +5,7 @@ import { QcTestsRepository } from './qc-tests.repository';
 
 @Module({
   controllers: [QcTestsController],
-  providers: [QcTestsService, QcTestsRepository]
+  providers: [QcTestsService, QcTestsRepository],
+  exports: [QcTestsService],
 })
 export class QcTestsModule {}

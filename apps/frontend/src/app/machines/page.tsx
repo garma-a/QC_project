@@ -3,7 +3,6 @@ import type { MachineResponseDto, SectionResponseDto } from '@/lib/types/api';
 import { MachinesTable } from '@/features/machines/components/MachinesTable';
 
 export default async function MachinesPage() {
-  // Fetch both in parallel — fast, no sequential waterfall
   const [machines, sections] = await Promise.all([
     api.get<MachineResponseDto[]>('/api/v1/machines'),
     api.get<SectionResponseDto[]>('/api/v1/sections'),
