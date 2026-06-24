@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
-import { alerts, controlLots, qcResults, qcTests, usersToAlerts } from '@/drizzle/schema';
+import { alerts, controlLots, qcResults, qcTests, usersToAlerts, machines, sections } from '@/drizzle/schema';
 import { and, desc, eq } from 'drizzle-orm';
 
 @Injectable()
@@ -24,15 +24,82 @@ export class AlertsRepository {
         resolutionNote: usersToAlerts.resolutionNote,
         machineId: qcTests.machineId,
         testId: qcTests.id,
+        machineName: machines.name,
+        sectionId: sections.id,
+        sectionName: sections.name,
+        testName: qcTests.testName,
       })
       .from(usersToAlerts)
       .innerJoin(alerts, eq(usersToAlerts.alertId, alerts.id))
       .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(sections, eq(machines.sectionId, sections.id))
       .where(eq(usersToAlerts.userId, userId))
       .orderBy(desc(alerts.createdAt))
       .$dynamic();
+
+    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
+    const safeOffset = Math.max(0, offset ?? 0);
+
+    query = query.limit(safeLimit).offset(safeOffset);
+
+    return await query;
+  }
+
+  async findAll(userId: number, limit?: number, offset?: number, sectionId?: number, machineId?: number) {
+    let query = this.databaseService.db
+      .select({
+        id: alerts.id,
+        type: alerts.type,
+        priority: alerts.priority,
+        message: alerts.message,
+        ruleViolated: alerts.ruleViolated,
+        suggestedSolution: alerts.suggestedSolution,
+        resultId: alerts.resultId,
+        createdAt: alerts.createdAt,
+        // For unassigned alerts, status/seenAt/resolvedAt will be null, so we cast to UNSEEN in service if needed
+        status: usersToAlerts.status,
+        seenAt: usersToAlerts.seenAt,
+        resolvedAt: usersToAlerts.resolvedAt,
+        resolutionNote: usersToAlerts.resolutionNote,
+        machineId: qcTests.machineId,
+        testId: qcTests.id,
+        machineName: machines.name,
+        sectionId: sections.id,
+        sectionName: sections.name,
+        testName: qcTests.testName,
+      })
+      .from(alerts)
+      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
+      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(sections, eq(machines.sectionId, sections.id))
+      .leftJoin(
+        usersToAlerts,
+        and(eq(alerts.id, usersToAlerts.alertId), eq(usersToAlerts.userId, userId)),
+      )
+      .orderBy(desc(alerts.createdAt))
+      .$dynamic();
+
+    if (sectionId) {
+      query = query.where(eq(sections.id, sectionId));
+    }
+    if (machineId) {
+      // If we also had sectionId, we should `and` them, but drizzle handles chained `.where` by ANDing them, or we can use `and` explicitly.
+      // Drizzle's chained where replaces the previous where. We should build an array of conditions.
+    }
+
+    // Let's rewrite the where logic:
+    const conditions: any[] = [];
+    if (sectionId) conditions.push(eq(sections.id, sectionId));
+    if (machineId) conditions.push(eq(machines.id, machineId));
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
 
     const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
@@ -123,5 +190,31 @@ export class AlertsRepository {
         ),
       )
       .returning();
+  }
+
+  async getAlertContext(alertId: number) {
+    const [context] = await this.databaseService.db
+      .select({
+        alertId: alerts.id,
+        priority: alerts.priority,
+        message: alerts.message,
+        ruleViolated: alerts.ruleViolated,
+        suggestedSolution: alerts.suggestedSolution,
+        measuredValue: qcResults.measuredValue,
+        zScore: qcResults.zScore,
+        testName: qcTests.testName,
+        machineName: machines.name,
+        sectionId: sections.id,
+        sectionName: sections.name,
+      })
+      .from(alerts)
+      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
+      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(sections, eq(machines.sectionId, sections.id))
+      .where(eq(alerts.id, alertId));
+
+    return context;
   }
 }

@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
+import type { UpdateProfileDto, ProfileResponseDto } from '@qc/shared';
 import { CurrentUser } from '@/users/user.decorator';
 import { Role } from '@/auth/auth.types';
 import {
@@ -182,6 +183,48 @@ export class UsersController {
     @Body() adminUpdateUserDto: AdminUpdateUserDto,
   ) {
     return this.userService.updateUser(id, adminUpdateUserDto);
+  }
+
+  @Get('me/profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get current user profile',
+    description: 'Returns the full details of the currently logged in user, including their assigned sections and email preferences.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile data retrieved successfully.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  async getProfile(@CurrentUser('userId') userId: number) {
+    return this.userService.getProfile(userId);
+  }
+
+  @Patch('me/profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Update current user profile',
+    description: 'Updates profile fields and email preferences for the currently logged in user.',
+  })
+  @ApiBody({ type: Object })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'JWT token missing or invalid.',
+    type: UnauthorizedResponseDto,
+  })
+  async updateProfile(
+    @CurrentUser('userId') userId: number,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.userService.updateProfile(userId, dto);
   }
 
   @Get()

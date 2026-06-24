@@ -48,6 +48,8 @@ export const users = pgTable('users', {
   phone: text('phone'),
   role: roleEnum('role').notNull().default('TECHNICIAN'),
   isActive: boolean('is_active').default(true),
+  emailNotificationsEnabled: boolean('email_notifications_enabled').default(false).notNull(),
+  subscribeToAllSections: boolean('subscribe_to_all_sections').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 });
@@ -172,6 +174,23 @@ export const alerts = pgTable('alerts', {
   resultIdIdx: index('idx_alerts_result_id').on(t.resultId),
   // Supports ORDER BY alerts.created_at DESC in findAllByUser
   createdAtIdx: index('idx_alerts_created_at').on(t.createdAt),
+}));
+
+export const emailLogs = pgTable('email_logs', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  alertId: integer('alert_id')
+    .references(() => alerts.id)
+    .notNull(),
+  recipientEmail: varchar('recipient_email', { length: 256 }).notNull(),
+  status: varchar('status', { length: 50 }).notNull(), // 'sent', 'failed'
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index('idx_email_logs_user_id').on(t.userId),
+  alertIdIdx: index('idx_email_logs_alert_id').on(t.alertId),
 }));
 
 export const usersToAlerts = pgTable(

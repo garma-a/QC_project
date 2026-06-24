@@ -329,7 +329,7 @@ export function UsersManager({
               isActive: res.data.isActive,
               sectionIds: res.data.sectionIds,
               sectionNames: res.data.sectionNames,
-              createdAt: res.data.createdAt,
+              createdAt: res.data.createdAt ? new Date(res.data.createdAt).toISOString() : undefined,
             },
           ]);
         }
