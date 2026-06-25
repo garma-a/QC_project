@@ -50,7 +50,7 @@ export default function QCPage() {
     </div>
   );
 
-  if (isPageLoading || isQcLoading || !pageData) {
+  if (isPageLoading || !pageData) {
     return (
       <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <LoadingSkeleton />
@@ -70,6 +70,7 @@ export default function QCPage() {
           isFetchingNextPage={isFetchingNextPage}
           selectedMachineId={selectedMachineId}
           onMachineSelect={setSelectedMachineId}
+          isLoading={isQcLoading}
         />
       </Suspense>
     </div>

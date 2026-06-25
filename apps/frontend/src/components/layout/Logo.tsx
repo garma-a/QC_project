@@ -66,7 +66,7 @@ export function Logo({ className = '' }: { className?: string }) {
           />
         </svg>
       </div>
-      <div className="flex flex-col leading-tight pt-1">
+      <div className="flex flex-col leading-tight pt-1 ml-2">
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#ff99a8] font-black text-xl tracking-tighter drop-shadow-sm">
           MAGDI YACOUB
         </span>

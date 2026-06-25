@@ -36,10 +36,7 @@ export default function DashboardPage() {
       )}
 
       <div className="p-4 sm:p-6 lg:p-8">
-        {/* Header decorative line */}
-        <div className="mb-6">
-          <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full" />
-        </div>
+
 
         <Suspense fallback={<DashboardSkeleton />}>
           <MonitorClient

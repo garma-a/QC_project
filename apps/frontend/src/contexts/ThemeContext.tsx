@@ -28,11 +28,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
+    
+    // Disable transitions temporarily
+    root.classList.add('disable-transitions');
+    
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+    
+    // Force a reflow
+    window.getComputedStyle(root).getPropertyValue('opacity');
+    
+    // Enable transitions again
+    setTimeout(() => {
+      root.classList.remove('disable-transitions');
+    }, 50);
+
     // Only persist after initial mount to avoid overwriting saved theme with the default
     if (mounted) {
       localStorage.setItem('theme', theme);

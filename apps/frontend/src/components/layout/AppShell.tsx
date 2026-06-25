@@ -24,11 +24,11 @@ export function AppShell({ children }: AppShellProps) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  const isLoginPage = pathname === "/login";
+  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password";
 
-  // On login page, render children directly without the shell layout.
-  // This avoids the Sidebar + shell appearing on the login page.
-  if (isLoginPage) {
+  // On auth pages, render children directly without the shell layout.
+  // This avoids the Sidebar + shell appearing on the login/signup page.
+  if (isAuthPage) {
     return <>{children}</>;
   }
 

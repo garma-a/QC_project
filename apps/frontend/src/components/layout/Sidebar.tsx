@@ -101,10 +101,7 @@ const menuItems = [
             />
           </div>
 
-          <div className="hidden lg:block relative z-10">
-            <LogoCompact />
-          </div>
-          <div className="lg:hidden relative z-10">
+          <div className="relative z-10 w-full flex justify-center lg:justify-start lg:pl-2">
             <Logo />
           </div>
           <button

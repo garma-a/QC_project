@@ -80,8 +80,7 @@ export function MonitorClient({ machines, categories, qcHistory, isFetching = fa
           )}
         </div>
 
-        {/* Decorative line */}
-        <div className="h-1 bg-gradient-to-r from-[#c41e3a] via-[#b8860b] to-[#003366] dark:from-[#e84855] dark:via-[#ffd700] dark:to-[#4a90e2] rounded-full mb-6" />
+
 
         {/* Machines grouped by category */}
         <div className="space-y-6">

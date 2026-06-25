@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -120,7 +120,7 @@ export function ForgotPasswordForm() {
       {/* Step indicator */}
       <div className="flex items-center justify-between mb-7 relative z-10">
         {STEP_ORDER.map((s, i) => (
-          <div key={s} className="flex items-center flex-1">
+          <Fragment key={s}>
             <div className="flex flex-col items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -144,7 +144,7 @@ export function ForgotPasswordForm() {
                 i < currentStepIndex ? 'bg-[#003366] dark:bg-[#4a90e2]' : 'bg-gray-200 dark:bg-[#2a2a2a]'
               }`} />
             )}
-          </div>
+          </Fragment>
         ))}
       </div>
 
