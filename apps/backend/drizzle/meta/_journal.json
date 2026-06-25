@@ -50,6 +50,13 @@
       "when": 1782276735110,
       "tag": "0006_dark_lady_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782348111341,
+      "tag": "0007_careless_snowbird",
+      "breakpoints": true
     }
   ]
 }

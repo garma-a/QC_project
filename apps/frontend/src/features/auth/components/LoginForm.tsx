@@ -2,29 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, AlertCircle, Shield, Wrench } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { loginAccount } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { UserResponseDto } from '@/lib/types/api';
 
-const QUICK_LOGIN_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@lab.local', password: 'Password123!', icon: Shield, color: 'from-[#b8860b] to-[#d4af37] dark:from-[#ffd700] dark:to-[#f4c430]' },
-  { label: 'Technician', email: 'john.doe@lab.local', password: 'Password123!', icon: Wrench, color: 'from-[#003366] to-[#1a5276] dark:from-[#4a90e2] dark:to-[#6bb3f0]' },
-];
-
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
-
-  const fillCredentials = (account: typeof QUICK_LOGIN_ACCOUNTS[number]) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,33 +44,6 @@ export function LoginForm() {
 
   return (
     <>
-      {/* Quick Login Buttons */}
-      <div className="mb-6 relative z-10">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-medium text-center uppercase tracking-wider">Quick Login</p>
-        <div className="grid grid-cols-2 gap-3">
-          {QUICK_LOGIN_ACCOUNTS.map((account) => {
-            const Icon = account.icon;
-            return (
-              <button
-                key={account.email}
-                type="button"
-                onClick={() => fillCredentials(account)}
-                disabled={isPending}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r ${account.color} text-white text-sm font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70`}
-              >
-                <Icon size={16} />
-                {account.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
-        <div className="relative flex justify-center"><span className="bg-white dark:bg-[#1e1e1e] px-3 text-xs text-gray-400 dark:text-gray-500">or enter manually</span></div>
-      </div>
-
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20 border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40 flex items-start gap-3 relative z-10">
@@ -113,23 +76,38 @@ export function LoginForm() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-gray-700 dark:text-gray-300 mb-2 text-sm font-semibold">
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="password" className="block text-gray-700 dark:text-gray-300 text-sm font-semibold">
+              Password
+            </label>
+            <a
+              href="/forgot-password"
+              className="text-xs text-[#c41e3a] dark:text-[#e84855] font-medium hover:underline"
+            >
+              Forgot Password?
+            </a>
+          </div>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60">
               <Lock size={20} />
             </div>
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
               placeholder="Enter your password"
               autoComplete="current-password"
               disabled={isPending}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
         </div>
 
@@ -141,6 +119,18 @@ export function LoginForm() {
           <Lock size={18} />
           {isPending ? 'Signing In...' : 'Sign In to MYGHC Lab'}
         </button>
+
+        <div className="relative my-2">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
+          <div className="relative flex justify-center"><span className="bg-white dark:bg-[#1e1e1e] px-3 text-xs text-gray-400 dark:text-gray-500">New staff member?</span></div>
+        </div>
+
+        <a
+          href="/signup"
+          className="w-full py-3 rounded-xl border-2 border-[#003366]/40 dark:border-[#4a90e2]/40 text-[#003366] dark:text-[#4a90e2] hover:bg-[#003366]/5 dark:hover:bg-[#4a90e2]/10 transition-all flex items-center justify-center gap-2 font-semibold text-sm"
+        >
+          Register with your work email
+        </a>
       </form>
     </>
   );

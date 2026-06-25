@@ -101,6 +101,7 @@ export const api = {
     serverFetch<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(data) }),
   patch: <T>(endpoint: string, data: unknown, options?: RequestInit) =>
     serverFetch<T>(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(data) }),
-  delete: <T>(endpoint: string, options?: RequestInit) =>
-    serverFetch<T>(endpoint, { ...options, method: 'DELETE' }),
+  delete: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
+    serverFetch<T>(endpoint, { ...options, method: 'DELETE', body: data ? JSON.stringify(data) : undefined }),
 };
+

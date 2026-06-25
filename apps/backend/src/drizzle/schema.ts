@@ -44,7 +44,7 @@ export const users = pgTable('users', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   email: varchar('email', { length: 256 }).unique().notNull(),
-  passwordHash: text('password_hash').notNull(),
+  passwordHash: text('password_hash'),
   phone: text('phone'),
   role: roleEnum('role').notNull().default('TECHNICIAN'),
   isActive: boolean('is_active').default(true),
@@ -52,6 +52,13 @@ export const users = pgTable('users', {
   subscribeToAllSections: boolean('subscribe_to_all_sections').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
+});
+
+export const whitelistEmails = pgTable('whitelist_emails', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 256 }).unique().notNull(),
+  addedBy: integer('added_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const sections = pgTable('sections', {

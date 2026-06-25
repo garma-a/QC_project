@@ -191,6 +191,165 @@ export async function refreshTokensAction() {
 }
 
 // ===================================================================
+// Signup flow
+// ===================================================================
+
+export async function checkEmailAction(email: string) {
+  try {
+    const data = await api.post<{ message: string }>('/api/v1/auth/signup/check-email', { email });
+    return { success: true, message: data.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to check email.' };
+  }
+}
+
+export async function verifySignupOtpAction(email: string, otp: string) {
+  try {
+    const data = await api.post<{ message: string }>('/api/v1/auth/signup/verify-otp', { email, otp });
+    return { success: true, message: data.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Invalid OTP.' };
+  }
+}
+
+export async function completeSignupAction(
+  email: string,
+  firstName: string,
+  lastName: string,
+  password: string,
+) {
+  try {
+    const response = await api.post<LoginResponseDto>('/api/v1/auth/signup/complete', {
+      email,
+      firstName,
+      lastName,
+      password,
+    });
+
+    if (!response?.accessToken) {
+      return { error: 'Signup failed. Please try again.' };
+    }
+
+    const token = response.accessToken;
+    const refreshToken = response.refreshToken;
+    const cookieStore = await cookies();
+
+    cookieStore.set('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60,
+    });
+
+    if (refreshToken) {
+      cookieStore.set('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    const jwtPayload = decodeJwt(token);
+    if (!jwtPayload) {
+      return { error: 'Failed to decode authentication token.' };
+    }
+
+    let user: UserResponseDto | null = null;
+    try {
+      user = await api.get<UserResponseDto>(`/api/v1/users/${jwtPayload.userId}`);
+    } catch {}
+
+    const userInfo = user ?? {
+      id: jwtPayload.userId,
+      firstName,
+      lastName,
+      email,
+      role: jwtPayload.role,
+      isActive: true,
+      sectionIds: [],
+      sectionNames: [],
+      createdAt: new Date().toISOString(),
+    };
+    cookieStore.set('user_info', JSON.stringify(userInfo), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    return { success: true, token, user: userInfo as UserResponseDto };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Signup failed.' };
+  }
+}
+
+// ===================================================================
+// Forgot password flow
+// ===================================================================
+
+export async function forgotPasswordAction(email: string) {
+  try {
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password', { email });
+    return { success: true, message: data.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to send OTP.' };
+  }
+}
+
+export async function verifyResetOtpAction(email: string, otp: string) {
+  try {
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/verify-otp', { email, otp });
+    return { success: true, message: data.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Invalid OTP.' };
+  }
+}
+
+export async function resetPasswordAction(email: string, newPassword: string) {
+  try {
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/reset', { email, newPassword });
+    return { success: true, message: data.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to reset password.' };
+  }
+}
+
+// ===================================================================
+// Whitelist management (admin)
+// ===================================================================
+
+export async function addEmailToWhitelistAction(email: string) {
+  try {
+    const data = await api.post<{ id: number; email: string; createdAt: string }>('/api/v1/auth/whitelist', { email });
+    return { success: true, data };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to add email to whitelist.' };
+  }
+}
+
+export async function removeEmailFromWhitelistAction(email: string) {
+  try {
+    await api.delete('/api/v1/auth/whitelist', { email });
+    return { success: true };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to remove email from whitelist.' };
+  }
+}
+
+export async function getWhitelistedEmailsAction() {
+  try {
+    const data = await api.get<{ id: number; email: string; createdAt: string }[]>('/api/v1/auth/whitelist');
+    return { success: true, data };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : 'Failed to fetch whitelist.' };
+  }
+}
+
+// ===================================================================
 // User Actions
 // ===================================================================
 
