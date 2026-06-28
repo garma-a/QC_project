@@ -41,6 +41,7 @@ export async function loginAccount(formData: FormData) {
     const response = await api.post<LoginResponseDto>(
       '/api/v1/auth/login',
       payload,
+      { skipAutoRedirect: true },
     );
 
     if (!response?.accessToken) {
@@ -196,7 +197,7 @@ export async function refreshTokensAction() {
 
 export async function checkEmailAction(email: string) {
   try {
-    const data = await api.post<{ message: string }>('/api/v1/auth/signup/check-email', { email });
+    const data = await api.post<{ message: string }>('/api/v1/auth/signup/check-email', { email }, { skipAutoRedirect: true });
     return { success: true, message: data.message };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Failed to check email.' };
@@ -205,7 +206,7 @@ export async function checkEmailAction(email: string) {
 
 export async function verifySignupOtpAction(email: string, otp: string) {
   try {
-    const data = await api.post<{ message: string }>('/api/v1/auth/signup/verify-otp', { email, otp });
+    const data = await api.post<{ message: string }>('/api/v1/auth/signup/verify-otp', { email, otp }, { skipAutoRedirect: true });
     return { success: true, message: data.message };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Invalid OTP.' };
@@ -224,7 +225,7 @@ export async function completeSignupAction(
       firstName,
       lastName,
       password,
-    });
+    }, { skipAutoRedirect: true });
 
     if (!response?.accessToken) {
       return { error: 'Signup failed. Please try again.' };
@@ -293,7 +294,7 @@ export async function completeSignupAction(
 
 export async function forgotPasswordAction(email: string) {
   try {
-    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password', { email });
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password', { email }, { skipAutoRedirect: true });
     return { success: true, message: data.message };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Failed to send OTP.' };
@@ -302,7 +303,7 @@ export async function forgotPasswordAction(email: string) {
 
 export async function verifyResetOtpAction(email: string, otp: string) {
   try {
-    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/verify-otp', { email, otp });
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/verify-otp', { email, otp }, { skipAutoRedirect: true });
     return { success: true, message: data.message };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Invalid OTP.' };
@@ -311,7 +312,7 @@ export async function verifyResetOtpAction(email: string, otp: string) {
 
 export async function resetPasswordAction(email: string, newPassword: string) {
   try {
-    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/reset', { email, newPassword });
+    const data = await api.post<{ message: string }>('/api/v1/auth/forgot-password/reset', { email, newPassword }, { skipAutoRedirect: true });
     return { success: true, message: data.message };
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Failed to reset password.' };

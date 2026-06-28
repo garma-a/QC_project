@@ -36,13 +36,23 @@ async function getAuthToken(): Promise<string | null> {
   }
 }
 
+export interface ServerFetchOptions extends RequestInit {
+  /**
+   * When true, a 401 response throws a normal ApiRequestError instead of
+   * calling redirect('/login'). Use this for unauthenticated endpoints
+   * (login, signup, forgot-password) so their error messages reach the UI.
+   */
+  skipAutoRedirect?: boolean;
+}
+
 export async function serverFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ServerFetchOptions = {}
 ): Promise<T> {
+  const { skipAutoRedirect, ...fetchOptions } = options;
   const token = await getAuthToken();
 
-  const headers = new Headers(options.headers);
+  const headers = new Headers(fetchOptions.headers);
   headers.set('Content-Type', 'application/json');
 
   if (token) {
@@ -53,15 +63,16 @@ export async function serverFetch<T>(
 
   const res = await fetch(url, {
     cache: 'no-store',
-    ...options,
+    ...fetchOptions,
     headers,
   });
 
   if (!res.ok) {
-    // Check for 401 BEFORE entering any try/catch block.
-    // Next.js redirect() works by throwing a special NEXT_REDIRECT error,
-    // which would be silently swallowed if called inside a catch block.
-    if (res.status === 401) {
+    // Only auto-redirect on 401 for authenticated endpoints.
+    // Auth endpoints (login, signup, forgot-password) pass skipAutoRedirect=true
+    // so their "Invalid credentials" / "Email not whitelisted" errors reach the UI
+    // instead of being swallowed by Next.js's NEXT_REDIRECT exception.
+    if (res.status === 401 && !skipAutoRedirect) {
       redirect('/login');
     }
 
@@ -93,15 +104,15 @@ export async function serverFetch<T>(
 
 // Convenience methods
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
+  get: <T>(endpoint: string, options?: ServerFetchOptions) =>
     serverFetch<T>(endpoint, { ...options, method: 'GET' }),
-  post: <T>(endpoint: string, data: unknown, options?: RequestInit) =>
+  post: <T>(endpoint: string, data: unknown, options?: ServerFetchOptions) =>
     serverFetch<T>(endpoint, { ...options, method: 'POST', body: JSON.stringify(data) }),
-  put: <T>(endpoint: string, data: unknown, options?: RequestInit) =>
+  put: <T>(endpoint: string, data: unknown, options?: ServerFetchOptions) =>
     serverFetch<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(data) }),
-  patch: <T>(endpoint: string, data: unknown, options?: RequestInit) =>
+  patch: <T>(endpoint: string, data: unknown, options?: ServerFetchOptions) =>
     serverFetch<T>(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(data) }),
-  delete: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
+  delete: <T>(endpoint: string, data?: unknown, options?: ServerFetchOptions) =>
     serverFetch<T>(endpoint, { ...options, method: 'DELETE', body: data ? JSON.stringify(data) : undefined }),
 };
 
