@@ -472,6 +472,32 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
       }
     }
 
+    // Add historical inactive lots from qcHistory
+    for (const entry of qcHistory) {
+      if (!testMap.has(entry.testId.toString())) {
+        testMap.set(entry.testId.toString(), {
+          testId: entry.testId.toString(),
+          testName: entry.testName,
+          category: 'General', // Fallback
+          lots: [],
+        });
+      }
+      
+      const testEntry = testMap.get(entry.testId.toString())!;
+      
+      // If the lot isn't in the array yet, add it as inactive
+      if (!testEntry.lots.some(l => l.lotId === entry.lotId)) {
+        testEntry.lots.push({
+          lotId: entry.lotId,
+          level: entry.level ?? 1,
+          lotNumber: entry.lotNumber ?? `Lot-${entry.lotId}`,
+          isActive: false, // Since it wasn't in machine.tests, it's inactive
+          mean: (entry as any).lotMean ?? 0,
+          standardDeviation: (entry as any).lotSd ?? 1,
+        });
+      }
+    }
+
     for (const test of testMap.values()) {
       test.lots.sort((a, b) => a.level - b.level);
     }
