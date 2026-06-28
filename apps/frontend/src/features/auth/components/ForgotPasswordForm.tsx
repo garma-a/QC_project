@@ -47,6 +47,18 @@ export function ForgotPasswordForm() {
     const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendCooldown]);
+
+  // Auto-fill email from URL if user came from the login page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const emailParam = params.get('email');
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+    }
+  }, []);
+
   const router = useRouter();
 
   const currentStepIndex = STEP_ORDER.indexOf(step);
