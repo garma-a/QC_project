@@ -63,24 +63,35 @@ export class AuthService {
   // ─── Signup flow ───────────────────────────────────────────────────────
 
   /**
-   * Step 1: Check if email is on the whitelist and not already registered,
-   * then send an OTP to that email.
+   * Step 1: Check if email can register, then send an OTP.
+   *
+   * Priority order:
+   *  1. If the email already has a full account (passwordHash set) → conflict error.
+   *  2. If the email exists in DB but has no password (admin pre-created the user)
+   *     → allow signup directly, no whitelist check needed.
+   *  3. Otherwise → must be on the admin whitelist to proceed.
    */
   async initiateSignup(email: string) {
     const normalised = email.toLowerCase().trim();
 
-    const whitelisted = await this.authRepository.isEmailWhitelisted(normalised);
-    if (!whitelisted) {
-      throw new BadRequestException(
-        'This email is not authorised to register. Please contact your administrator.',
-      );
-    }
-
     const existing = await this.authRepository.findByEmail(normalised);
-    if (existing && existing.passwordHash) {
+
+    // Case 1: account already fully registered
+    if (existing?.passwordHash) {
       throw new ConflictException(
         'An account with this email already exists. Please log in.',
       );
+    }
+
+    // Case 2: admin pre-created this user (no password yet) — skip whitelist check
+    if (!existing) {
+      // Case 3: brand-new email — must be whitelisted by an admin
+      const whitelisted = await this.authRepository.isEmailWhitelisted(normalised);
+      if (!whitelisted) {
+        throw new BadRequestException(
+          'This email is not authorised to register. Please contact your administrator.',
+        );
+      }
     }
 
     const otp = generateOtp();
@@ -161,14 +172,26 @@ export class AuthService {
 
   /**
    * Step 1: Send password-reset OTP to a registered email.
+   *
+   * For this internal system we give clear feedback rather than hiding whether
+   * the email is registered, since user enumeration is not a threat model here.
    */
   async forgotPassword(dto: ForgotPasswordDto) {
     const normalised = dto.email.toLowerCase().trim();
     const user = await this.authRepository.findByEmail(normalised);
 
-    // Always return success to avoid user enumeration
-    if (!user || !user.isActive || !user.passwordHash) {
-      return { message: 'If this email is registered, an OTP has been sent.' };
+    // No account at all, or the account was admin-created but never completed
+    // signup (no passwordHash) — tell the user to register first.
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException(
+        'No registered account was found for this email. Please sign up first.',
+      );
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException(
+        'This account has been deactivated. Please contact your administrator.',
+      );
     }
 
     const otp = generateOtp();
