@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
 import { QcResultsService } from '@/qc-results/qc-results.service';
+import { SectionsService } from '@/sections/sections.service';
 import { DashboardBffResponseDto, DashboardMachineDto, DashboardCategoryDto, DashboardQcHistoryDto } from './dto/dashboard-bff.dto';
 import { QcPageMachinesResponseDto, QcPageHistoryResponseDto, QcInteractiveHistoryEntryDto } from './dto/qc-bff.dto';
 
@@ -11,13 +12,15 @@ export class BffService {
     private readonly machinesService: MachinesService,
     private readonly controlLotsService: ControlLotsService,
     private readonly qcResultsService: QcResultsService,
+    private readonly sectionsService: SectionsService,
   ) {}
 
   async getDashboardData(): Promise<DashboardBffResponseDto> {
-    const [fetchedMachines, activeLotsResponse, allResultsResponse] = await Promise.all([
+    const [fetchedMachines, activeLotsResponse, allResultsResponse, sections] = await Promise.all([
       this.machinesService.findAll(),
       this.controlLotsService.findActiveWithTestContext(),
       this.qcResultsService.getRecentAll(),
+      this.sectionsService.findAll(),
     ]);
 
     // Format activeLots based on response type (array or paginated object)
@@ -37,10 +40,13 @@ export class BffService {
     if (fetchedMachines && fetchedMachines.length > 0) {
       // Build section categories from machines
       const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
-      categories = sectionIds.map((sid) => ({
-        id: sid.toString(),
-        name: `Section ${sid}`,
-      }));
+      categories = sectionIds.map((sid) => {
+        const sec = sections.find((s) => s.id === sid);
+        return {
+          id: sid.toString(),
+          name: sec?.name ?? `Section ${sid}`,
+        };
+      });
 
       // Build qcHistory directly from enriched results
       qcHistory = allResults.map((result: any): DashboardQcHistoryDto => {
@@ -114,9 +120,10 @@ export class BffService {
   }
 
   async getQcPageMachines(): Promise<QcPageMachinesResponseDto> {
-    const [fetchedMachines, activeLotsResponse] = await Promise.all([
+    const [fetchedMachines, activeLotsResponse, sections] = await Promise.all([
       this.machinesService.findAll(),
       this.controlLotsService.findActiveWithTestContext(),
+      this.sectionsService.findAll(),
     ]);
 
     const activeLots = Array.isArray(activeLotsResponse) 
@@ -130,10 +137,13 @@ export class BffService {
     }
 
     const sectionIds = [...new Set(fetchedMachines.map((m) => m.sectionId))];
-    categories = sectionIds.map((sid) => ({
-      id: sid.toString(),
-      name: `Section ${sid}`,
-    }));
+    categories = sectionIds.map((sid) => {
+      const sec = sections.find((s) => s.id === sid);
+      return {
+        id: sid.toString(),
+        name: sec?.name ?? `Section ${sid}`,
+      };
+    });
 
     const machines = fetchedMachines.map((machine: any) => {
       const machineLots = activeLots.filter((lot: any) => lot.machineId === machine.id);

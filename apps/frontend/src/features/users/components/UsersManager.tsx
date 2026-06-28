@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { clientFetch } from '@/lib/api/clientFetch';
 import {
   UserPlus,
   Users,
@@ -15,7 +16,74 @@ import {
 import { LogoCompact } from '@/components/layout/Logo';
 import { createUser, updateUser } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { AdminUpdateUserDto, Role } from '@/lib/types/api';
+import type { AdminUpdateUserDto, Role, SectionResponseDto } from '@/lib/types/api';
+
+/** Reusable section multi-select used in both Create and Edit forms */
+function SectionPicker({
+  sections,
+  selected,
+  onChange,
+  disabled,
+}: {
+  sections: SectionResponseDto[];
+  selected: number[];
+  onChange: (ids: number[]) => void;
+  disabled?: boolean;
+}) {
+  const toggle = (id: number) => {
+    onChange(
+      selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id],
+    );
+  };
+
+  if (sections.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 dark:text-gray-500 py-2">
+        No sections available.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+      {sections.map((sec) => {
+        const isChecked = selected.includes(sec.id);
+        return (
+          <label
+            key={sec.id}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none ${
+              isChecked
+                ? 'border-[#c41e3a] bg-[#c41e3a]/10 dark:border-[#e84855] dark:bg-[#e84855]/15 text-[#c41e3a] dark:text-[#e84855] font-semibold'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-[#c41e3a]/40 dark:hover:border-[#e84855]/40'
+            } ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+          >
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={isChecked}
+              onChange={() => toggle(sec.id)}
+              disabled={disabled}
+            />
+            <span
+              className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                isChecked
+                  ? 'border-[#c41e3a] bg-[#c41e3a] dark:border-[#e84855] dark:bg-[#e84855]'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+            >
+              {isChecked && (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+                  <path d="M1.5 5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            <span className="text-xs leading-tight">{sec.name}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
 export type UserType = {
   id: number;
@@ -31,29 +99,24 @@ export type UserType = {
 
 type EditTechnicianModalProps = {
   user: UserType;
+  sections: SectionResponseDto[];
   onCancel: () => void;
   onSave: (updatedUser: AdminUpdateUserDto) => Promise<void>;
 };
 
 function EditTechnicianModal({
   user,
+  sections,
   onCancel,
   onSave,
 }: EditTechnicianModalProps) {
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
   const [email, setEmail] = useState(user.email);
-  const [sectionIdsText, setSectionIdsText] = useState(
-    (user.sectionIds ?? []).join(', '),
+  const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>(
+    user.sectionIds ?? [],
   );
   const [isPending, setIsPending] = useState(false);
-
-  const parseSectionIds = (value: string) => {
-    return value
-      .split(',')
-      .map((part) => Number(part.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +125,7 @@ function EditTechnicianModal({
       firstName,
       lastName,
       email,
-      sectionIds: parseSectionIds(sectionIdsText),
+      sectionIds: selectedSectionIds,
     });
     setIsPending(false);
   };
@@ -117,16 +180,19 @@ function EditTechnicianModal({
 
           <div>
             <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">
-              Section IDs
+              Assigned Sections
             </label>
-            <input
-              type="text"
-              value={sectionIdsText}
-              onChange={(e) => setSectionIdsText(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent"
-              placeholder="e.g. 1, 3"
+            <SectionPicker
+              sections={sections}
+              selected={selectedSectionIds}
+              onChange={setSelectedSectionIds}
               disabled={isPending}
             />
+            {selectedSectionIds.length > 0 && (
+              <p className="text-xs text-gray-400 mt-1">
+                {selectedSectionIds.length} section{selectedSectionIds.length > 1 ? 's' : ''} selected
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -175,20 +241,28 @@ export function UsersManager({
       : null);
   const isAdmin = currentUser?.role === 'ADMIN';
   const [users, setUsers] = useState<UserType[]>(initialUsers);
+  const [sections, setSections] = useState<SectionResponseDto[]>([]);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     password: '',
     email: '',
-    sectionIdsText: '',
   });
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+
+  // Fetch sections once on mount so we can show names in the pickers
+  useEffect(() => {
+    clientFetch<SectionResponseDto[]>('/api/v1/sections')
+      .then(setSections)
+      .catch(() => {/* non-critical */});
+  }, []);
 
   const handleEditUser = (user: UserType) => {
     setEditingUser(user);
@@ -236,10 +310,23 @@ export function UsersManager({
     try {
       const res = await updateUser(editingUser.id, updatedFields);
       if (!res.error) {
-        // Update user in local state
+        // Resolve section names from our local sections list so the card
+        // shows names immediately without requiring a page refresh
+        const updatedSectionIds = updatedFields.sectionIds ?? editingUser.sectionIds ?? [];
+        const updatedSectionNames = updatedSectionIds
+          .map((id) => sections.find((s) => s.id === id)?.name)
+          .filter((n): n is string => Boolean(n));
+
         setUsers((prev) =>
           prev.map((u) =>
-            u.id === editingUser.id ? { ...u, ...updatedFields } : u,
+            u.id === editingUser.id
+              ? {
+                  ...u,
+                  ...updatedFields,
+                  sectionIds: updatedSectionIds,
+                  sectionNames: updatedSectionNames,
+                }
+              : u,
           ),
         );
         setEditingUser(null);
@@ -282,11 +369,6 @@ export function UsersManager({
     e.preventDefault();
     setMessage(null);
 
-    const parsedSectionIds = formData.sectionIdsText
-      .split(',')
-      .map((part) => Number(part.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0);
-
     if (!formData.firstName || !formData.password || !formData.email) {
       setMessage({ type: 'error', text: 'Please fill in all required fields' });
       return;
@@ -308,7 +390,7 @@ export function UsersManager({
         password: formData.password,
         email: formData.email,
         role: 'TECHNICIAN',
-        sectionIds: parsedSectionIds,
+        sectionIds: selectedSectionIds,
       });
 
       if (res.success) {
@@ -316,7 +398,6 @@ export function UsersManager({
           type: 'success',
           text: `Technician account created successfully for ${formData.firstName} ${formData.lastName}`,
         });
-        // Add new user to local state
         if (res.data) {
           setUsers((prev) => [
             ...prev,
@@ -333,13 +414,8 @@ export function UsersManager({
             },
           ]);
         }
-        setFormData({
-          firstName: '',
-          lastName: '',
-          password: '',
-          email: '',
-          sectionIdsText: '',
-        });
+        setFormData({ firstName: '', lastName: '', password: '', email: '' });
+        setSelectedSectionIds([]);
         setShowAddForm(false);
       } else {
         setMessage({
@@ -350,8 +426,7 @@ export function UsersManager({
     } catch (err) {
       setMessage({
         type: 'error',
-        text:
-          err instanceof Error ? err.message : 'Failed to create technician',
+        text: err instanceof Error ? err.message : 'Failed to create technician',
       });
     }
     setIsPending(false);
@@ -512,18 +587,19 @@ export function UsersManager({
 
             <div>
               <label className="block text-gray-700 dark:text-gray-300 mb-2 font-semibold">
-                Section IDs
+                Assigned Sections
               </label>
-              <input
-                type="text"
-                value={formData.sectionIdsText}
-                onChange={(e) =>
-                  setFormData({ ...formData, sectionIdsText: e.target.value })
-                }
-                className="w-full px-4 py-3 rounded-xl border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                placeholder="e.g. 1, 3"
+              <SectionPicker
+                sections={sections}
+                selected={selectedSectionIds}
+                onChange={setSelectedSectionIds}
                 disabled={isPending}
               />
+              {selectedSectionIds.length > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {selectedSectionIds.length} section{selectedSectionIds.length > 1 ? 's' : ''} selected
+                </p>
+              )}
             </div>
 
             <button
@@ -675,6 +751,7 @@ export function UsersManager({
       {editingUser && (
         <EditTechnicianModal
           user={editingUser}
+          sections={sections}
           onCancel={() => setEditingUser(null)}
           onSave={handleSaveEdit}
         />
