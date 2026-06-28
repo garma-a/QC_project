@@ -74,6 +74,14 @@ export class QcResultsRepository {
         })
         .returning();
 
+      // 1.5 Update the Machine's lastRunAt timestamp
+      if (run.runDate) {
+        await tx
+          .update(machines)
+          .set({ lastRunAt: run.runDate })
+          .where(eq(machines.id, machineId));
+      }
+
       // 2. Insert all results tied to this Run
       const insertedResults = await tx
         .insert(qcResults)

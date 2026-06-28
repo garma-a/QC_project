@@ -13,7 +13,7 @@ export class BffService {
     private readonly controlLotsService: ControlLotsService,
     private readonly qcResultsService: QcResultsService,
     private readonly sectionsService: SectionsService,
-  ) {}
+  ) { }
 
   async getDashboardData(): Promise<DashboardBffResponseDto> {
     const [fetchedMachines, activeLotsResponse, allResultsResponse, sections] = await Promise.all([
@@ -24,8 +24,8 @@ export class BffService {
     ]);
 
     // Format activeLots based on response type (array or paginated object)
-    const activeLots = Array.isArray(activeLotsResponse) 
-      ? activeLotsResponse 
+    const activeLots = Array.isArray(activeLotsResponse)
+      ? activeLotsResponse
       : (activeLotsResponse as any).data || [];
 
     // Format allResults
@@ -70,7 +70,7 @@ export class BffService {
         const machineResults = qcHistory
           .filter((entry) => entry.machineId === machine.id)
           .sort((a, b) => new Date(b.testDate as string).getTime() - new Date(a.testDate as string).getTime());
-        
+
         const latestResult = machineResults[0];
         const machineLots = activeLots.filter((lot: any) => lot.machineId === machine.id);
 
@@ -126,12 +126,12 @@ export class BffService {
       this.sectionsService.findAll(),
     ]);
 
-    const activeLots = Array.isArray(activeLotsResponse) 
-      ? activeLotsResponse 
+    const activeLots = Array.isArray(activeLotsResponse)
+      ? activeLotsResponse
       : (activeLotsResponse && (activeLotsResponse as any).data) || [];
 
     let categories: DashboardCategoryDto[] = [];
-    
+
     if (!fetchedMachines || fetchedMachines.length === 0) {
       return { machines: [], categories: [] };
     }
@@ -178,9 +178,9 @@ export class BffService {
 
   async getQcHistory(limit: number, offset: number, machineId?: number): Promise<QcPageHistoryResponseDto> {
     const paginatedResponse = await this.qcResultsService.findAll(undefined, limit, offset, machineId);
-    
+
     const rawResults = Array.isArray(paginatedResponse) ? paginatedResponse : ('results' in paginatedResponse ? paginatedResponse.results : []);
-    
+
     const formattedResults: QcInteractiveHistoryEntryDto[] = rawResults.map((entry: any) => {
       const dateObj = new Date(entry.testDate as string);
       const dateStr = !Number.isNaN(dateObj.getTime())
@@ -196,8 +196,8 @@ export class BffService {
         testName: entry.testName,
         date: dateStr,
         rawDate: entry.testDate,
-        performedBy: entry.performedByFirstName 
-          ? `${entry.performedByFirstName} ${entry.performedByLastName}` 
+        performedBy: entry.performedByFirstName
+          ? `${entry.performedByFirstName} ${entry.performedByLastName}`
           : 'User ' + (entry.performedBy || 'Unknown'),
         numericResult: entry.value,
         result: entry.value?.toString() ?? '',

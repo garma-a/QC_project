@@ -78,7 +78,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
     };
 
     const colorClass = classMap[status] || classMap['IDLE'];
-    
+
     return (
       <Badge className={`border-none ${colorClass}`} variant="outline">
         {status}
