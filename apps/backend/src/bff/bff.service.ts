@@ -196,7 +196,9 @@ export class BffService {
         testName: entry.testName,
         date: dateStr,
         rawDate: entry.testDate,
-        performedBy: 'User ' + (entry.technicianId || 'Unknown'),
+        performedBy: entry.performedByFirstName 
+          ? `${entry.performedByFirstName} ${entry.performedByLastName}` 
+          : 'User ' + (entry.performedBy || 'Unknown'),
         numericResult: entry.value,
         result: entry.value?.toString() ?? '',
         expectedRange: `${lowerLimit} - ${upperLimit}`,

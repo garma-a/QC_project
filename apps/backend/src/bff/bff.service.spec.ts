@@ -203,7 +203,8 @@ describe('BffService', () => {
             machineId: 2,
             testName: 'Cholesterol',
             testDate: 'invalid-date',
-            technicianId: 42,
+            performedByFirstName: 'Admin',
+            performedByLastName: 'Seeder',
             value: 200,
             lowerControlLimit: 150,
             upperControlLimit: 250,
@@ -222,7 +223,7 @@ describe('BffService', () => {
       expect(mockQcResultsService.findAll).toHaveBeenCalledWith(undefined, 50, 0, 2);
       expect(result.results).toHaveLength(1);
       expect(result.results[0]?.expectedRange).toBe('150 - 250');
-      expect(result.results[0]?.performedBy).toBe('User 42');
+      expect(result.results[0]?.performedBy).toBe('Admin Seeder');
       expect(result.results[0]?.date).toBe('N/A N/A'); // Tests the invalid date fallback branch
     });
 

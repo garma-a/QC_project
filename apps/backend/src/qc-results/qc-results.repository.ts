@@ -1,5 +1,5 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, machines, qcResults, qcRuns, qcTests } from '@/drizzle/schema';
+import { controlLots, machines, qcResults, qcRuns, qcTests, users } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { desc, eq, and, inArray, sql, gte, lte } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
@@ -228,6 +228,8 @@ export class QcResultsRepository {
         lotId: qcResults.lotId,
         testDate: qcRuns.runDate,
         performedBy: qcRuns.performedBy,
+        performedByFirstName: users.firstName,
+        performedByLastName: users.lastName,
         // Enriched: lot context
         lotNumber: controlLots.lotNumber,
         lotMean: controlLots.mean,
@@ -245,6 +247,7 @@ export class QcResultsRepository {
       .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .leftJoin(users, eq(qcRuns.performedBy, users.id))
       .$dynamic();
       
     if (machineId) {
