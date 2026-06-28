@@ -161,34 +161,41 @@ export class AlertsRepository {
 
   async markSeen(alertId: number, userId: number) {
     return this.databaseService.db
-      .update(usersToAlerts)
-      .set({
+      .insert(usersToAlerts)
+      .values({
+        userId,
+        alertId,
         status: 'SEEN',
         seenAt: new Date(),
       })
-      .where(
-        and(
-          eq(usersToAlerts.alertId, alertId),
-          eq(usersToAlerts.userId, userId),
-        ),
-      )
+      .onConflictDoUpdate({
+        target: [usersToAlerts.userId, usersToAlerts.alertId],
+        set: {
+          status: 'SEEN',
+          seenAt: new Date(),
+        },
+      })
       .returning();
   }
 
   async markResolved(alertId: number, userId: number, resolutionNote?: string) {
     return this.databaseService.db
-      .update(usersToAlerts)
-      .set({
+      .insert(usersToAlerts)
+      .values({
+        userId,
+        alertId,
         status: 'RESOLVED',
         resolvedAt: new Date(),
         resolutionNote: resolutionNote ?? null,
       })
-      .where(
-        and(
-          eq(usersToAlerts.alertId, alertId),
-          eq(usersToAlerts.userId, userId),
-        ),
-      )
+      .onConflictDoUpdate({
+        target: [usersToAlerts.userId, usersToAlerts.alertId],
+        set: {
+          status: 'RESOLVED',
+          resolvedAt: new Date(),
+          resolutionNote: resolutionNote ?? null,
+        },
+      })
       .returning();
   }
 

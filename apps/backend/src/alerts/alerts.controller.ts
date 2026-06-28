@@ -10,9 +10,7 @@ import {
   Sse,
   MessageEvent,
   Req,
-  UseInterceptors,
 } from '@nestjs/common';
-import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, filter, takeUntil } from 'rxjs/operators';
@@ -46,8 +44,6 @@ export class AlertsController {
   constructor(private readonly alertsService: AlertsService) { }
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(30 * 1000)
   @ApiOperation({
     summary: 'List current user alerts',
     description:
