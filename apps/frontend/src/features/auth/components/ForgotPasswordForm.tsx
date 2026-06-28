@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -39,6 +39,14 @@ export function ForgotPasswordForm() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isPending, setIsPending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Countdown timer: decrements by 1 every second while cooldown > 0
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
   const router = useRouter();
 
   const currentStepIndex = STEP_ORDER.indexOf(step);
@@ -56,6 +64,7 @@ export function ForgotPasswordForm() {
       setError(result.error);
     } else {
       setSuccessMsg(result.message ?? 'OTP sent!');
+      setResendCooldown(45);
       setStep('verify-otp');
     }
   };
@@ -112,6 +121,7 @@ export function ForgotPasswordForm() {
       setError(result.error);
     } else {
       setSuccessMsg('A new OTP has been sent.');
+      setResendCooldown(45);
     }
   };
 
@@ -258,10 +268,11 @@ export function ForgotPasswordForm() {
           <button
             type="button"
             onClick={resendOtp}
-            disabled={isPending}
-            className="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] transition-colors flex items-center justify-center gap-1.5"
+            disabled={isPending || resendCooldown > 0}
+            className="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500 dark:disabled:hover:text-gray-400"
           >
-            <RotateCcw size={14} /> Resend OTP
+            <RotateCcw size={14} />
+            {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : 'Resend OTP'}
           </button>
         </form>
       )}
