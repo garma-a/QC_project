@@ -173,13 +173,17 @@ describe('AuthService', () => {
 
   describe('initiateSignup()', () => {
     it('sends OTP and returns message when email is whitelisted and not registered', async () => {
-      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue(undefined);
+      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
       mockRepo.saveOtp.mockResolvedValue(undefined);
 
+      // Act
       const result = await service.initiateSignup('  TECH@LAB.COM  ');
 
+      // Assert
       expect(result.message).toMatch(/OTP sent/i);
+      expect(mockRepo.findByEmail).toHaveBeenCalledWith('tech@lab.com');
       expect(mockRepo.isEmailWhitelisted).toHaveBeenCalledWith('tech@lab.com');
       expect(mockRepo.saveOtp).toHaveBeenCalledWith(
         'signup',
@@ -194,18 +198,24 @@ describe('AuthService', () => {
     });
 
     it('normalises email to lowercase before processing', async () => {
-      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue(undefined);
+      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
       mockRepo.saveOtp.mockResolvedValue(undefined);
 
+      // Act
       await service.initiateSignup('UPPERCASE@LAB.COM');
 
-      expect(mockRepo.isEmailWhitelisted).toHaveBeenCalledWith('uppercase@lab.com');
+      // Assert
+      expect(mockRepo.findByEmail).toHaveBeenCalledWith('uppercase@lab.com');
     });
 
     it('throws BadRequestException when email is not whitelisted', async () => {
+      // Arrange
+      mockRepo.findByEmail.mockResolvedValue(undefined);
       mockRepo.isEmailWhitelisted.mockResolvedValue(false);
 
+      // Act & Assert
       await expect(service.initiateSignup('unknown@lab.com')).rejects.toThrow(
         BadRequestException,
       );
@@ -216,26 +226,30 @@ describe('AuthService', () => {
     });
 
     it('throws ConflictException when account is already fully registered', async () => {
-      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue(ACTIVE_USER);
 
+      // Act & Assert
       await expect(service.initiateSignup(ACTIVE_USER.email)).rejects.toThrow(
         ConflictException,
       );
       await expect(service.initiateSignup(ACTIVE_USER.email)).rejects.toThrow(
         'already exists',
       );
+      expect(mockRepo.isEmailWhitelisted).not.toHaveBeenCalled();
     });
 
     it('allows re-initiating signup when user row exists but has no password yet', async () => {
-      // Admin may have pre-created the user without a password
-      mockRepo.isEmailWhitelisted.mockResolvedValue(true);
+      // Arrange (Admin pre-created the user)
       mockRepo.findByEmail.mockResolvedValue({ ...ACTIVE_USER, passwordHash: null });
       mockRepo.saveOtp.mockResolvedValue(undefined);
 
+      // Act
       const result = await service.initiateSignup(ACTIVE_USER.email);
 
+      // Assert
       expect(result.message).toMatch(/OTP sent/i);
+      expect(mockRepo.isEmailWhitelisted).not.toHaveBeenCalled();
     });
   });
 
@@ -358,11 +372,14 @@ describe('AuthService', () => {
     const dto = { email: 'tech@lab.com' };
 
     it('sends reset OTP and returns generic message for registered active users', async () => {
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue(ACTIVE_USER);
       mockRepo.saveOtp.mockResolvedValue(undefined);
 
+      // Act
       const result = await service.forgotPassword(dto);
 
+      // Assert
       expect(result.message).toMatch(/OTP has been sent/i);
       expect(mockRepo.saveOtp).toHaveBeenCalledWith(
         'reset',
@@ -372,31 +389,34 @@ describe('AuthService', () => {
       expect(mockEmailService.sendEmail).toHaveBeenCalled();
     });
 
-    it('returns same generic message without sending OTP for unknown email (anti-enumeration)', async () => {
+    it('throws BadRequestException when email is not registered', async () => {
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue(undefined);
 
-      const result = await service.forgotPassword({ email: 'ghost@lab.com' });
-
-      expect(result.message).toMatch(/OTP has been sent/i);
+      // Act & Assert
+      await expect(service.forgotPassword({ email: 'ghost@lab.com' })).rejects.toThrow(BadRequestException);
+      await expect(service.forgotPassword({ email: 'ghost@lab.com' })).rejects.toThrow('No registered account was found');
       expect(mockRepo.saveOtp).not.toHaveBeenCalled();
       expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
     });
 
-    it('returns same generic message without sending OTP for deactivated accounts', async () => {
+    it('throws UnauthorizedException when account is deactivated', async () => {
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue({ ...ACTIVE_USER, isActive: false });
 
-      const result = await service.forgotPassword(dto);
-
-      expect(result.message).toMatch(/OTP has been sent/i);
+      // Act & Assert
+      await expect(service.forgotPassword(dto)).rejects.toThrow(UnauthorizedException);
+      await expect(service.forgotPassword(dto)).rejects.toThrow('has been deactivated');
       expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
     });
 
-    it('returns same generic message for users who never completed signup', async () => {
+    it('throws BadRequestException when user never completed signup', async () => {
+      // Arrange
       mockRepo.findByEmail.mockResolvedValue({ ...ACTIVE_USER, passwordHash: null });
 
-      const result = await service.forgotPassword(dto);
-
-      expect(result.message).toMatch(/OTP has been sent/i);
+      // Act & Assert
+      await expect(service.forgotPassword(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.forgotPassword(dto)).rejects.toThrow('No registered account was found');
       expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
     });
   });
