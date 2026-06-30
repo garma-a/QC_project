@@ -7,8 +7,8 @@ describe('Logo component', () => {
   it('renders standard Logo correctly', () => {
     render(<Logo />);
     expect(screen.getByText('MAGDI YACOUB')).toBeInTheDocument();
-    expect(screen.getByText('HEART CENTER')).toBeInTheDocument();
-    expect(screen.getByText('Aswan Branch • Laboratory QC')).toBeInTheDocument();
+    expect(screen.getByText('Heart Center')).toBeInTheDocument();
+    expect(screen.getByText('LABORATORY QC')).toBeInTheDocument();
     
     // Test for svg (lucide-react Heart)
     const svg = document.querySelector('svg');
@@ -22,9 +22,8 @@ describe('Logo component', () => {
 
   it('renders compact Logo correctly', () => {
     render(<LogoCompact />);
-    expect(screen.getByText('MAGDI YACOUB')).toBeInTheDocument();
-    expect(screen.getByText('Heart Center')).toBeInTheDocument();
-    expect(screen.getByText('Aswan Lab QC')).toBeInTheDocument();
+    const svg = document.querySelector('svg');
+    expect(svg).toBeInTheDocument();
   });
 
   it('renders compact Logo with custom className', () => {

@@ -276,7 +276,7 @@ export function ControlLotManager({ initialLots, machines, allTests }: ControlLo
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{getTestName(lot.testId)}</td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{machine?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                        {lot.expirationDate.split("T")[0]}
+                        {lot.expirationDate ? new Date(lot.expirationDate).toISOString().split("T")[0] : 'N/A'}
                       </td>
                       <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
                         {lot.mean != null ? lot.mean.toFixed(2) : "—"}

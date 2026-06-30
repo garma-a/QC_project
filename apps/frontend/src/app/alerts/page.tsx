@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Eye, RefreshCw, BarChart3 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, RefreshCw, BarChart3, Activity } from "lucide-react";
 import { useAlerts } from "@/hooks/useAlerts";
-import type { AlertPriority, UserAlertStatus } from "@/lib/types/api";
+import { useMachines } from "@/hooks/useMachines";
+import type { AlertPriority, UserAlertStatus, SectionResponseDto } from "@/lib/types/api";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { clientFetch } from "@/lib/api/clientFetch";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const PRIORITY_STYLES: Record<AlertPriority, string> = {
   HIGH: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
@@ -22,7 +26,7 @@ const STATUS_STYLES: Record<UserAlertStatus, string> = {
     "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800",
 };
 
-function formatRelativeTime(dateString?: string | null) {
+function formatRelativeTime(dateString?: string | Date | null) {
   if (!dateString) return "Unknown time";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "Unknown time";
@@ -38,12 +42,39 @@ function formatRelativeTime(dateString?: string | null) {
 }
 
 export default function AlertsPage() {
-  const { alerts, loading, error, refetch, markSeen, markResolved, fetchNextPage, hasNextPage, isFetchingNextPage } = useAlerts(15000);
+  const [scope, setScope] = useState<"assigned" | "all">("assigned");
+  const [sectionFilter, setSectionFilter] = useState<number | null>(null);
+  const [machineFilter, setMachineFilter] = useState<number | null>(null);
+
+  const { alerts, loading, error, refetch, markSeen, markResolved, fetchNextPage, hasNextPage, isFetchingNextPage } = useAlerts({ pollIntervalMs: 15000, scope, sectionId: sectionFilter, machineId: machineFilter });
+  const { machines } = useMachines();
+  const token = useAuthStore((s) => s.accessToken);
+
+  const { data: sections = [] } = useQuery({
+    queryKey: ['sections'],
+    queryFn: ({ signal }) => clientFetch<SectionResponseDto[]>('/api/v1/sections', { signal }, token),
+    enabled: !!token,
+  });
+
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [noteByAlertId, setNoteByAlertId] = useState<Record<number, string>>({});
   const [statusFilter, setStatusFilter] = useState<"ALL" | "UNRESOLVED" | "RESOLVED">("UNRESOLVED");
   const [timeFilter, setTimeFilter] = useState<"24H" | "48H" | "7D" | "ALL">("24H");
+
+  // Filter machines based on selected section
+  const availableMachines = useMemo(() => {
+    if (!sectionFilter) return machines;
+    return machines.filter((m) => m.sectionId === sectionFilter);
+  }, [machines, sectionFilter]);
+
+  // Reset machine filter if section changes and the machine is not in the new section
+  useMemo(() => {
+    if (machineFilter && sectionFilter) {
+      const machineExists = availableMachines.some((m) => m.id === machineFilter);
+      if (!machineExists) setMachineFilter(null);
+    }
+  }, [sectionFilter, machineFilter, availableMachines]);
 
   const sortedAlerts = useMemo(() => {
     return [...alerts].sort((a, b) => {
@@ -120,29 +151,85 @@ export default function AlertsPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <select
-          value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as "ALL" | "UNRESOLVED" | "RESOLVED")
-          }
-          className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
-        >
-          <option value="ALL">All statuses</option>
-          <option value="UNRESOLVED">Unresolved only</option>
-          <option value="RESOLVED">Resolved only</option>
-        </select>
+      <div className="mb-4 flex flex-col gap-4">
+        {/* Scope and Time/Status Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex bg-gray-100 dark:bg-[#1a1a1a] rounded-lg p-1 mr-4">
+            <button
+              onClick={() => setScope("assigned")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                scope === "assigned"
+                  ? "bg-white dark:bg-[#2c2c2c] text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              My Sections
+            </button>
+            <button
+              onClick={() => setScope("all")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                scope === "all"
+                  ? "bg-white dark:bg-[#2c2c2c] text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+            >
+              All Sections
+            </button>
+          </div>
 
-        <select
-          value={timeFilter}
-          onChange={(e) => setTimeFilter(e.target.value as "24H" | "48H" | "7D" | "ALL")}
-          className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
-        >
-          <option value="24H">Last 24 hours</option>
-          <option value="48H">Last 48 hours</option>
-          <option value="7D">Last 7 days</option>
-          <option value="ALL">All time</option>
-        </select>
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as "ALL" | "UNRESOLVED" | "RESOLVED")
+            }
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
+          >
+            <option value="ALL">All statuses</option>
+            <option value="UNRESOLVED">Unresolved only</option>
+            <option value="RESOLVED">Resolved only</option>
+          </select>
+
+          <select
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value as "24H" | "48H" | "7D" | "ALL")}
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
+          >
+            <option value="24H">Last 24 hours</option>
+            <option value="48H">Last 48 hours</option>
+            <option value="7D">Last 7 days</option>
+            <option value="ALL">All time</option>
+          </select>
+        </div>
+
+        {/* Section and Machine Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={sectionFilter ?? ""}
+            onChange={(e) => setSectionFilter(e.target.value ? Number(e.target.value) : null)}
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Sections</option>
+            {sections.map((sec) => (
+              <option key={sec.id} value={sec.id}>
+                {sec.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={machineFilter ?? ""}
+            onChange={(e) => setMachineFilter(e.target.value ? Number(e.target.value) : null)}
+            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-3 py-2 text-sm text-gray-800 dark:text-gray-100"
+            disabled={availableMachines.length === 0}
+          >
+            <option value="">All Machines</option>
+            {availableMachines.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {error && (
@@ -199,19 +286,35 @@ export default function AlertsPage() {
                     <p className="mb-2 text-sm text-gray-700 dark:text-gray-300">
                       {alert.message ?? "No alert details provided."}
                     </p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                      <span>Rule: {alert.ruleViolated ?? "N/A"}</span>
-                      <span>Result ID: {alert.resultId}</span>
-                      <span>{formatRelativeTime(alert.createdAt)}</span>
-                      {alert.seenAt && (
-                        <span>Seen: {new Date(alert.seenAt).toLocaleString()}</span>
+                    {alert.ruleViolated && (
+                      <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">Rule Violated:</span>{" "}
+                        {alert.ruleViolated}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-4 mb-2 text-xs text-gray-500 dark:text-gray-400">
+                      {alert.sectionName && (
+                        <div className="flex items-center gap-1 font-medium bg-gray-100 dark:bg-[#2a2a2a] px-2 py-1 rounded">
+                          <Activity className="h-3 w-3 text-[#c41e3a]" />
+                          <span>{alert.sectionName}</span>
+                        </div>
                       )}
-                      {alert.resolvedAt && (
-                        <span>
-                          Resolved: {new Date(alert.resolvedAt).toLocaleString()}
-                        </span>
+                      {alert.machineName && (
+                        <div className="flex items-center gap-1 font-medium bg-gray-100 dark:bg-[#2a2a2a] px-2 py-1 rounded">
+                          <BarChart3 className="h-3 w-3 text-blue-500" />
+                          <span>{alert.machineName}</span>
+                        </div>
+                      )}
+                      {alert.testName && (
+                        <div className="flex items-center gap-1 font-medium bg-gray-100 dark:bg-[#2a2a2a] px-2 py-1 rounded">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500"></span>
+                          <span>{alert.testName}</span>
+                        </div>
                       )}
                     </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Created: {formatRelativeTime(alert.createdAt)}
+                    </p>
                     {alert.resolutionNote && (
                       <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                         Resolution note: {alert.resolutionNote}

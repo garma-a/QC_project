@@ -13,6 +13,7 @@ import {
   Database,
   TestTube,
   Server,
+  UserCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutAccount } from "@/lib/actions";
 import { Logo, LogoCompact } from "./Logo";
+import { DoctorAvatar } from "@/components/ui/DoctorAvatar";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -99,10 +101,7 @@ const menuItems = [
             />
           </div>
 
-          <div className="hidden lg:block relative z-10">
-            <LogoCompact />
-          </div>
-          <div className="lg:hidden relative z-10">
+          <div className="relative z-10 w-full flex justify-center lg:justify-start lg:pl-2">
             <Logo />
           </div>
           <button
@@ -148,23 +147,32 @@ const menuItems = [
 
         {/* User Info, Theme Toggle and Logout */}
         <div className="flex-shrink-0 p-4 border-t-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 space-y-2 bg-gradient-to-t from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1a1a1a]">
-          {/* User Info */}
-          <div className="px-4 py-3 rounded-xl bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border border-[#c41e3a]/10 dark:border-[#e84855]/20">
+          {/* User Info Card (Clickable to Profile) */}
+          <Link 
+            href="/profile"
+            onClick={onClose}
+            className={`block px-4 py-3 rounded-xl border transition-all duration-300 group ${
+              pathname === '/profile' 
+                ? 'bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] border-[#b8860b] dark:border-[#ffd700] shadow-md shadow-[#c41e3a]/30'
+                : 'bg-gradient-to-br from-[#fff8f0] to-white dark:from-[#2a2a2a] dark:to-[#1e1e1e] border-[#c41e3a]/10 dark:border-[#e84855]/20 hover:border-[#c41e3a]/30 dark:hover:border-[#e84855]/50 hover:shadow-md'
+            }`}
+          >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] flex items-center justify-center text-white text-sm flex-shrink-0 shadow-lg ring-2 ring-[#b8860b] dark:ring-[#ffd700]">
-                {currentUser?.firstName?.[0] || ''}
-                {currentUser?.lastName?.[0] || ''}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg ring-2 transition-all ${
+                pathname === '/profile' ? 'ring-[#ffd700]' : 'ring-[#b8860b] dark:ring-[#ffd700] group-hover:ring-[#c41e3a] dark:group-hover:ring-[#e84855]'
+              }`}>
+                <DoctorAvatar className="w-full h-full" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-gray-900 dark:text-white text-sm font-medium truncate">
+                <p className={`text-sm font-medium truncate ${pathname === '/profile' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                   {currentUser?.firstName} {currentUser?.lastName}
                 </p>
-                <p className="text-[#b8860b] dark:text-[#ffd700] text-xs truncate font-semibold">
+                <p className={`text-xs truncate font-semibold ${pathname === '/profile' ? 'text-[#ffd700]' : 'text-[#b8860b] dark:text-[#ffd700]'}`}>
                   {isAdmin ? "Administrator" : "Technician"}
                 </p>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Theme Toggle */}
           <button

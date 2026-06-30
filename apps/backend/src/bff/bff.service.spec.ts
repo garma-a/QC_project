@@ -3,12 +3,14 @@ import { BffService } from './bff.service';
 import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
 import { QcResultsService } from '@/qc-results/qc-results.service';
+import { SectionsService } from '@/sections/sections.service';
 
 describe('BffService', () => {
   let service: BffService;
   let mockMachinesService: Record<string, jest.Mock>;
   let mockControlLotsService: Record<string, jest.Mock>;
   let mockQcResultsService: Record<string, jest.Mock>;
+  let mockSectionsService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     mockMachinesService = {
@@ -24,12 +26,17 @@ describe('BffService', () => {
       findAll: jest.fn(),
     };
 
+    mockSectionsService = {
+      findAll: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BffService,
         { provide: MachinesService, useValue: mockMachinesService },
         { provide: ControlLotsService, useValue: mockControlLotsService },
         { provide: QcResultsService, useValue: mockQcResultsService },
+        { provide: SectionsService, useValue: mockSectionsService },
       ],
     }).compile();
 
@@ -80,16 +87,20 @@ describe('BffService', () => {
           lotSd: 1.5,
         },
       ];
+      const mockSections = [
+        { id: 3, name: 'Hematology' }
+      ];
 
       mockMachinesService.findAll.mockResolvedValue(mockMachines);
       mockControlLotsService.findActiveWithTestContext.mockResolvedValue(mockActiveLots);
       mockQcResultsService.getRecentAll.mockResolvedValue(mockRecentResults);
+      mockSectionsService.findAll.mockResolvedValue(mockSections);
 
       // Act
       const result = await service.getDashboardData();
 
       // Assert
-      expect(result.categories).toEqual([{ id: '3', name: 'Section 3' }]);
+      expect(result.categories).toEqual([{ id: '3', name: 'Hematology' }]);
       expect(result.machines[0]?.id).toBe(1);
       expect(result.machines[0]?.testsToday).toBe(1);
       expect(result.machines[0]?.lastQC).toEqual({
@@ -110,6 +121,7 @@ describe('BffService', () => {
       mockMachinesService.findAll.mockResolvedValue([]);
       mockControlLotsService.findActiveWithTestContext.mockResolvedValue([]);
       mockQcResultsService.getRecentAll.mockResolvedValue([]);
+      mockSectionsService.findAll.mockResolvedValue([]);
 
       // Act
       const result = await service.getDashboardData();
@@ -131,6 +143,7 @@ describe('BffService', () => {
         { id: 2, machineId: 1, status: 'FAIL' },
         { id: 3, machineId: 1, status: 'UNKNOWN_STATUS' },
       ]);
+      mockSectionsService.findAll.mockResolvedValue([]);
 
       // Act
       const result = await service.getDashboardData();
@@ -151,12 +164,15 @@ describe('BffService', () => {
       mockControlLotsService.findActiveWithTestContext.mockResolvedValue([
         { machineId: 2, testId: 55, testName: 'WBC', lowerControlLimit: null, upperControlLimit: null },
       ]);
+      mockSectionsService.findAll.mockResolvedValue([
+        { id: 5, name: 'Microbiology' }
+      ]);
 
       // Act
       const result = await service.getQcPageMachines();
 
       // Assert
-      expect(result.categories).toEqual([{ id: '5', name: 'Section 5' }]);
+      expect(result.categories).toEqual([{ id: '5', name: 'Microbiology' }]);
       expect(result.machines).toHaveLength(1);
       expect(result.machines[0]?.model).toBe('SYS-101');
       expect(result.machines[0]?.tests?.[0]?.name).toBe('WBC');
@@ -187,7 +203,8 @@ describe('BffService', () => {
             machineId: 2,
             testName: 'Cholesterol',
             testDate: 'invalid-date',
-            technicianId: 42,
+            performedByFirstName: 'Admin',
+            performedByLastName: 'Seeder',
             value: 200,
             lowerControlLimit: 150,
             upperControlLimit: 250,
@@ -206,7 +223,7 @@ describe('BffService', () => {
       expect(mockQcResultsService.findAll).toHaveBeenCalledWith(undefined, 50, 0, 2);
       expect(result.results).toHaveLength(1);
       expect(result.results[0]?.expectedRange).toBe('150 - 250');
-      expect(result.results[0]?.performedBy).toBe('User 42');
+      expect(result.results[0]?.performedBy).toBe('Admin Seeder');
       expect(result.results[0]?.date).toBe('N/A N/A'); // Tests the invalid date fallback branch
     });
 

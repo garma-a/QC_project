@@ -204,4 +204,27 @@ export class UsersRepository {
       sectionNames: sectionRows.map((x) => x.sectionName),
     };
   }
+
+  async findByIdWithProfile(id: number) {
+    const [user] = await this.databaseService.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    if (!user) return null;
+
+    const sectionRows = await this.databaseService.db
+      .select({
+        id: sections.id,
+        name: sections.name,
+        specialization: sections.specialization,
+      })
+      .from(usersToSections)
+      .innerJoin(sections, eq(usersToSections.sectionId, sections.id))
+      .where(eq(usersToSections.userId, id));
+
+    return {
+      ...user,
+      assignedSections: sectionRows,
+    };
+  }
 }

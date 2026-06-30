@@ -10,6 +10,7 @@ import type { Cache } from 'cache-manager';
 import { AdminCreateUserDto } from '@/users/dto/admin-create-user.dto';
 import * as argon2 from 'argon2';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
+import type { UpdateProfileDto } from '@qc/shared';
 import { Role } from '@/auth/auth.types';
 import { UsersRepository } from './users.repository';
 import { WorkerService } from '@/auth/workers/worker.service';
@@ -173,5 +174,27 @@ export class UsersService {
     const { passwordHash, ...safeUser } = user;
 
     return safeUser;
+  }
+
+  async getProfile(userId: number) {
+    const user = await this.usersRepository.findByIdWithProfile(userId);
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  }
+
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
+    const existingUser = await this.usersRepository.findById(userId);
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (Object.keys(dto).length > 0) {
+      await this.usersRepository.update(userId, dto);
+    }
+    
+    return this.getProfile(userId);
   }
 }

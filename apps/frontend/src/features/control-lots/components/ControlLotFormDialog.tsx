@@ -47,9 +47,9 @@ export function ControlLotFormDialog({ mode, initialData, availableTests, initia
     const payload = getPayload();
 
     if (mode === 'create') {
-      // Smart Deactivation: check for an existing active lot for the same test
+      // Smart Deactivation: check for an existing active lot for the same test and level
       const existingActiveLot = initialLots.find(
-        (lot) => lot.isActive && lot.testId === payload.testId,
+        (lot) => lot.isActive && lot.testId === payload.testId && lot.level === payload.level,
       );
 
       if (existingActiveLot) {

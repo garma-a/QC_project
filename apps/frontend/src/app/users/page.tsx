@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { api } from '@/lib/api/serverFetch';
 import { UsersManager } from '@/features/users/components/UsersManager';
+import { WhitelistManager } from '@/features/users/components/WhitelistManager';
 import { decodeJwt } from '@/lib/utils/jwt';
 import type { UserListItemDto } from '@/lib/types/api';
 import type { UserType } from '@/features/users/components/UsersManager';
@@ -68,7 +69,13 @@ export default async function UsersPage() {
     console.error("Failed to fetch users");
   }
 
+  const isAdmin = currentUser?.role === 'ADMIN';
+
   return (
-    <UsersManager initialUsers={initialUsers} currentUser={currentUser} />
+    <div className="space-y-6">
+      <UsersManager initialUsers={initialUsers} currentUser={currentUser} />
+      {isAdmin && <WhitelistManager />}
+    </div>
   );
 }
+

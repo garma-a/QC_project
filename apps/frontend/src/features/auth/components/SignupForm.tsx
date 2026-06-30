@@ -1,0 +1,395 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Mail,
+  Lock,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  RotateCcw,
+  User,
+  KeyRound,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import {
+  checkEmailAction,
+  verifySignupOtpAction,
+  completeSignupAction,
+} from '@/lib/actions';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { UserResponseDto } from '@/lib/types/api';
+
+type Step = 'check-email' | 'verify-otp' | 'set-password';
+
+const STEP_LABELS: Record<Step, string> = {
+  'check-email': 'Enter Email',
+  'verify-otp': 'Verify OTP',
+  'set-password': 'Set Password',
+};
+
+const STEP_ORDER: Step[] = ['check-email', 'verify-otp', 'set-password'];
+
+export function SignupForm() {
+  const [step, setStep] = useState<Step>('check-email');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [isPending, setIsPending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Countdown timer: decrements by 1 every second while cooldown > 0
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
+  const currentStepIndex = STEP_ORDER.indexOf(step);
+
+  const handleCheckEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    setIsPending(true);
+
+    const result = await checkEmailAction(email);
+    setIsPending(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMsg(result.message ?? 'OTP sent to your email!');
+      setResendCooldown(45);
+      setStep('verify-otp');
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    setIsPending(true);
+
+    const result = await verifySignupOtpAction(email, otp);
+    setIsPending(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMsg(result.message ?? 'Email verified!');
+      setStep('set-password');
+    }
+  };
+
+  const handleCompleteSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setIsPending(true);
+    const result = await completeSignupAction(email, firstName, lastName, password);
+    setIsPending(false);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.success && result.token && result.user) {
+      setAuth(result.user as UserResponseDto, result.token);
+      router.replace('/dashboard');
+    }
+  };
+
+  const resendOtp = async () => {
+    setError('');
+    setSuccessMsg('');
+    setIsPending(true);
+    const result = await checkEmailAction(email);
+    setIsPending(false);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMsg('A new OTP has been sent to your email.');
+      setResendCooldown(45);
+    }
+  };
+
+  return (
+    <>
+      {/* Step indicator */}
+      <div className="flex items-center justify-between mb-7 relative z-10">
+        {STEP_ORDER.map((s, i) => (
+          <div key={s} className="flex items-center flex-1">
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  i < currentStepIndex
+                    ? 'bg-[#003366] dark:bg-[#4a90e2] text-white'
+                    : i === currentStepIndex
+                    ? 'bg-[#c41e3a] dark:bg-[#e84855] text-white ring-4 ring-[#c41e3a]/20 dark:ring-[#e84855]/20'
+                    : 'bg-gray-200 dark:bg-[#2a2a2a] text-gray-400 dark:text-gray-500'
+                }`}
+              >
+                {i < currentStepIndex ? <CheckCircle2 size={14} /> : i + 1}
+              </div>
+              <span className={`text-[10px] mt-1 font-medium whitespace-nowrap ${
+                i === currentStepIndex ? 'text-[#c41e3a] dark:text-[#e84855]' : 'text-gray-400 dark:text-gray-500'
+              }`}>
+                {STEP_LABELS[s]}
+              </span>
+            </div>
+            {i < STEP_ORDER.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all duration-500 ${
+                i < currentStepIndex ? 'bg-[#003366] dark:bg-[#4a90e2]' : 'bg-gray-200 dark:bg-[#2a2a2a]'
+              }`} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Error / success messages */}
+      {error && (
+        <div className="mb-5 p-3.5 rounded-xl bg-[#c41e3a]/10 dark:bg-[#e84855]/20 border-2 border-[#c41e3a]/30 dark:border-[#e84855]/40 flex items-start gap-3 relative z-10">
+          <AlertCircle size={18} className="text-[#c41e3a] dark:text-[#e84855] flex-shrink-0 mt-0.5" />
+          <p className="text-[#c41e3a] dark:text-[#e84855] text-sm font-medium">{error}</p>
+        </div>
+      )}
+      {successMsg && (
+        <div className="mb-5 p-3.5 rounded-xl bg-green-50 dark:bg-green-900/20 border-2 border-green-300 dark:border-green-700/50 flex items-start gap-3 relative z-10">
+          <CheckCircle2 size={18} className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+          <p className="text-green-700 dark:text-green-300 text-sm font-medium">{successMsg}</p>
+        </div>
+      )}
+
+      {/* ── Step 1: Enter Email ── */}
+      {step === 'check-email' && (
+        <form onSubmit={handleCheckEmail} className="space-y-5 relative z-10">
+          <div>
+            <label htmlFor="signup-email" className="block text-gray-700 dark:text-gray-300 mb-2 text-sm font-semibold">
+              Work Email
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60">
+                <Mail size={20} />
+              </div>
+              <input
+                id="signup-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                placeholder="Enter your work email"
+                autoComplete="email"
+                disabled={isPending}
+              />
+            </div>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Only emails approved by your administrator can register.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isPending || !email}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#003366] to-[#1a5276] dark:from-[#4a90e2] dark:to-[#6bb3f0] text-white hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-bold text-base disabled:opacity-70"
+          >
+            {isPending ? 'Sending OTP...' : (
+              <>
+                Send Verification OTP <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+            Already have an account?{' '}
+            <a href="/login" className="text-[#c41e3a] dark:text-[#e84855] font-semibold hover:underline">
+              Sign In
+            </a>
+          </p>
+        </form>
+      )}
+
+      {/* ── Step 2: Verify OTP ── */}
+      {step === 'verify-otp' && (
+        <form onSubmit={handleVerifyOtp} className="space-y-5 relative z-10">
+          <div className="bg-blue-50 dark:bg-[#1a2a3a] border border-blue-200 dark:border-[#2a4a6a] rounded-xl p-4 text-sm text-blue-700 dark:text-[#7fb3e8] mb-2">
+            We sent a 6-digit OTP to <strong>{email}</strong>. Check your inbox (and spam folder).
+          </div>
+          <div>
+            <label htmlFor="signup-otp" className="block text-gray-700 dark:text-gray-300 mb-2 text-sm font-semibold">
+              6-Digit OTP
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60">
+                <KeyRound size={20} />
+              </div>
+              <input
+                id="signup-otp"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+                className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all text-center text-2xl font-mono tracking-[12px] placeholder:text-gray-400 dark:placeholder:text-gray-500 placeholder:tracking-normal"
+                placeholder="••••••"
+                disabled={isPending}
+                autoComplete="one-time-code"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isPending || otp.length !== 6}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-bold text-base disabled:opacity-70"
+          >
+            {isPending ? 'Verifying...' : (
+              <>
+                Verify OTP <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={resendOtp}
+            disabled={isPending || resendCooldown > 0}
+            className="w-full text-center text-sm text-gray-500 dark:text-gray-400 hover:text-[#c41e3a] dark:hover:text-[#e84855] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500 dark:disabled:hover:text-gray-400"
+          >
+            <RotateCcw size={14} />
+            {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : 'Resend OTP'}
+          </button>
+        </form>
+      )}
+
+      {/* ── Step 3: Set Password ── */}
+      {step === 'set-password' && (
+        <form onSubmit={handleCompleteSignup} className="space-y-4 relative z-10">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="signup-firstname" className="block text-gray-700 dark:text-gray-300 mb-1.5 text-sm font-semibold">
+                First Name
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <User size={16} />
+                </div>
+                <input
+                  id="signup-firstname"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all text-sm placeholder:text-gray-400"
+                  placeholder="John"
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="signup-lastname" className="block text-gray-700 dark:text-gray-300 mb-1.5 text-sm font-semibold">
+                Last Name
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <User size={16} />
+                </div>
+                <input
+                  id="signup-lastname"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all text-sm placeholder:text-gray-400"
+                  placeholder="Doe"
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="signup-password" className="block text-gray-700 dark:text-gray-300 mb-1.5 text-sm font-semibold">
+              Password <span className="text-gray-400 font-normal">(min. 8 characters)</span>
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60">
+                <Lock size={18} />
+              </div>
+              <input
+                id="signup-password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full pl-12 pr-12 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all placeholder:text-gray-400"
+                placeholder="Create a strong password"
+                disabled={isPending}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="signup-confirm-password" className="block text-gray-700 dark:text-gray-300 mb-1.5 text-sm font-semibold">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#c41e3a]/60 dark:text-[#e84855]/60">
+                <Lock size={18} />
+              </div>
+              <input
+                id="signup-confirm-password"
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-300 dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent transition-all placeholder:text-gray-400"
+                placeholder="Repeat your password"
+                disabled={isPending}
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isPending || !firstName || !lastName || !password || !confirmPassword}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] dark:from-[#e84855] dark:to-[#c75b7a] text-white hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-bold text-base ring-2 ring-[#b8860b]/50 dark:ring-[#ffd700]/50 disabled:opacity-70"
+          >
+            <Lock size={18} />
+            {isPending ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
+      )}
+    </>
+  );
+}

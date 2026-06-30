@@ -1,9 +1,11 @@
 import { DatabaseService } from '@/database/database.service';
-import { users } from '@/drizzle/schema';
+import { users, whitelistEmails } from '@/drizzle/schema';
 import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { eq } from 'drizzle-orm';
+
+const OTP_TTL = 10 * 60 * 1000; // 10 minutes in ms
 
 @Injectable()
 export class AuthRepository {
@@ -11,6 +13,8 @@ export class AuthRepository {
     private readonly databaseService: DatabaseService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) { }
+
+  // ─── User lookup ───────────────────────────────────────────────────────
 
   async findByEmail(email: string) {
     const [user] = await this.databaseService.db
@@ -27,6 +31,101 @@ export class AuthRepository {
       .where(eq(users.id, id));
     return user;
   }
+
+  async updatePassword(id: number, passwordHash: string) {
+    const [user] = await this.databaseService.db
+      .update(users)
+      .set({ passwordHash })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async createUser(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    passwordHash: string;
+    role: 'TECHNICIAN' | 'ADMIN';
+    isActive: boolean;
+  }) {
+    const [newUser] = await this.databaseService.db
+      .insert(users)
+      .values(data)
+      .returning();
+    return newUser;
+  }
+
+  // ─── Whitelist ─────────────────────────────────────────────────────────
+
+  async isEmailWhitelisted(email: string): Promise<boolean> {
+    const [entry] = await this.databaseService.db
+      .select()
+      .from(whitelistEmails)
+      .where(eq(whitelistEmails.email, email.toLowerCase()));
+    return !!entry;
+  }
+
+  async addToWhitelist(email: string, addedBy?: number) {
+    const [entry] = await this.databaseService.db
+      .insert(whitelistEmails)
+      .values({ email: email.toLowerCase(), addedBy })
+      .onConflictDoNothing()
+      .returning();
+    return entry;
+  }
+
+  async removeFromWhitelist(email: string) {
+    const [entry] = await this.databaseService.db
+      .delete(whitelistEmails)
+      .where(eq(whitelistEmails.email, email.toLowerCase()))
+      .returning();
+    return entry;
+  }
+
+  async getAllWhitelistedEmails() {
+    return await this.databaseService.db
+      .select()
+      .from(whitelistEmails)
+      .orderBy(whitelistEmails.createdAt);
+  }
+
+  // ─── OTP management ────────────────────────────────────────────────────
+
+  private otpKey(type: 'signup' | 'reset', email: string) {
+    return `otp:${type}:${email.toLowerCase()}`;
+  }
+
+  /** Store a 6-digit OTP in cache for 10 minutes */
+  async saveOtp(type: 'signup' | 'reset', email: string, otp: string) {
+    await this.cacheManager.set(this.otpKey(type, email), otp, OTP_TTL);
+  }
+
+  async verifyOtp(type: 'signup' | 'reset', email: string, otp: string): Promise<boolean> {
+    const stored = await this.cacheManager.get<string>(this.otpKey(type, email));
+    return stored === otp;
+  }
+
+  /** Mark OTP as verified (replace value so it can only be used once) */
+  async markOtpVerified(type: 'signup' | 'reset', email: string) {
+    // We store a sentinel so the reset-password step can confirm OTP was verified
+    await this.cacheManager.set(
+      this.otpKey(type, email),
+      '__verified__',
+      OTP_TTL,
+    );
+  }
+
+  async isOtpVerified(type: 'signup' | 'reset', email: string): Promise<boolean> {
+    const val = await this.cacheManager.get<string>(this.otpKey(type, email));
+    return val === '__verified__';
+  }
+
+  async clearOtp(type: 'signup' | 'reset', email: string) {
+    await this.cacheManager.del(this.otpKey(type, email));
+  }
+
+  // ─── Refresh token management ──────────────────────────────────────────
 
   async saveRefreshToken(userId: number, jti: string, expiresAt: Date) {
     // calculate ttl in milliseconds

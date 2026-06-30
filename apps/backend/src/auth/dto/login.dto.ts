@@ -17,12 +17,10 @@ export class LoginDto implements SharedTypes.LoginDto {
   @ApiProperty({
     description: 'User password',
     example: 'strongPassword123',
-    type: String,
-    minLength: 8
+    type: String
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(8)
   password: string;
 }
 

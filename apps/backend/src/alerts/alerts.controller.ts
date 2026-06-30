@@ -10,9 +10,7 @@ import {
   Sse,
   MessageEvent,
   Req,
-  UseInterceptors,
 } from '@nestjs/common';
-import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, filter, takeUntil } from 'rxjs/operators';
@@ -46,8 +44,6 @@ export class AlertsController {
   constructor(private readonly alertsService: AlertsService) { }
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(30 * 1000)
   @ApiOperation({
     summary: 'List current user alerts',
     description:
@@ -75,11 +71,35 @@ export class AlertsController {
     required: false,
     description: 'Number of results to skip (default: 0)',
   })
+  @ApiQuery({
+    name: 'scope',
+    type: String,
+    required: false,
+    description: 'Scope of alerts ("assigned" or "all"). Default is "assigned".',
+  })
+  @ApiQuery({
+    name: 'sectionId',
+    type: Number,
+    required: false,
+    description: 'Filter alerts by section ID',
+  })
+  @ApiQuery({
+    name: 'machineId',
+    type: Number,
+    required: false,
+    description: 'Filter alerts by machine ID',
+  })
   async findAll(
     @CurrentUser('userId') userId: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
+    @Query('scope') scope?: 'assigned' | 'all',
+    @Query('sectionId', new ParseIntPipe({ optional: true })) sectionId?: number,
+    @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
   ) {
+    if (scope === 'all' || sectionId || machineId) {
+      return await this.alertsService.findAll(userId, limit, offset, sectionId, machineId);
+    }
     return await this.alertsService.findAllByUser(userId, limit, offset);
   }
 

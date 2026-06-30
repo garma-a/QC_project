@@ -38,7 +38,7 @@ describe('useAlerts hook', () => {
     });
 
     expect(result.current.alerts).toEqual(mockAlerts);
-    expect(clientFetch).toHaveBeenCalledWith('/api/v1/alerts?limit=50&offset=0', expect.any(Object), 'valid-token');
+    expect(clientFetch).toHaveBeenCalledWith('/api/v1/alerts?limit=50&offset=0&scope=assigned', expect.any(Object), 'valid-token');
   });
 
   it('marks alert as seen via mutation', async () => {

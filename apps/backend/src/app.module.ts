@@ -14,6 +14,7 @@ import { AlertsModule } from '@/alerts/alerts.module';
 import { SectionsModule } from '@/sections/sections.module';
 import { EventsModule } from '@/events/events.module';
 import { BffModule } from './bff/bff.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { BffModule } from './bff/bff.module';
     SectionsModule,
     EventsModule,
     BffModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

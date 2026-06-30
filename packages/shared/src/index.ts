@@ -50,6 +50,27 @@ export interface UserResponseDto {
   updatedAt?: string | Date | null;
 }
 
+export interface ProfileResponseDto {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  phone: string | null;
+  emailNotificationsEnabled: boolean;
+  subscribeToAllSections: boolean;
+  assignedSections: { id: number; name: string; specialization: string | null }[];
+  createdAt: string | Date;
+}
+
+export interface UpdateProfileDto {
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  emailNotificationsEnabled?: boolean;
+  subscribeToAllSections?: boolean;
+}
+
 export interface UserListItemDto {
   id: number;
   firstName: string;
@@ -364,6 +385,10 @@ export interface AlertResponseDto {
   seenAt?: string | Date | null;
   resolvedAt?: string | Date | null;
   resolutionNote?: string | null;
+  machineName?: string | null;
+  sectionId?: number | null;
+  sectionName?: string | null;
+  testName?: string | null;
 }
 
 export type UserAlertStatus = 'UNSEEN' | 'SEEN' | 'RESOLVED';

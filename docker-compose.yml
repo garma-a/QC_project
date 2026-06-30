@@ -7,13 +7,33 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=mydb
+      - POSTGRES_DB=qc_project
     volumes:
       - postgres_data:/var/lib/postgresql/data
     deploy:
       resources:
         limits:
           memory: 512M
+
+  # ─── Mailhog: local SMTP catch-all + web UI ───────────────────────────────
+  # All outgoing emails are intercepted here — nothing is delivered for real.
+  # Web UI (view all emails): http://localhost:8025
+  # SMTP endpoint for the backend: localhost:1025
+  #
+  # To use Mailhog instead of Ethereal, set in apps/backend/.env:
+  #   SMTP_DEV_MODE=false
+  #   SMTP_HOST=localhost
+  #   SMTP_PORT=1025
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: monorepo-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 
 volumes:
   postgres_data:

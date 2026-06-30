@@ -33,7 +33,8 @@ export function QCHistoryInteractive({
   hasNextPage,
   isFetchingNextPage,
   selectedMachineId,
-  onMachineSelect
+  onMachineSelect,
+  isLoading
 }: {
   qcHistory: QcHistoryType[],
   machines: { 
@@ -59,7 +60,8 @@ export function QCHistoryInteractive({
   hasNextPage?: boolean,
   isFetchingNextPage?: boolean,
   selectedMachineId?: string,
-  onMachineSelect: (id: string | undefined) => void
+  onMachineSelect: (id: string | undefined) => void,
+  isLoading?: boolean
 }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,18 +204,28 @@ export function QCHistoryInteractive({
 
       <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
         {/* QC History */}
-        <QCHistory
-          searchTerm={debouncedSearchTerm}
-          selectedDay={selectedDay}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          qcHistory={qcHistory}
-          machines={machines}
-          categories={categories}
-          fetchNextPage={fetchNextPage}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-        />
+        {isLoading ? (
+          <div className="space-y-4 pt-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-48 w-full glass-card rounded-2xl relative overflow-hidden">
+                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent animate-[shimmer_1.5s_infinite]" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <QCHistory
+            searchTerm={debouncedSearchTerm}
+            selectedDay={selectedDay}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            qcHistory={qcHistory}
+            machines={machines}
+            categories={categories}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+          />
+        )}
       </div>
 
       {/* Create QC Test Modal */}

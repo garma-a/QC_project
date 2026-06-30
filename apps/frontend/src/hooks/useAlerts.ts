@@ -24,7 +24,14 @@ interface UseAlertsReturn {
   ) => Promise<UserAlertStatusResponseDto[]>;
 }
 
-export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
+export interface UseAlertsParams {
+  pollIntervalMs?: number;
+  scope?: 'assigned' | 'all';
+  sectionId?: number | null;
+  machineId?: number | null;
+}
+
+export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machineId }: UseAlertsParams = {}): UseAlertsReturn {
   const token = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
@@ -38,9 +45,13 @@ export function useAlerts(pollIntervalMs?: number): UseAlertsReturn {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['alerts'],
-    queryFn: async ({ pageParam = 0, signal }) =>
-      clientFetch<AlertResponseDto[]>(`/api/v1/alerts?limit=50&offset=${pageParam}`, { signal }, token),
+    queryKey: ['alerts', scope, sectionId, machineId],
+    queryFn: async ({ pageParam = 0, signal }) => {
+      let url = `/api/v1/alerts?limit=50&offset=${pageParam}&scope=${scope}`;
+      if (sectionId) url += `&sectionId=${sectionId}`;
+      if (machineId) url += `&machineId=${machineId}`;
+      return clientFetch<AlertResponseDto[]>(url, { signal }, token);
+    },
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === 50 ? allPages.length * 50 : undefined;
     },

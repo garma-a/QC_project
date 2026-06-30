@@ -60,7 +60,7 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
     return allActiveLots.find(t => t.id === testId)!;
   });
 
-  const testLots = allActiveLots.filter(t => t.id === selectedTest);
+  const testLots = allActiveLots.filter(t => t.id === selectedTest).sort((a, b) => a.level - b.level);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

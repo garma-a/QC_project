@@ -58,7 +58,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
   };
 
   // Helper to determine expiry date badge color
-  const getExpiryBadgeColor = (expirationDate: string | null): string => {
+  const getExpiryBadgeColor = (expirationDate: string | Date | null): string => {
     if (!isMounted || !expirationDate) return 'bg-gray-100 text-gray-700';
 
     try {
@@ -83,7 +83,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
   };
 
   // Helper to format expiry date for display
-  const formatExpiryDate = (expirationDate: string | null): string => {
+  const formatExpiryDate = (expirationDate: string | Date | null): string => {
     if (!isMounted) return '...';
     if (!expirationDate) return 'N/A';
     try {
@@ -106,7 +106,7 @@ export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTab
     );
   };
 
-  const calculateDaysActive = (date: string | null): number => {
+  const calculateDaysActive = (date: string | Date | null): number => {
     if (!date) return 0;
     try {
       const creationDate = new Date(date);

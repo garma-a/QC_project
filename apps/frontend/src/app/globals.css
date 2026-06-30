@@ -142,6 +142,12 @@
   .dark ::-webkit-scrollbar-thumb:hover {
     background: rgb(232 72 85 / 0.5); /* #e84855 with 50% opacity */
   }
+
+  /* Utility to disable transitions during theme toggle */
+  .disable-transitions,
+  .disable-transitions * {
+    transition: none !important;
+  }
 }
 
 /* Shimmer animation for skeleton loading states */
@@ -198,5 +204,5 @@
 }
 
 .glass-input {
-  @apply bg-white/50 dark:bg-black/20 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/50 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all duration-300;
+  @apply bg-white/50 dark:bg-black/60 backdrop-blur-sm border border-gray-200/60 dark:border-gray-500/50 focus:bg-white dark:focus:bg-[#1a1a1a] transition-all duration-300;
 }
