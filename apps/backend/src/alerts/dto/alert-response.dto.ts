@@ -75,6 +75,42 @@ export class AlertResponseDto implements SharedTypes.AlertResponseDto {
     description: 'Optional resolution note saved by the authenticated user',
   })
   resolutionNote: string | null;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'ID of the machine linked to this alert',
+  })
+  machineId?: number;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'ID of the test linked to this alert',
+  })
+  testId?: number;
+
+  @ApiPropertyOptional({
+    example: 'Machine A',
+    description: 'Name of the machine linked to this alert',
+  })
+  machineName?: string | null;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'ID of the section linked to this alert',
+  })
+  sectionId?: number | null;
+
+  @ApiPropertyOptional({
+    example: 'Hematology',
+    description: 'Name of the section linked to this alert',
+  })
+  sectionName?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'WBC',
+    description: 'Name of the test linked to this alert',
+  })
+  testName?: string | null;
 }
 
 export class UserAlertStatusResponseDto implements SharedTypes.UserAlertStatusResponseDto {

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MonitorClient } from '../components/MonitorClient';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock router
 const mockPush = vi.fn();
@@ -21,14 +22,31 @@ vi.mock('@/features/machines/components/MachineCharts', () => ({
   MachineCharts: () => <div data-testid="machine-charts-mock">Charts Mock</div>
 }));
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
+
 describe('MonitorClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient.clear();
     currentSearchParams = new URLSearchParams('');
   });
 
   it('renders empty state gracefully when machines list is empty (fetch failed/no data)', () => {
-    render(<MonitorClient machines={[]} categories={[]} qcHistory={[]} />);
+    renderWithProviders(<MonitorClient machines={[]} categories={[]} qcHistory={[]} />);
     // Should not crash, just won't render any machines
     const heading = screen.queryByText(/Monitor/i);
     // As it renders categories based on map, it should render nothing if categories is empty
@@ -49,7 +67,7 @@ describe('MonitorClient', () => {
     }];
     const categories = [{ id: '1', name: 'Category 1' }];
 
-    render(<MonitorClient machines={malformedMachines} categories={categories} qcHistory={[]} />);
+    renderWithProviders(<MonitorClient machines={malformedMachines} categories={categories} qcHistory={[]} />);
     
     // Machine is rendered
     expect(screen.getByText('Partial Machine')).toBeInTheDocument();
@@ -76,7 +94,7 @@ describe('MonitorClient', () => {
       lastQC: { date: '2023-01-01', status: 'warning' }
     };
 
-    render(<MonitorClient machines={[machine]} categories={[{ id: '1', name: 'Cat' }]} qcHistory={[]} />);
+    renderWithProviders(<MonitorClient machines={[machine]} categories={[{ id: '1', name: 'Cat' }]} qcHistory={[]} />);
     
     // It should render the detailed view directly
     expect(screen.getByText('No QC history found for this machine.')).toBeInTheDocument();
@@ -91,9 +109,10 @@ describe('MonitorClient', () => {
     const machine = {
       id: 1, name: 'Analytics Machine', hospCode: 'H-03', sectionId: 1, currentStatus: 'IDLE' as const, isActive: true, createdAt: '', updatedAt: ''
     };
-    render(<MonitorClient machines={[machine]} categories={[{id: '1', name: 'Cat'}]} qcHistory={[]} />);
+    renderWithProviders(<MonitorClient machines={[machine]} categories={[{id: '1', name: 'Cat'}]} qcHistory={[]} />);
     
     // The mock component should render
     expect(screen.getByTestId('machine-charts-mock')).toBeInTheDocument();
   });
 });
+

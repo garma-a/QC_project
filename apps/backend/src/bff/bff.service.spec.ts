@@ -4,6 +4,7 @@ import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
 import { QcResultsService } from '@/qc-results/qc-results.service';
 import { SectionsService } from '@/sections/sections.service';
+import { DatabaseService } from '@/database/database.service';
 
 describe('BffService', () => {
   let service: BffService;
@@ -11,6 +12,7 @@ describe('BffService', () => {
   let mockControlLotsService: Record<string, jest.Mock>;
   let mockQcResultsService: Record<string, jest.Mock>;
   let mockSectionsService: Record<string, jest.Mock>;
+  let mockDatabaseService: Record<string, any>;
 
   beforeEach(async () => {
     mockMachinesService = {
@@ -30,6 +32,16 @@ describe('BffService', () => {
       findAll: jest.fn(),
     };
 
+    mockDatabaseService = {
+      db: {
+        query: {
+          machines: {
+            findMany: jest.fn(),
+          },
+        },
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BffService,
@@ -37,10 +49,19 @@ describe('BffService', () => {
         { provide: ControlLotsService, useValue: mockControlLotsService },
         { provide: QcResultsService, useValue: mockQcResultsService },
         { provide: SectionsService, useValue: mockSectionsService },
+        { provide: DatabaseService, useValue: mockDatabaseService },
       ],
     }).compile();
 
     service = module.get<BffService>(BffService);
+    
+    // Clear promises/caches
+    (service as any).dashboardPromise = null;
+    (service as any).dashboardPromiseExpires = 0;
+    (service as any).qcMachinesPromise = null;
+    (service as any).qcMachinesPromiseExpires = 0;
+    (service as any).dashboardHistoryCache.clear();
+    (service as any).qcHistoryCache.clear();
   });
 
   it('should be defined', () => {
@@ -51,22 +72,29 @@ describe('BffService', () => {
     it('should return beautifully formatted dashboard data when dependencies return valid data', async () => {
       // Arrange
       const mockMachines = [
-        { id: 1, name: 'Alinity Analyzer 1014', sectionId: 3 },
-      ];
-      const mockActiveLots = [
-        {
-          id: 10,
-          machineId: 1,
-          testId: 101,
-          testName: 'Hemoglobin',
-          testType: 'Routine',
-          lowerControlLimit: 10,
-          upperControlLimit: 20,
-          level: 2,
-          lotNumber: 'L2-LOT',
-          mean: 15,
-          standardDeviation: 1.5,
-          isActive: true,
+        { 
+          id: 1, 
+          name: 'Alinity Analyzer 1014', 
+          section: { id: 3, name: 'Hematology' },
+          qcTests: [
+            {
+              testName: 'Hemoglobin',
+              testType: 'Routine',
+              controlLots: [
+                {
+                  id: 10,
+                  testId: 101,
+                  lowerControlLimit: 10,
+                  upperControlLimit: 20,
+                  level: 2,
+                  lotNumber: 'L2-LOT',
+                  mean: 15,
+                  standardDeviation: 1.5,
+                  isActive: true,
+                }
+              ]
+            }
+          ]
         },
       ];
       const mockRecentResults = [
@@ -87,21 +115,16 @@ describe('BffService', () => {
           lotSd: 1.5,
         },
       ];
-      const mockSections = [
-        { id: 3, name: 'Hematology' }
-      ];
 
-      mockMachinesService.findAll.mockResolvedValue(mockMachines);
-      mockControlLotsService.findActiveWithTestContext.mockResolvedValue(mockActiveLots);
+      mockDatabaseService.db.query.machines.findMany.mockResolvedValue(mockMachines);
       mockQcResultsService.getRecentAll.mockResolvedValue(mockRecentResults);
-      mockSectionsService.findAll.mockResolvedValue(mockSections);
 
       // Act
       const result = await service.getDashboardData();
 
       // Assert
       expect(result.categories).toEqual([{ id: '3', name: 'Hematology' }]);
-      expect(result.machines[0]?.id).toBe(1);
+      expect(result.machines[0]?.id).toBe('1');
       expect(result.machines[0]?.testsToday).toBe(1);
       expect(result.machines[0]?.lastQC).toEqual({
         date: expect.any(String),
@@ -109,19 +132,12 @@ describe('BffService', () => {
       });
       expect(result.machines[0]?.tests?.[0]?.id).toBe('101');
       expect(result.machines[0]?.tests?.[0]?.name).toBe('Hemoglobin');
-      
-      expect(result.qcHistory).toHaveLength(1);
-      expect(result.qcHistory[0]?.id).toBe(501);
-      expect(result.qcHistory[0]?.status).toBe('PASS');
-      expect(result.qcHistory[0]?.expectedRange).toBe('10 - 20');
     });
 
     it('should handle empty responses gracefully without crashing', async () => {
       // Arrange
-      mockMachinesService.findAll.mockResolvedValue([]);
-      mockControlLotsService.findActiveWithTestContext.mockResolvedValue([]);
+      mockDatabaseService.db.query.machines.findMany.mockResolvedValue([]);
       mockQcResultsService.getRecentAll.mockResolvedValue([]);
-      mockSectionsService.findAll.mockResolvedValue([]);
 
       // Act
       const result = await service.getDashboardData();
@@ -134,38 +150,47 @@ describe('BffService', () => {
 
     it('should correctly map fallback statuses (WARNING -> warning, FAIL -> fail, unknown -> pass)', async () => {
       // Arrange
-      mockMachinesService.findAll.mockResolvedValue([
-        { id: 1, name: 'Machine 1', sectionId: 1 },
+      mockDatabaseService.db.query.machines.findMany.mockResolvedValue([
+        { id: 1, name: 'Machine 1', section: null, qcTests: [] },
       ]);
-      mockControlLotsService.findActiveWithTestContext.mockResolvedValue([]);
       mockQcResultsService.getRecentAll.mockResolvedValue([
-        { id: 1, machineId: 1, status: 'WARNING' },
-        { id: 2, machineId: 1, status: 'FAIL' },
-        { id: 3, machineId: 1, status: 'UNKNOWN_STATUS' },
+        { id: 1, machineId: 1, status: 'WARNING', testDate: '2026-10-24T10:00:00Z' },
+        { id: 2, machineId: 1, status: 'FAIL', testDate: '2026-10-24T11:00:00Z' },
+        { id: 3, machineId: 1, status: 'UNKNOWN_STATUS', testDate: '2026-10-24T12:00:00Z' }, // This will be the latest
       ]);
-      mockSectionsService.findAll.mockResolvedValue([]);
 
       // Act
       const result = await service.getDashboardData();
 
       // Assert
-      expect(result.qcHistory[0]?.status).toBe('WARNING');
-      expect(result.qcHistory[1]?.status).toBe('FAIL');
-      expect(result.qcHistory[2]?.status).toBe('UNKNOWN_STATUS');
+      expect(result.machines[0]?.lastQC?.status).toBe('fail'); // UNKNOWN_STATUS defaults to fail in the code: statusMap[...] || 'fail'
     });
   });
 
   describe('getQcPageMachines', () => {
     it('should format machines specifically for the QC selector', async () => {
       // Arrange
-      mockMachinesService.findAll.mockResolvedValue([
-        { id: 2, name: 'Sysmex', sectionId: 5, hospCode: 'SYS-101' },
-      ]);
-      mockControlLotsService.findActiveWithTestContext.mockResolvedValue([
-        { machineId: 2, testId: 55, testName: 'WBC', lowerControlLimit: null, upperControlLimit: null },
-      ]);
-      mockSectionsService.findAll.mockResolvedValue([
-        { id: 5, name: 'Microbiology' }
+      mockDatabaseService.db.query.machines.findMany.mockResolvedValue([
+        { 
+          id: 2, 
+          name: 'Sysmex', 
+          hospCode: 'SYS-101',
+          section: { id: 5, name: 'Microbiology' },
+          qcTests: [
+            {
+              testName: 'WBC',
+              testType: null,
+              controlLots: [
+                {
+                  id: 11,
+                  testId: 55,
+                  lowerControlLimit: null,
+                  upperControlLimit: null,
+                }
+              ]
+            }
+          ]
+        },
       ]);
 
       // Act
@@ -182,7 +207,7 @@ describe('BffService', () => {
 
     it('should return empty arrays when no machines are found', async () => {
       // Arrange
-      mockMachinesService.findAll.mockResolvedValue(null); // Testing null boundary
+      mockDatabaseService.db.query.machines.findMany.mockResolvedValue([]); 
 
       // Act
       const result = await service.getQcPageMachines();

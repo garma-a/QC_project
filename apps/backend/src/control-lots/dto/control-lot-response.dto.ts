@@ -96,3 +96,14 @@ export class ControlLotDeactivateResponseDto implements SharedTypes.ControlLotDe
   })
   lot: ControlLotResponseDto;
 }
+
+export class EnrichedControlLotResponseDto extends ControlLotResponseDto implements SharedTypes.EnrichedControlLotResponseDto {
+  @ApiProperty({ example: 'Complete Blood Count', description: 'Name of the parent QC test' })
+  testName: string;
+
+  @ApiPropertyOptional({ example: 'Hematology', description: 'Category/type of the parent QC test' })
+  testType?: string | null;
+
+  @ApiProperty({ example: 1, description: 'ID of the machine this test belongs to' })
+  machineId: number;
+}

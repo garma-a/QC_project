@@ -6,9 +6,7 @@ import { AllExceptionsFilter } from './http-exception.filter.js';
 import { ValidationPipe } from '@nestjs/common';
 import { writeFileSync } from 'fs';
 
-
 async function bootstrap() {
-
   const app = await NestFactory.create(AppModule);
   // Lock down CORS to the specific origin of the frontend application
   app.enableCors({

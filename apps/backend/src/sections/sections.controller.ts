@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { SectionsService } from './sections.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { SectionResponseDto } from './dto/section-response.dto';
 
 @ApiTags('Sections')
 @ApiBearerAuth()
@@ -30,6 +31,7 @@ export class SectionsController {
   @ApiResponse({
     status: 200,
     description: 'Returns all lab sections successfully.',
+    type: [SectionResponseDto],
   })
   @ApiResponse({
     status: 401,

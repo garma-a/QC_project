@@ -162,6 +162,7 @@ export class QcResultsController {
   @ApiResponse({
     status: 200,
     description: 'Returns the recent results.',
+    type: QcResultsWithLotResponseDto,
   })
   @ApiResponse({
     status: 401,

@@ -1,5 +1,5 @@
 import * as SharedTypes from '@qc/shared';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginResponseDto implements SharedTypes.LoginResponseDto {
@@ -15,6 +15,20 @@ export class LoginResponseDto implements SharedTypes.LoginResponseDto {
     description: 'JWT refresh token used to obtain a new access token when it expires.',
   })
   refreshToken: string;
+}
+
+export class WhitelistedEmailDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: 'technician@hospital.com' })
+  email: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  addedBy: number | null;
+
+  @ApiProperty({ example: '2026-03-15T10:30:00.000Z' })
+  createdAt: Date | string;
 }
 
 export class RefreshTokenDto {

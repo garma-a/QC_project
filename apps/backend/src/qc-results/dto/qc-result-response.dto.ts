@@ -81,18 +81,40 @@ class LotSummaryDto {
   machineName: string;
 }
 
+export class EnrichedQcResultResponseDto extends QcResultResponseDto implements SharedTypes.EnrichedQcResultResponseDto {
+  @ApiProperty({ example: 'LOT-HGB-2026-A' })
+  lotNumber: string;
+  @ApiPropertyOptional({ example: 14.0 })
+  lotMean: number | null;
+  @ApiPropertyOptional({ example: 0.5 })
+  lotSd: number | null;
+  @ApiProperty({ example: 1 })
+  lotLevel: number;
+  @ApiPropertyOptional({ example: 12.5 })
+  lowerControlLimit: number | null;
+  @ApiPropertyOptional({ example: 15.5 })
+  upperControlLimit: number | null;
+  @ApiProperty({ example: 1 })
+  testId: number;
+  @ApiProperty({ example: 'Hemoglobin (HGB)' })
+  testName: string;
+  @ApiProperty({ example: 1 })
+  machineId: number;
+}
+
 export class QcResultsWithLotResponseDto implements SharedTypes.QcResultsWithLotResponseDto {
   @ApiProperty({
     type: () => LotSummaryDto,
-    description: 'Control lot parameters and test/machine info',
+    description: 'Control lot parameters and test/machine info. Null when querying across multiple lots.',
+    nullable: true,
   })
-  lot: LotSummaryDto;
+  lot: LotSummaryDto | null;
 
   @ApiProperty({
-    type: () => [QcResultResponseDto],
+    type: () => [EnrichedQcResultResponseDto],
     description: 'Array of QC results ordered by date descending',
   })
-  results: QcResultResponseDto[];
+  results: EnrichedQcResultResponseDto[] | QcResultResponseDto[];
 }
 
 class ControlLotInResultDto {

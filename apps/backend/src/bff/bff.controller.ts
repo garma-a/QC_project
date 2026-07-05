@@ -2,7 +2,7 @@ import { Controller, Get, UseGuards, Query, ParseIntPipe, Param, UseInterceptors
 
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BffService } from './bff.service';
-import { DashboardBffResponseDto } from './dto/dashboard-bff.dto';
+import { DashboardBffResponseDto, DashboardQcHistoryDto } from './dto/dashboard-bff.dto';
 import { QcPageMachinesResponseDto, QcPageHistoryResponseDto } from './dto/qc-bff.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/users/user.decorator';
@@ -38,6 +38,7 @@ export class BffController {
   @ApiResponse({
     status: 200,
     description: 'Returns machine history.',
+    type: [DashboardQcHistoryDto],
   })
   getDashboardMachineHistory(@Param('machineId', ParseIntPipe) machineId: number) {
     return this.bffService.getDashboardMachineHistory(machineId);

@@ -46,7 +46,7 @@ export class EmailService implements OnModuleInit {
       } catch (err) {
         this.logger.warn(
           `Could not create Ethereal test account (${err.message}). ` +
-          'Emails will be silently dropped in dev mode.',
+            'Emails will be silently dropped in dev mode.',
         );
         // Fallback: no-op transporter
         this.transporter = nodemailer.createTransport({ jsonTransport: true });

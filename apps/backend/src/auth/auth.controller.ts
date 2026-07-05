@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Post, Query, UseGuards } from '@nestjs/c
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '@/auth/auth.service';
 import { LoginDto } from '@/auth/dto/login.dto';
-import { LoginResponseDto, RefreshTokenDto } from '@/auth/dto/auth-response.dto';
+import { LoginResponseDto, RefreshTokenDto, WhitelistedEmailDto } from '@/auth/dto/auth-response.dto';
 import {
   CheckEmailDto,
   VerifySignupOtpDto,
@@ -147,7 +147,7 @@ export class AuthController {
     summary: 'Get all whitelisted emails (admin only)',
     description: 'Returns the list of all emails that have been whitelisted for registration.',
   })
-  @ApiResponse({ status: 200, description: 'List of whitelisted emails.' })
+  @ApiResponse({ status: 200, description: 'List of whitelisted emails.', type: [WhitelistedEmailDto] })
   getWhitelist() {
     return this.authService.getWhitelistedEmails();
   }

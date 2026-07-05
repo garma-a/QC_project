@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { AdminUpdateUserDto } from '@/users/dto/admin-update-user.dto';
-import type { UpdateProfileDto, ProfileResponseDto } from '@qc/shared';
+import { ProfileResponseDto, UpdateProfileDto } from '@/users/dto/profile.dto';
 import { CurrentUser } from '@/users/user.decorator';
 import { Role } from '@/auth/auth.types';
 import {
@@ -194,6 +194,7 @@ export class UsersController {
   @ApiResponse({
     status: 200,
     description: 'Profile data retrieved successfully.',
+    type: ProfileResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -210,10 +211,11 @@ export class UsersController {
     summary: 'Update current user profile',
     description: 'Updates profile fields and email preferences for the currently logged in user.',
   })
-  @ApiBody({ type: Object })
+  @ApiBody({ type: UpdateProfileDto })
   @ApiResponse({
     status: 200,
     description: 'Profile updated successfully.',
+    type: ProfileResponseDto,
   })
   @ApiResponse({
     status: 401,
