@@ -66,7 +66,7 @@ export default async function UsersPage() {
       initialUsers = fetchedUsers;
     }
   } catch {
-    console.error("Failed to fetch users");
+    console.warn("Failed to fetch users");
   }
 
   const isAdmin = currentUser?.role === 'ADMIN';

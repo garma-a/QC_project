@@ -140,12 +140,12 @@ export function ForgotPasswordForm() {
   return (
     <>
       {/* Step indicator */}
-      <div className="flex items-center justify-between mb-7 relative z-10">
+      <div className="flex items-center justify-between mb-10 relative z-10 w-full px-4">
         {STEP_ORDER.map((s, i) => (
           <Fragment key={s}>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center relative group">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 z-10 ${
                   i < currentStepIndex
                     ? 'bg-[#003366] dark:bg-[#4a90e2] text-white'
                     : i === currentStepIndex
@@ -155,14 +155,14 @@ export function ForgotPasswordForm() {
               >
                 {i < currentStepIndex ? <CheckCircle2 size={14} /> : i + 1}
               </div>
-              <span className={`text-[10px] mt-1 font-medium whitespace-nowrap ${
+              <span className={`absolute top-10 text-[10px] font-medium whitespace-nowrap transition-colors duration-300 ${
                 i === currentStepIndex ? 'text-[#c41e3a] dark:text-[#e84855]' : 'text-gray-400 dark:text-gray-500'
               }`}>
                 {STEP_LABELS[s]}
               </span>
             </div>
             {i < STEP_ORDER.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 mb-4 transition-all duration-500 ${
+              <div className={`flex-1 h-0.5 mx-2 transition-all duration-500 ${
                 i < currentStepIndex ? 'bg-[#003366] dark:bg-[#4a90e2]' : 'bg-gray-200 dark:bg-[#2a2a2a]'
               }`} />
             )}
