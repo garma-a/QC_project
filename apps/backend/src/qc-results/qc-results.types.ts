@@ -3,3 +3,4 @@ export enum QcStatus {
   FAIL = 'FAIL',
   WARNING = 'WARNING',
 }
+

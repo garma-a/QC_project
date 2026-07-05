@@ -1,0 +1,21 @@
+info:
+  name: Check Email
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/check-email"
+  body:
+    type: json
+    data: |-
+      {
+        "email":"g@gmail.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

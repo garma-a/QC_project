@@ -14,7 +14,6 @@ export class QcResultsRepository {
       .select()
       .from(controlLots)
       .where(eq(controlLots.id, lotId))
-      .limit(1);
     return lot;
   }
 
@@ -126,7 +125,7 @@ export class QcResultsRepository {
 
   async getResultsByLotId(lotId: number, limit?: number, offset?: number, startDate?: string, endDate?: string) {
     let safeLimit = limit ?? 100;
-    
+
     // Safety constraint: If historical date range is requested, max out at 500 points to prevent crashes.
     if (startDate && endDate) {
       safeLimit = Math.max(1, Math.min(limit ?? 500, 500));
@@ -154,7 +153,7 @@ export class QcResultsRepository {
       .$dynamic();
 
     const filters = [eq(qcResults.lotId, lotId)];
-    
+
     if (startDate) {
       filters.push(gte(qcRuns.runDate, new Date(startDate)));
     }
@@ -257,11 +256,11 @@ export class QcResultsRepository {
       .innerJoin(machines, eq(qcTests.machineId, machines.id))
       .leftJoin(users, eq(qcRuns.performedBy, users.id))
       .$dynamic();
-      
+
     if (machineId) {
       query = query.where(eq(machines.id, machineId));
     }
-    
+
     return query
       .orderBy(desc(qcResults.id))
       .limit(safeLimit)
@@ -293,7 +292,7 @@ export class QcResultsRepository {
 
   async getRecentZScoresByLotIds(lotIds: number[], limitPerLot: number): Promise<Map<number, number[]>> {
     if (lotIds.length === 0) return new Map<number, number[]>();
-    
+
     const idsList = sql.join(lotIds, sql`, `);
     const query = sql`
       WITH RankedScores AS (
@@ -306,7 +305,7 @@ export class QcResultsRepository {
     `;
     const result: any = await this.databaseService.db.execute(query);
     const rows = result.rows || result;
-    
+
     const map = new Map<number, number[]>();
     for (const id of lotIds) map.set(id, []);
     for (const row of rows) {

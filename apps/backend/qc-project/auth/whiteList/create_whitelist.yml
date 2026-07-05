@@ -1,0 +1,21 @@
+info:
+  name: Create Whitelist
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/whitelist"
+  body:
+    type: json
+    data: |-
+      {
+        "email":"g@gmail.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

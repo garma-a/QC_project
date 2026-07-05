@@ -118,7 +118,7 @@ export class QcResultsService {
 
     // 2. SECOND PASS: Run Westgard analysis using the complete run layout.
     //    Every lot now has full omniscient visibility of all other levels' z-scores.
-    
+
     // BATCH FETCH ALL PREVIOUS Z-SCORES
     const allPriorZScoresMap = await this.qcResultsRepository.getRecentZScoresByLotIds(
       lotIds,
@@ -170,7 +170,7 @@ export class QcResultsService {
     try {
       for (let i = 0; i < evaluatedResults.length; i++) {
         const e = evaluatedResults[i];
-        // Ensure we grab the exact inserted result by lotId, because PostgreSQL's INSERT...RETURNING 
+        // Ensure we grab the exact inserted result by lotId, because PostgreSQL's INSERT...RETURNING
         // does not guarantee the returned array is in the same order as the inserted array!
         const savedResult = savedRunData.results.find(r => r.lotId === e.resultItem.lotId);
 

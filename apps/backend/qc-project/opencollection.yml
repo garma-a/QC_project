@@ -1,0 +1,26 @@
+opencollection: 1.0.0
+
+info:
+  name: qc-project
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjI4LCJyb2xlIjoiVEVDSE5JQ0lBTiIsImlhdCI6MTc4MzIzMjA2NiwiZXhwIjoxNzgzMjM1NjY2fQ.i6xe4yKXjE1jJ97y4W3_8aAGSdIwY97wZjCzx8VpKTk
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git

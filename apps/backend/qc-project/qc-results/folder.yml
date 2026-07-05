@@ -1,0 +1,7 @@
+info:
+  name: "qc-results"
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit

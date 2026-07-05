@@ -1,0 +1,15 @@
+info:
+  name: "Mark Alert Seen"
+  type: http
+  seq: 2
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/alerts/mark-seen/:id"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -11,7 +11,7 @@ import { CurrentUser } from '@/users/user.decorator';
 @UseGuards(JwtAuthGuard)
 @Controller('bff')
 export class BffController {
-  constructor(private readonly bffService: BffService) {}
+  constructor(private readonly bffService: BffService) { }
 
   @Get('dashboard')
   @ApiOperation({

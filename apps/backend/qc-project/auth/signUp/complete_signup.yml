@@ -1,0 +1,24 @@
+info:
+  name: Complete Signup
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/complete"
+  body:
+    type: json
+    data: |-
+      {
+        "email":"g@gmail.com",
+        "firstName":"girgis",
+        "lastName":"emad",
+        "password":"Password123!"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

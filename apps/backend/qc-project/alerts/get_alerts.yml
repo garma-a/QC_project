@@ -1,0 +1,15 @@
+info:
+  name: "Get Alerts"
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/alerts"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

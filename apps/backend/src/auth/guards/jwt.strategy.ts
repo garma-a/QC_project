@@ -38,8 +38,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     const minimalUser = { isActive: user.isActive ?? false, role: user.role as Role };
-    // Note: cache-manager v5+ uses milliseconds for ttl, older versions used seconds.
-    // NestJS cache-manager defaults to ms, so we pass 300000ms.
     await this.cacheManager.set(cacheKey, minimalUser, 300000);
 
     if (!minimalUser.isActive) {

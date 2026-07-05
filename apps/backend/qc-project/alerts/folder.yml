@@ -1,0 +1,7 @@
+info:
+  name: "alerts"
+  type: folder
+  seq: 10
+
+request:
+  auth: inherit

@@ -1,0 +1,4 @@
+name: qc-project_envs
+variables:
+  - name: baseUrl
+    value: http://localhost:4000/api/v1

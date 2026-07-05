@@ -20,7 +20,7 @@ export class AuthRepository {
     const [user] = await this.databaseService.db
       .select()
       .from(users)
-      .where(eq(users.email, email));
+      .where(eq(users.email, email)).limit(1);
     return user;
   }
 
@@ -130,10 +130,10 @@ export class AuthRepository {
   async saveRefreshToken(userId: number, jti: string, expiresAt: Date) {
     // calculate ttl in milliseconds
     const ttl = Math.max(0, expiresAt.getTime() - Date.now());
-    
+
     // save token mapping: jti -> userId
     await this.cacheManager.set(`refresh_token:${jti}`, userId, ttl);
-    
+
     // add to user's tokens list
     const userTokensKey = `user_tokens:${userId}`;
     const userTokens = await this.cacheManager.get<string[]>(userTokensKey) || [];
@@ -163,12 +163,12 @@ export class AuthRepository {
   async deleteAllRefreshTokens(userId: number) {
     const userTokensKey = `user_tokens:${userId}`;
     const userTokens = await this.cacheManager.get<string[]>(userTokensKey) || [];
-    
+
     // Delete all individual tokens
     for (const jti of userTokens) {
       await this.cacheManager.del(`refresh_token:${jti}`);
     }
-    
+
     // Delete the user tokens list
     await this.cacheManager.del(userTokensKey);
   }

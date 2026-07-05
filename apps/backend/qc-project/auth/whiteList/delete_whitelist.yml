@@ -1,0 +1,21 @@
+info:
+  name: Delete Whitelist
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/auth/whitelist"
+  body:
+    type: json
+    data: |-
+      {
+        "email":"unverified_test_ca302dfc@lab.com"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

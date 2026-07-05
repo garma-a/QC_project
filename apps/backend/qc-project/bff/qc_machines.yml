@@ -1,0 +1,15 @@
+info:
+  name: "QC Machines"
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/bff/qc/machines"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
