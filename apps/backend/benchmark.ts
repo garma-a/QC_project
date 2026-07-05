@@ -4,13 +4,13 @@ import autocannon from 'autocannon';
  * ===================================================================================================================
  *                                         COMPREHENSIVE API BENCHMARKING SUITE
  * ===================================================================================================================
- * 
+ *
  * DESCRIPTION:
  * This load-testing suite tests 100% of the QC Application's API. It dynamically benchmarks all available modules,
- * including GET, POST, PATCH, and DELETE endpoints. It utilizes `autocannon` to simulate high-concurrency 
+ * including GET, POST, PATCH, and DELETE endpoints. It utilizes `autocannon` to simulate high-concurrency
  * traffic scenarios, effectively stress-testing the database connections, the Node.js event loop, validation pipes,
  * and authentication guards.
- * 
+ *
  * HOW TO READ THE METRICS:
  * 1. Requests/Sec: The number of full request-response lifecycles completed per second. Higher is better.
  * 2. Latency (p99): The time in milliseconds that 99% of requests completed within. Lower is better.
@@ -19,13 +19,13 @@ import autocannon from 'autocannon';
  *    Note: Because we use static data for POST/PATCH benchmarking, it is completely normal to see 400/409 errors
  *    arising from Drizzle's unique constraints or class-validator. These still properly test server throughput!
  * 5. Timeouts: Requests that failed to complete within the timeout window. Any timeout > 0 suggests a bottleneck.
- * 
+ *
  * ===================================================================================================================
  */
 
 const BASE_URL = 'http://localhost:4000/api/v1';
-const CONNECTIONS = 50; 
-const DURATION = 3;     
+const CONNECTIONS = 50;
+const DURATION = 3;
 
 // Interfaces mapping out the core shapes of the benchmarking engine
 interface BenchmarkConfig {
@@ -62,7 +62,7 @@ async function runBenchmark(moduleName: string, config: BenchmarkConfig, authHea
   return new Promise((resolve) => {
     const isPostOrPatch = config.method === 'POST' || config.method === 'PATCH';
     const bodyStr = isPostOrPatch && config.body ? JSON.stringify(config.body) : undefined;
-    
+
     const headers: Record<string, string> = { ...authHeaders };
     if (isPostOrPatch) {
       headers['Content-Type'] = 'application/json';
@@ -102,7 +102,7 @@ async function runBenchmark(moduleName: string, config: BenchmarkConfig, authHea
           errors: result.errors,
           timeouts: result.timeouts
         });
-        
+
         console.log('\x1b[90m[Cooldown] Waiting 5 seconds for background tasks to flush...\x1b[0m');
         setTimeout(() => resolve(), 5000);
       }
@@ -121,7 +121,7 @@ async function main() {
   console.log('\n\x1b[35m===========================================================================\x1b[0m');
   console.log('\x1b[35m                  🚀 STARTING 100% COVERAGE APP BENCHMARK 🚀                 \x1b[0m');
   console.log('\x1b[35m===========================================================================\x1b[0m\n');
-  
+
   console.log('Waiting 3 seconds to ensure the server event loop is fully initialized...');
   await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -144,7 +144,7 @@ async function main() {
   const loginData = await loginRes.json();
   const token = loginData.accessToken;
   const authHeaders = { 'Authorization': `Bearer ${token}` };
-  
+
   console.log('\x1b[32mSuccessfully acquired JWT token! The benchmarking suite will now begin.\x1b[0m\n');
 
   // Hardcoded ID for routes that require an ID.
@@ -155,7 +155,7 @@ async function main() {
   // MODULE 1: AUTHENTICATION
   // ==========================================
   const moduleAuth = 'Auth Module';
-  
+
   // Test valid login
   await runBenchmark(moduleAuth, {
     title: 'Login Valid User (Argon2 Hashing)',
@@ -205,12 +205,12 @@ async function main() {
     title: 'Create New User',
     method: 'POST',
     url: `${BASE_URL}/users`,
-    body: { 
-      firstName: 'Benchmark', 
-      lastName: 'User', 
-      email: 'bench_[%ID%]@lab.local', 
-      password: 'Password123!', 
-      role: 'TECHNICIAN' 
+    body: {
+      firstName: 'Benchmark',
+      lastName: 'User',
+      email: 'bench_[%ID%]@lab.local',
+      password: 'Password123!',
+      role: 'TECHNICIAN'
     }
   }, authHeaders);
 
@@ -345,14 +345,14 @@ async function main() {
     title: 'Create New Control Lot',
     method: 'POST',
     url: `${BASE_URL}/control-lots`,
-    body: { 
-      testId: 1, 
-      lotNumber: 'BNCH-LOT-[%ID%]', 
+    body: {
+      testId: 1,
+      lotNumber: 'BNCH-LOT-[%ID%]',
       expirationDate: '2030-01-01T00:00:00Z',
-      targetValue: 100, 
-      mean: 100, 
-      standardDeviation: 5, 
-      level: 1 
+      targetValue: 100,
+      mean: 100,
+      standardDeviation: 5,
+      level: 1
     }
   }, authHeaders);
 
@@ -391,12 +391,12 @@ async function main() {
     title: 'Submit New QC Measurement (Triggering Rules)',
     method: 'POST',
     url: `${BASE_URL}/qc-results`,
-    body: { 
-      machineId: 1, 
-      testId: 1, 
-      lotId: 1, 
-      measuredValue: 105, 
-      comments: 'Automated Benchmark Submission' 
+    body: {
+      machineId: 1,
+      testId: 1,
+      lotId: 1,
+      measuredValue: 105,
+      comments: 'Automated Benchmark Submission'
     }
   }, authHeaders);
 
@@ -501,33 +501,33 @@ async function main() {
   // Iterate over each module and print a beautiful ASCII table
   for (const [mod, results] of Object.entries(groupedResults)) {
     console.log(`\x1b[44m\x1b[37m MODULE: ${mod.padEnd(89)} \x1b[0m`);
-    
+
     // Print Table Header
     console.log(
-      `\x1b[36m| \x1b[0m${'Endpoint Description'.padEnd(46)} | ` + 
-      `${'Method'.padEnd(6)} | ` + 
-      `${'Req/Sec'.padEnd(9)} | ` + 
-      `${'Latency'.padEnd(10)} | ` + 
+      `\x1b[36m| \x1b[0m${'Endpoint Description'.padEnd(46)} | ` +
+      `${'Method'.padEnd(6)} | ` +
+      `${'Req/Sec'.padEnd(9)} | ` +
+      `${'Latency'.padEnd(10)} | ` +
       `${'Status'.padEnd(10)} \x1b[36m|\x1b[0m`
     );
     console.log(`\x1b[36m|${'-'.repeat(48)}|${'-'.repeat(8)}|${'-'.repeat(11)}|${'-'.repeat(12)}|${'-'.repeat(12)}|\x1b[0m`);
 
     let totalModReqs = 0;
-    
+
     for (const res of results) {
       totalModReqs += res.totalRequests;
-      
+
       // Formatting
       const endpointName = res.title.length > 46 ? res.title.substring(0, 43) + '...' : res.title.padEnd(46);
       const methodStr = res.method.padEnd(6);
       const reqSecStr = res.requestsPerSec.toString().padEnd(9);
       const latencyStr = `${res.latencyP99}ms`.padEnd(10);
-      
+
       // Color coded status evaluation logic based on expected thresholds
       let statusStr = '\x1b[32mEXCELLENT\x1b[0m ';
       if (res.requestsPerSec < 150) statusStr = '\x1b[33mAVERAGE\x1b[0m   ';
       if (res.requestsPerSec < 30) statusStr = '\x1b[31mSLOW\x1b[0m      ';
-      
+
       // Specific check for timeouts
       if (res.timeouts > 0) statusStr = '\x1b[31mTIMEOUTS\x1b[0m  ';
 

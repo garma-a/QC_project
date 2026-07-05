@@ -28,8 +28,8 @@ services:
     image: mailhog/mailhog:latest
     container_name: monorepo-mailhog
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
     deploy:
       resources:
         limits:
