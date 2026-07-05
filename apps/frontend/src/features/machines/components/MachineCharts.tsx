@@ -451,16 +451,17 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
 
     if (machine?.tests && machine.tests.length > 0) {
       for (const t of machine.tests) {
-        if (!testMap.has(t.id)) {
-          testMap.set(t.id, {
-            testId: t.id,
+        const tIdStr = String(t.id);
+        if (!testMap.has(tIdStr)) {
+          testMap.set(tIdStr, {
+            testId: tIdStr,
             testName: t.name,
             category: t.category,
             lots: [],
           });
         }
         if (t.lotId !== -1) {
-          testMap.get(t.id)!.lots.push({
+          testMap.get(tIdStr)!.lots.push({
             lotId: t.lotId,
             level: t.level ?? 1,
             lotNumber: t.lotNumber,
@@ -510,7 +511,7 @@ export function MachineCharts({ machine, qcHistory }: MachineChartsProps) {
   const searchParams = useSearchParams();
   const urlTestId = searchParams.get('testId');
 
-  const activeTest = availableTests.find((test) => test.testId === urlTestId) ?? availableTests[0];
+  const activeTest = availableTests.find((test) => String(test.testId) === urlTestId) ?? availableTests[0];
 
   const [mode, setMode] = useState<'live' | 'archive'>('live');
 

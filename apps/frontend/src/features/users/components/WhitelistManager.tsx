@@ -69,7 +69,7 @@ export function WhitelistManager() {
   );
 
   return (
-    <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#2a2a2a] shadow-md overflow-hidden">
+    <div className="w-[90%] mx-auto bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#2a2a2a] shadow-md overflow-hidden">
       {/* Header */}
       <div className="px-6 py-5 border-b border-gray-100 dark:border-[#2a2a2a] bg-gradient-to-r from-[#003366]/5 to-transparent dark:from-[#4a90e2]/5">
         <div className="flex items-center gap-3">

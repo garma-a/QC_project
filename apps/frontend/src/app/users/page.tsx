@@ -72,7 +72,7 @@ export default async function UsersPage() {
   const isAdmin = currentUser?.role === 'ADMIN';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <UsersManager initialUsers={initialUsers} currentUser={currentUser} />
       {isAdmin && <WhitelistManager />}
     </div>
