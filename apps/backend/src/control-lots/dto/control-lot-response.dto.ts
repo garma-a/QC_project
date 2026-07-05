@@ -106,4 +106,16 @@ export class EnrichedControlLotResponseDto extends ControlLotResponseDto impleme
 
   @ApiProperty({ example: 1, description: 'ID of the machine this test belongs to' })
   machineId: number;
+
+  @ApiProperty({
+    example: 5,
+    description: 'Number of days since creation',
+  })
+  declare daysActive: number;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the lot is older than 10 days and needs checking',
+  })
+  declare needsChecking: boolean;
 }

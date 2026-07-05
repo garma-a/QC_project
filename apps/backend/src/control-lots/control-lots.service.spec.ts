@@ -49,6 +49,7 @@ describe('ControlLotsService', () => {
   describe('create', () => {
     const newLotDto = {
       testId: 1,
+      level: 1,
       lotNumber: 'LOT-HGB-2026-A',
       expirationDate: '2026-12-31',
       mean: 14.0,

@@ -362,7 +362,7 @@ export interface LotSummaryDto {
 }
 
 export interface QcResultsWithLotResponseDto {
-  lot: LotSummaryDto;
+  lot: LotSummaryDto | null;
   results: QcResultResponseDto[];
 }
 
