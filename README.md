@@ -134,6 +134,115 @@ The seed script creates users and prints demo credentials in the terminal.
 - If backend fails to connect, verify PostgreSQL is up and `DATABASE_URL` matches your local container config.
 - If auth-protected calls return `401`, ensure login succeeded and token is included in requests.
 
+## Performance Benchmarks
+
+The backend API is highly optimized. Below are the results from an extensive autocannon benchmark running across all routes (tested locally).
+
+```text
+===========================================================================
+                 🏆 FINAL BENCHMARK PERFORMANCE REPORT 🏆                  
+===========================================================================
+
+ MODULE: Auth Module                                                                               
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Login Valid User (Argon2 Hashing)              | POST   | 3.67      | 2898ms     | SLOW       |
+| Login Invalid Credentials (Testing 401 Reje... | POST   | 186.67    | 491ms      | EXCELLENT  |
+| Signup Step 1: Check Email & Send OTP          | POST   | 1743.67   | 76ms       | EXCELLENT  |
+| Forgot Password Step 1: Send OTP               | POST   | 7         | 3005ms     | SLOW       |
+| Get Email Whitelist                            | GET    | 730       | 143ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 8,013
+
+ MODULE: Users Module                                                                              
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Create New User                                | POST   | 1093.67   | 107ms      | EXCELLENT  |
+| Get All Users (Paginated)                      | GET    | 366.67    | 192ms      | EXCELLENT  |
+| Get Specific User By ID                        | GET    | 412.67    | 224ms      | EXCELLENT  |
+| Get Current User Profile                       | GET    | 441       | 206ms      | EXCELLENT  |
+| Update Specific User By ID                     | PATCH  | 255.34    | 338ms      | EXCELLENT  |
+| Delete Specific User By ID                     | DELETE | 622.67    | 154ms      | EXCELLENT  |
+| Invalid User Payload (Testing DTO Validation)  | POST   | 1388.34   | 77ms       | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 13,741
+
+ MODULE: Sections Module                                                                           
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Get All Sections                               | GET    | 695       | 270ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 2,085
+
+ MODULE: Machines Module                                                                           
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Create New Machine                             | POST   | 246.67    | 411ms      | EXCELLENT  |
+| Get All Machines                               | GET    | 696.67    | 236ms      | EXCELLENT  |
+| Get Specific Machine By ID                     | GET    | 468.34    | 217ms      | EXCELLENT  |
+| Update Machine Status By ID                    | PATCH  | 370.34    | 269ms      | EXCELLENT  |
+| Delete Machine By ID                           | DELETE | 574       | 156ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 7,068
+
+ MODULE: QC Tests Module                                                                           
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Create QC Test Parameter                       | POST   | 345.67    | 246ms      | EXCELLENT  |
+| Get All QC Tests (Master List)                 | GET    | 550.67    | 146ms      | EXCELLENT  |
+| Get QC Tests For Specific Machine              | GET    | 1298.34   | 151ms      | EXCELLENT  |
+| Update QC Test By ID                           | PATCH  | 276.67    | 295ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 7,414
+
+ MODULE: Control Lots Module                                                                       
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Create New Control Lot                         | POST   | 117       | 1464ms     | AVERAGE    |
+| Get All Active Control Lots                    | GET    | 987.67    | 194ms      | EXCELLENT  |
+| Get Specific Control Lot Details By ID         | GET    | 542.34    | 274ms      | EXCELLENT  |
+| Update Control Lot Statistics By ID            | PATCH  | 209       | 397ms      | EXCELLENT  |
+| Delete / Deactivate Control Lot By ID          | DELETE | 541       | 158ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 7,191
+
+ MODULE: QC Results Module                                                                         
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Submit New QC Measurement (Triggering Rules)   | POST   | 1044      | 139ms      | EXCELLENT  |
+| Get Paginated QC Results History               | GET    | 175.34    | 541ms      | EXCELLENT  |
+| Get Recent QC Results                          | GET    | 120.34    | 696ms      | AVERAGE    |
+| Get Specific QC Result By ID                   | GET    | 375.67    | 211ms      | EXCELLENT  |
+| Append Comments to QC Result By ID             | PATCH  | 218.34    | 298ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 5,801
+
+ MODULE: Alerts Module                                                                             
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Get All User Alerts (Inbox)                    | GET    | 152       | 683ms      | EXCELLENT  |
+| Mark Alert as Seen                             | PATCH  | 355.34    | 318ms      | EXCELLENT  |
+| Mark Alert as Resolved (Providing Context)     | PATCH  | 398.34    | 223ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 2,717
+
+ MODULE: BFF Module                                                                                
+| Endpoint Description                           | Method | Req/Sec   | Latency    | Status     |
+|------------------------------------------------|--------|-----------|------------|------------|
+| Get Dashboard Data                             | GET    | 56.67     | 1289ms     | AVERAGE    |
+| Get Dashboard Machine History                  | GET    | 192.34    | 369ms      | EXCELLENT  |
+| Get QC Page Machines                           | GET    | 64        | 1225ms     | AVERAGE    |
+| Get QC Page History                            | GET    | 943       | 145ms      | EXCELLENT  |
+|------------------------------------------------|--------|-----------|------------|------------|
+  └─ Total Processed Requests for Module: 3,768
+
+===========================================================================
+✅ BENCHMARK COMPLETE.
+Total Requests Processed: 57,798 across all routes.
+Average API Throughput:   494 Req/Sec
+===========================================================================
+```
+
 ## Useful Commands
 
 From repository root:

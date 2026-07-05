@@ -1,4 +1,5 @@
-import { Controller, Get, UseGuards, Query, ParseIntPipe, Param } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, ParseIntPipe, Param, UseInterceptors } from '@nestjs/common';
+
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BffService } from './bff.service';
 import { DashboardBffResponseDto } from './dto/dashboard-bff.dto';
@@ -14,6 +15,7 @@ export class BffController {
   constructor(private readonly bffService: BffService) { }
 
   @Get('dashboard')
+
   @ApiOperation({
     summary: 'Get Dashboard Data',
     description: 'Aggregates Machines, active Control Lots, and Recent QC Activity for the frontend Dashboard page.',
@@ -28,6 +30,7 @@ export class BffController {
   }
 
   @Get('dashboard/machine-history/:machineId')
+
   @ApiOperation({
     summary: 'Get Machine History for Dashboard',
     description: 'Returns the last 30 days of QC history for a specific machine to be used in the dashboard charts.',
@@ -41,6 +44,7 @@ export class BffController {
   }
 
   @Get('qc/machines')
+
   @ApiOperation({
     summary: 'Get QC Page Machines',
     description: 'Returns machines and categories formatted for the QC Interactive selector.',
@@ -54,6 +58,7 @@ export class BffController {
   }
 
   @Get('qc/history')
+
   @ApiOperation({
     summary: 'Get Paginated QC History',
     description: 'Returns paginated QC history perfectly formatted for the Interactive QC Table.',

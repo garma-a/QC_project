@@ -22,7 +22,8 @@
         "test:e2e": "bun test ./test",
         "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
         "db:migrate": "bunx drizzle-kit migrate",
-        "db:seed": "bun --bun ts-node -r tsconfig-paths/register src/database/seed.ts"
+        "db:seed": "bun --bun ts-node -r tsconfig-paths/register src/database/seed.ts",
+        "db:cleanup": "bun --bun ts-node -r tsconfig-paths/register src/database/cleanup-benchmark.ts"
     },
     "dependencies": {
         "@nestjs/cache-manager": "^3.1.3",

@@ -30,10 +30,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Internal Server Error';
 
-    this.logger.error(
-      `Unhandled Exception: ${JSON.stringify(message)}`,
-      exception instanceof Error ? exception.stack : exception,
-    );
+    if (httpStatus >= 500) {
+      this.logger.error(
+        `Unhandled Exception: ${JSON.stringify(message)}`,
+        exception instanceof Error ? exception.stack : exception,
+      );
+    }
 
     const errorResponse = typeof message === 'string'
       ? { message }

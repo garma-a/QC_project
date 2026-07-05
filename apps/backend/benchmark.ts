@@ -172,6 +172,29 @@ async function main() {
     body: { email: 'fake@example.com', password: 'WrongPassword' }
   });
 
+  // Test signup flow initialization (Check Email)
+  await runBenchmark(moduleAuth, {
+    title: 'Signup Step 1: Check Email & Send OTP',
+    method: 'POST',
+    url: `${BASE_URL}/auth/signup/check-email`,
+    body: { email: 'newuser_[%ID%]@lab.local' }
+  });
+
+  // Test forgot password
+  await runBenchmark(moduleAuth, {
+    title: 'Forgot Password Step 1: Send OTP',
+    method: 'POST',
+    url: `${BASE_URL}/auth/forgot-password`,
+    body: { email: 'admin@lab.local' }
+  });
+
+  // Get Admin Whitelist
+  await runBenchmark(moduleAuth, {
+    title: 'Get Email Whitelist',
+    method: 'GET',
+    url: `${BASE_URL}/auth/whitelist`
+  }, authHeaders);
+
 
   // ==========================================
   // MODULE 2: USERS
@@ -201,6 +224,12 @@ async function main() {
     title: 'Get Specific User By ID',
     method: 'GET',
     url: `${BASE_URL}/users/${targetId}`
+  }, authHeaders);
+
+  await runBenchmark(moduleUsers, {
+    title: 'Get Current User Profile',
+    method: 'GET',
+    url: `${BASE_URL}/users/me/profile`
   }, authHeaders);
 
   await runBenchmark(moduleUsers, {
@@ -378,6 +407,12 @@ async function main() {
   }, authHeaders);
 
   await runBenchmark(moduleResults, {
+    title: 'Get Recent QC Results',
+    method: 'GET',
+    url: `${BASE_URL}/qc-results/recent-all`
+  }, authHeaders);
+
+  await runBenchmark(moduleResults, {
     title: 'Get Specific QC Result By ID',
     method: 'GET',
     url: `${BASE_URL}/qc-results/${targetId}`
@@ -414,6 +449,37 @@ async function main() {
     url: `${BASE_URL}/alerts/mark-resolved/${targetId}`,
     body: { resolutionNote: 'Resolved by automated benchmark suite analysis' }
   }, authHeaders);
+
+
+  // ==========================================
+  // MODULE 9: BFF (BACKEND FOR FRONTEND)
+  // ==========================================
+  const moduleBff = 'BFF Module';
+
+  await runBenchmark(moduleBff, {
+    title: 'Get Dashboard Data',
+    method: 'GET',
+    url: `${BASE_URL}/bff/dashboard`
+  }, authHeaders);
+
+  await runBenchmark(moduleBff, {
+    title: 'Get Dashboard Machine History',
+    method: 'GET',
+    url: `${BASE_URL}/bff/dashboard/machine-history/1`
+  }, authHeaders);
+
+  await runBenchmark(moduleBff, {
+    title: 'Get QC Page Machines',
+    method: 'GET',
+    url: `${BASE_URL}/bff/qc/machines`
+  }, authHeaders);
+
+  await runBenchmark(moduleBff, {
+    title: 'Get QC Page History',
+    method: 'GET',
+    url: `${BASE_URL}/bff/qc/history?limit=50&offset=0`
+  }, authHeaders);
+
 
 
   // =================================================================================================

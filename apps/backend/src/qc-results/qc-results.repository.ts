@@ -1,5 +1,12 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, machines, qcResults, qcRuns, qcTests, users } from '@/drizzle/schema';
+import {
+  controlLots,
+  machines,
+  qcResults,
+  qcRuns,
+  qcTests,
+  users,
+} from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { desc, eq, and, inArray, sql, gte, lte } from 'drizzle-orm';
 import { QcStatus } from './qc-results.types';
@@ -7,13 +14,13 @@ import { UpdateQcResultDto } from './dto/update-qc-result.dto';
 
 @Injectable()
 export class QcResultsRepository {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService) {}
 
   async getLotById(lotId: number) {
     const [lot] = await this.databaseService.db
       .select()
       .from(controlLots)
-      .where(eq(controlLots.id, lotId))
+      .where(eq(controlLots.id, lotId));
     return lot;
   }
 
@@ -30,10 +37,7 @@ export class QcResultsRepository {
       .select({ id: controlLots.id, lotNumber: controlLots.lotNumber })
       .from(controlLots)
       .where(
-        and(
-          eq(controlLots.testId, testId),
-          eq(controlLots.isActive, true)
-        )
+        and(eq(controlLots.testId, testId), eq(controlLots.isActive, true)),
       );
   }
 
@@ -132,7 +136,13 @@ export class QcResultsRepository {
     return lot;
   }
 
-  async getResultsByLotId(lotId: number, limit?: number, offset?: number, startDate?: string, endDate?: string) {
+  async getResultsByLotId(
+    lotId: number,
+    limit?: number,
+    offset?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
     let safeLimit = limit ?? 100;
 
     // Safety constraint: If historical date range is requested, max out at 500 points to prevent crashes.
@@ -228,7 +238,13 @@ export class QcResultsRepository {
    * Scalability cap: default 100 results, hard max 500 per call.
    * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
    */
-  async getPaginatedResults(limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
+  async getPaginatedResults(
+    limit?: number,
+    offset?: number,
+    machineId?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
     const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
@@ -291,7 +307,10 @@ export class QcResultsRepository {
     return result;
   }
 
-  async getRecentZScoresByLotId(lotId: number, limit: number): Promise<number[]> {
+  async getRecentZScoresByLotId(
+    lotId: number,
+    limit: number,
+  ): Promise<number[]> {
     // Returns last `limit` z-scores ordered newest-first
     // so they align with zScores[1], zScores[2], ... in the evaluator
     const rows = await this.databaseService.db
@@ -304,7 +323,10 @@ export class QcResultsRepository {
     return rows.map((r) => r.zScore);
   }
 
-  async getRecentZScoresByLotIds(lotIds: number[], limitPerLot: number): Promise<Map<number, number[]>> {
+  async getRecentZScoresByLotIds(
+    lotIds: number[],
+    limitPerLot: number,
+  ): Promise<Map<number, number[]>> {
     if (lotIds.length === 0) return new Map<number, number[]>();
 
     const idsList = sql.join(lotIds, sql`, `);
@@ -327,5 +349,4 @@ export class QcResultsRepository {
     }
     return map;
   }
-
 }

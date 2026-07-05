@@ -34,5 +34,15 @@ export class CreateMachineDto implements SharedTypes.CreateMachineDto {
   @IsInt({ message: 'Section ID must be an integer' })
   @IsNotEmpty()
   sectionId: number;
+
+  @ApiPropertyOptional({
+    description: 'Current operational status of the machine',
+    example: 'IDLE',
+    enum: ['IDLE', 'RUNNING', 'MAINTENANCE', 'OFFLINE', 'ERROR'],
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  currentStatus?: 'IDLE' | 'RUNNING' | 'MAINTENANCE' | 'OFFLINE' | 'ERROR';
 }
 

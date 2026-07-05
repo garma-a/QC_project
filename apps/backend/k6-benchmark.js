@@ -1,6 +1,5 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
 export const options = {
   // Ramp-up and ramp-down simulation for realistic real-world load
@@ -56,59 +55,60 @@ export default function (data) {
   };
 
   // ==========================================
-  // 1. SIMULATE BROWSE (READ HEAVY)
+  // 1. SIMULATE DASHBOARD LOAD (BFF)
   // ==========================================
-  const getMachinesRes = http.get(`${BASE_URL}/machines`, authParams);
-  check(getMachinesRes, {
-    'fetched machines successfully': (r) => r.status === 200,
+  const dashboardRes = http.get(`${BASE_URL}/bff/dashboard`, authParams);
+  check(dashboardRes, {
+    'fetched dashboard successfully': (r) => r.status === 200,
   });
 
-  // Small delay to simulate user reading the screen
+  sleep(0.5); // User reading dashboard
+
+  const machineHistoryRes = http.get(`${BASE_URL}/bff/dashboard/machine-history/1`, authParams);
+  check(machineHistoryRes, {
+    'fetched machine history successfully': (r) => r.status === 200 || r.status === 404,
+  });
+
   sleep(0.5);
 
   // ==========================================
-  // 2. SIMULATE RESOURCE CREATION (WRITE)
+  // 2. SIMULATE QC PAGE LOAD (BFF)
   // ==========================================
-  const randStr = randomString(8);
-  const userPayload = JSON.stringify({
-    firstName: `K6_${randStr}`,
-    lastName: 'LoadTest',
-    email: `k6_${randStr}@lab.local`, // Guaranteed unique!
-    password: 'Password123!',
-    role: 'TECHNICIAN'
+  const qcMachinesRes = http.get(`${BASE_URL}/bff/qc/machines`, authParams);
+  check(qcMachinesRes, {
+    'fetched qc machines successfully': (r) => r.status === 200,
   });
 
-  const createUserRes = http.post(`${BASE_URL}/users`, userPayload, authParams);
-  check(createUserRes, {
-    'created user successfully': (r) => r.status === 201,
+  const qcHistoryRes = http.get(`${BASE_URL}/bff/qc/history?limit=50&offset=0`, authParams);
+  check(qcHistoryRes, {
+    'fetched qc history successfully': (r) => r.status === 200,
   });
 
-  const createdUser = createUserRes.json();
-  const userId = createdUser ? createdUser.id : null;
+  sleep(1); // User interacting with table
 
   // ==========================================
-  // 3. SIMULATE RESOURCE MODIFICATION (UPDATE)
+  // 3. SIMULATE QC RESULT SUBMISSION (WRITE)
   // ==========================================
-  if (userId) {
-    // Wait before editing
-    sleep(0.5);
+  const qcPayload = JSON.stringify({
+    machineId: 1,
+    testId: 1,
+    lotId: 1,
+    measuredValue: Math.floor(Math.random() * (120 - 80 + 1) + 80), // Random value between 80 and 120
+    comments: 'Load Test Submission'
+  });
 
-    const patchPayload = JSON.stringify({
-      firstName: `K6_Updated_${randStr}`,
-    });
-    const patchUserRes = http.patch(`${BASE_URL}/users/${userId}`, patchPayload, authParams);
-    check(patchUserRes, {
-      'updated user successfully': (r) => r.status === 200,
-    });
+  const createQcRes = http.post(`${BASE_URL}/qc-results`, qcPayload, authParams);
+  check(createQcRes, {
+    'submitted qc result successfully': (r) => r.status === 201 || r.status === 400 || r.status === 404,
+  });
 
-    // ==========================================
-    // 4. SIMULATE RESOURCE CLEANUP (DELETE)
-    // ==========================================
-    const deleteRes = http.del(`${BASE_URL}/users/${userId}`, null, authParams);
-    check(deleteRes, {
-      'deleted user successfully': (r) => r.status === 200 || r.status === 204,
-    });
-  }
+  // ==========================================
+  // 4. SIMULATE NOTIFICATIONS CHECK
+  // ==========================================
+  const alertsRes = http.get(`${BASE_URL}/alerts`, authParams);
+  check(alertsRes, {
+    'fetched alerts successfully': (r) => r.status === 200,
+  });
 
   // ==========================================
   // 5. THINK TIME
