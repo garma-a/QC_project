@@ -22,6 +22,8 @@ interface UseAlertsReturn {
     alertId: number,
     payload?: ResolveAlertDto,
   ) => Promise<UserAlertStatusResponseDto[]>;
+  markUnseen: (alertId: number) => Promise<UserAlertStatusResponseDto[]>;
+  markUnresolved: (alertId: number) => Promise<UserAlertStatusResponseDto[]>;
 }
 
 export interface UseAlertsParams {
@@ -29,9 +31,11 @@ export interface UseAlertsParams {
   scope?: 'assigned' | 'all';
   sectionId?: number | null;
   machineId?: number | null;
+  status?: string;
+  timeRange?: string;
 }
 
-export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machineId }: UseAlertsParams = {}): UseAlertsReturn {
+export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machineId, status, timeRange }: UseAlertsParams = {}): UseAlertsReturn {
   const token = useAuthStore((s) => s.accessToken);
   const queryClient = useQueryClient();
 
@@ -45,11 +49,13 @@ export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machi
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['alerts', scope, sectionId, machineId],
+    queryKey: ['alerts', scope, sectionId, machineId, status, timeRange],
     queryFn: async ({ pageParam = 0, signal }) => {
       let url = `/api/v1/alerts?limit=50&offset=${pageParam}&scope=${scope}`;
       if (sectionId) url += `&sectionId=${sectionId}`;
       if (machineId) url += `&machineId=${machineId}`;
+      if (status) url += `&status=${status}`;
+      if (timeRange) url += `&timeRange=${timeRange}`;
       return clientFetch<AlertResponseDto[]>(url, { signal }, token);
     },
     getNextPageParam: (lastPage, allPages) => {
@@ -89,6 +95,30 @@ export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machi
     },
   });
 
+  const { mutateAsync: markUnseen } = useMutation({
+    mutationFn: (alertId: number) =>
+      clientFetch<UserAlertStatusResponseDto[]>(
+        `/api/v1/alerts/mark-unseen/${alertId}`,
+        { method: 'PATCH' },
+        token,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+
+  const { mutateAsync: markUnresolved } = useMutation({
+    mutationFn: (alertId: number) =>
+      clientFetch<UserAlertStatusResponseDto[]>(
+        `/api/v1/alerts/mark-unresolved/${alertId}`,
+        { method: 'PATCH' },
+        token,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+    },
+  });
+
   return {
     alerts,
     loading: isLoading,
@@ -99,5 +129,7 @@ export function useAlerts({ pollIntervalMs, scope = 'assigned', sectionId, machi
     isFetchingNextPage,
     markSeen,
     markResolved: (alertId, payload) => markResolved({ alertId, payload }),
+    markUnseen,
+    markUnresolved,
   };
 }

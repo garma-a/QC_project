@@ -1,11 +1,11 @@
 info:
-  name: Mark Alert Seen
+  name: Mark Alert UnSeen
   type: http
-  seq: 2
+  seq: 5
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/alerts/mark-seen/2465"
+  url: "{{baseUrl}}/alerts/mark-unseen/2465"
   auth: inherit
 
 settings:

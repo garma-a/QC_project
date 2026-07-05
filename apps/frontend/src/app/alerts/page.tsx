@@ -46,7 +46,6 @@ export default function AlertsPage() {
   const [sectionFilter, setSectionFilter] = useState<number | null>(null);
   const [machineFilter, setMachineFilter] = useState<number | null>(null);
 
-  const { alerts, loading, error, refetch, markSeen, markResolved, fetchNextPage, hasNextPage, isFetchingNextPage } = useAlerts({ pollIntervalMs: 15000, scope, sectionId: sectionFilter, machineId: machineFilter });
   const { machines } = useMachines();
   const token = useAuthStore((s) => s.accessToken);
 
@@ -62,6 +61,15 @@ export default function AlertsPage() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "UNRESOLVED" | "RESOLVED">("UNRESOLVED");
   const [timeFilter, setTimeFilter] = useState<"24H" | "48H" | "7D" | "ALL">("24H");
 
+  const { alerts, loading, error, refetch, markSeen, markResolved, markUnseen, markUnresolved, fetchNextPage, hasNextPage, isFetchingNextPage } = useAlerts({ 
+    pollIntervalMs: 15000, 
+    scope, 
+    sectionId: sectionFilter, 
+    machineId: machineFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter === "UNRESOLVED" ? "UNSEEN" : statusFilter,
+    timeRange: timeFilter === "ALL" ? undefined : timeFilter === "24H" ? "24h" : timeFilter === "7D" ? "7d" : undefined
+  });
+
   // Filter machines based on selected section
   const availableMachines = useMemo(() => {
     if (!sectionFilter) return machines;
@@ -76,34 +84,7 @@ export default function AlertsPage() {
     }
   }, [sectionFilter, machineFilter, availableMachines]);
 
-  const sortedAlerts = useMemo(() => {
-    return [...alerts].sort((a, b) => {
-      const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bt - at;
-    });
-  }, [alerts]);
 
-  const filteredAlerts = useMemo(() => {
-    const now = Date.now();
-    let cutoff = 0;
-
-    if (timeFilter === "24H") cutoff = now - 24 * 60 * 60 * 1000;
-    if (timeFilter === "48H") cutoff = now - 48 * 60 * 60 * 1000;
-    if (timeFilter === "7D") cutoff = now - 7 * 24 * 60 * 60 * 1000;
-
-    return sortedAlerts.filter((alert) => {
-      if (statusFilter === "UNRESOLVED" && alert.status === "RESOLVED") return false;
-      if (statusFilter === "RESOLVED" && alert.status !== "RESOLVED") return false;
-
-      if (timeFilter === "ALL") return true;
-      if (!alert.createdAt) return false;
-
-      const createdAt = new Date(alert.createdAt).getTime();
-      if (Number.isNaN(createdAt)) return false;
-      return createdAt >= cutoff;
-    });
-  }, [sortedAlerts, statusFilter, timeFilter]);
 
   const handleMarkSeen = async (alertId: number) => {
     setActionError(null);
@@ -128,6 +109,30 @@ export default function AlertsPage() {
       setActionError(
         err instanceof Error ? err.message : "Failed to mark alert as resolved",
       );
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleMarkUnseen = async (alertId: number) => {
+    setActionError(null);
+    setProcessingId(alertId);
+    try {
+      await markUnseen(alertId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to mark alert as unseen");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleMarkUnresolved = async (alertId: number) => {
+    setActionError(null);
+    setProcessingId(alertId);
+    try {
+      await markUnresolved(alertId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to mark alert as unresolved");
     } finally {
       setProcessingId(null);
     }
@@ -248,14 +253,14 @@ export default function AlertsPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-[#1f1f1f] dark:text-gray-300">
           Loading alerts...
         </div>
-      ) : filteredAlerts.length === 0 ? (
+      ) : alerts.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-[#1f1f1f]">
           <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-green-500" />
           <p className="text-gray-700 dark:text-gray-200">No alerts found for this filter.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredAlerts.map((alert) => {
+          {alerts.map((alert) => {
             const priority = alert.priority ?? "MEDIUM";
             const busy = processingId === alert.id;
             const status = alert.status;
@@ -324,14 +329,25 @@ export default function AlertsPage() {
 
                   <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                     <div className="flex flex-col gap-2">
-                      <button
-                        onClick={() => handleMarkSeen(alert.id)}
-                        disabled={busy || status !== "UNSEEN"}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Seen
-                      </button>
+                      {status === "UNSEEN" ? (
+                        <button
+                          onClick={() => handleMarkSeen(alert.id)}
+                          disabled={busy}
+                          className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Mark Seen
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleMarkUnseen(alert.id)}
+                          disabled={busy || status === "RESOLVED"}
+                          className="inline-flex items-center justify-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                        >
+                          <Eye className="h-4 w-4 opacity-50" />
+                          Mark Unseen
+                        </button>
+                      )}
                       
                       {alert.machineId && alert.testId && (
                         <Link
@@ -355,14 +371,25 @@ export default function AlertsPage() {
                         placeholder="Resolution note (optional)"
                         className="w-48 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#232323] px-2 py-2 text-xs text-gray-800 dark:text-gray-100"
                       />
-                      <button
-                        onClick={() => handleMarkResolved(alert.id)}
-                        disabled={busy || status === "RESOLVED"}
-                        className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Resolve
-                      </button>
+                      {status === "RESOLVED" ? (
+                        <button
+                          onClick={() => handleMarkUnresolved(alert.id)}
+                          disabled={busy}
+                          className="inline-flex items-center justify-center gap-1 rounded-md border border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-900/20 px-3 py-2 text-xs font-medium text-green-700 dark:text-green-300 disabled:opacity-50 hover:bg-green-100 dark:hover:bg-green-900/40"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Unresolve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleMarkResolved(alert.id)}
+                          disabled={busy}
+                          className="inline-flex items-center justify-center gap-1 rounded-md bg-gradient-to-r from-[#c41e3a] to-[#8b1e3f] px-3 py-2 text-xs font-medium text-white disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Resolve
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

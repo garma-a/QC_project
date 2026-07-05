@@ -1,13 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
 import { alerts, controlLots, qcResults, qcTests, usersToAlerts, machines, sections } from '@/drizzle/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, or, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class AlertsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAllByUser(userId: number, limit?: number, offset?: number) {
+  async findAllByUser(userId: number, limit?: number, offset?: number, status?: string, timeRange?: string) {
+    const conditions: any[] = [eq(usersToAlerts.userId, userId)];
+    if (status) {
+      conditions.push(eq(usersToAlerts.status, status as any));
+    }
+    if (timeRange) {
+      const now = new Date();
+      if (timeRange === '24h') {
+        conditions.push(gte(alerts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)));
+      } else if (timeRange === '7d') {
+        conditions.push(gte(alerts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)));
+      }
+    }
+
     let query = this.databaseService.db
       .select({
         id: alerts.id,
@@ -36,11 +49,11 @@ export class AlertsRepository {
       .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
       .innerJoin(machines, eq(qcTests.machineId, machines.id))
       .innerJoin(sections, eq(machines.sectionId, sections.id))
-      .where(eq(usersToAlerts.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(alerts.createdAt))
       .$dynamic();
 
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
 
     query = query.limit(safeLimit).offset(safeOffset);
@@ -48,7 +61,7 @@ export class AlertsRepository {
     return await query;
   }
 
-  async findAll(userId: number, limit?: number, offset?: number, sectionId?: number, machineId?: number) {
+  async findAll(userId: number, limit?: number, offset?: number, sectionId?: number, machineId?: number, status?: string, timeRange?: string) {
     let query = this.databaseService.db
       .select({
         id: alerts.id,
@@ -84,24 +97,30 @@ export class AlertsRepository {
       .orderBy(desc(alerts.createdAt))
       .$dynamic();
 
-    if (sectionId) {
-      query = query.where(eq(sections.id, sectionId));
-    }
-    if (machineId) {
-      // If we also had sectionId, we should `and` them, but drizzle handles chained `.where` by ANDing them, or we can use `and` explicitly.
-      // Drizzle's chained where replaces the previous where. We should build an array of conditions.
-    }
-
-    // Let's rewrite the where logic:
     const conditions: any[] = [];
     if (sectionId) conditions.push(eq(sections.id, sectionId));
     if (machineId) conditions.push(eq(machines.id, machineId));
+    if (status) {
+      if (status === 'UNSEEN') {
+        conditions.push(or(isNull(usersToAlerts.status), eq(usersToAlerts.status, 'UNSEEN')));
+      } else {
+        conditions.push(eq(usersToAlerts.status, status as any));
+      }
+    }
+    if (timeRange) {
+      const now = new Date();
+      if (timeRange === '24h') {
+        conditions.push(gte(alerts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000)));
+      } else if (timeRange === '7d') {
+        conditions.push(gte(alerts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)));
+      }
+    }
 
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
 
-    const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
+    const safeLimit = Math.max(1, Math.min(limit ?? 50, 500));
     const safeOffset = Math.max(0, offset ?? 0);
 
     query = query.limit(safeLimit).offset(safeOffset);
@@ -194,6 +213,46 @@ export class AlertsRepository {
           status: 'RESOLVED',
           resolvedAt: new Date(),
           resolutionNote: resolutionNote ?? null,
+        },
+      })
+      .returning();
+  }
+
+  async markUnseen(alertId: number, userId: number) {
+    return this.databaseService.db
+      .insert(usersToAlerts)
+      .values({
+        userId,
+        alertId,
+        status: 'UNSEEN',
+        seenAt: null,
+      })
+      .onConflictDoUpdate({
+        target: [usersToAlerts.userId, usersToAlerts.alertId],
+        set: {
+          status: 'UNSEEN',
+          seenAt: null,
+        },
+      })
+      .returning();
+  }
+
+  async markUnresolved(alertId: number, userId: number) {
+    return this.databaseService.db
+      .insert(usersToAlerts)
+      .values({
+        userId,
+        alertId,
+        status: 'SEEN',
+        resolvedAt: null,
+        resolutionNote: null,
+      })
+      .onConflictDoUpdate({
+        target: [usersToAlerts.userId, usersToAlerts.alertId],
+        set: {
+          status: 'SEEN',
+          resolvedAt: null,
+          resolutionNote: null,
         },
       })
       .returning();

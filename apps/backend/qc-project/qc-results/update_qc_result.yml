@@ -1,11 +1,14 @@
 info:
-  name: "Update QC Result"
+  name: Update QC Result
   type: http
   seq: 5
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/qc-results/:id"
+  url: "{{baseUrl}}/qc-results/39956"
+  body:
+    type: json
+    data: "{}"
   auth: inherit
 
 settings:

@@ -144,6 +144,15 @@ export class ControlLotsRepository {
   }
 
   async update(id: number, data: Partial<typeof controlLots.$inferInsert>) {
+    if (Object.values(data).filter(v => v !== undefined).length === 0) {
+      const [current] = await this.databaseService.db
+        .select()
+        .from(controlLots)
+        .where(eq(controlLots.id, id))
+        .limit(1);
+      return current;
+    }
+
     const [updatedLot] = await this.databaseService.db
       .update(controlLots)
       .set(data)

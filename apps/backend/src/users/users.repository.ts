@@ -95,6 +95,15 @@ export class UsersRepository {
   }
 
   async update(id: number, data: Partial<typeof users.$inferInsert>) {
+    if (Object.values(data).filter(v => v !== undefined).length === 0) {
+      const [current] = await this.databaseService.db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+      return current;
+    }
+
     const [updatedUser] = await this.databaseService.db
       .update(users)
       .set(data)

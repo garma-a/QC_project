@@ -89,6 +89,18 @@ export class AlertsController {
     required: false,
     description: 'Filter alerts by machine ID',
   })
+  @ApiQuery({
+    name: 'status',
+    type: String,
+    required: false,
+    description: 'Filter alerts by status (e.g. UNSEEN, SEEN, RESOLVED)',
+  })
+  @ApiQuery({
+    name: 'timeRange',
+    type: String,
+    required: false,
+    description: 'Filter alerts by time range (24h, 7d)',
+  })
   async findAll(
     @CurrentUser('userId') userId: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
@@ -96,11 +108,13 @@ export class AlertsController {
     @Query('scope') scope?: 'assigned' | 'all',
     @Query('sectionId', new ParseIntPipe({ optional: true })) sectionId?: number,
     @Query('machineId', new ParseIntPipe({ optional: true })) machineId?: number,
+    @Query('status') status?: string,
+    @Query('timeRange') timeRange?: string,
   ) {
     if (scope === 'all' || sectionId || machineId) {
-      return await this.alertsService.findAll(userId, limit, offset, sectionId, machineId);
+      return await this.alertsService.findAll(userId, limit, offset, sectionId, machineId, status, timeRange);
     }
-    return await this.alertsService.findAllByUser(userId, limit, offset);
+    return await this.alertsService.findAllByUser(userId, limit, offset, status, timeRange);
   }
 
   @Patch('/mark-seen/:id')
@@ -178,5 +192,33 @@ export class AlertsController {
     );
   }
 
+
+  @Patch('/mark-unseen/:id')
+  @ApiOperation({
+    summary: 'Mark an alert as unseen',
+    description: 'Marks the authenticated user\'s alert notification state as `UNSEEN`.',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, type: [UserAlertStatusResponseDto] })
+  async markUnseen(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return await this.alertsService.markUnseen(id, userId);
+  }
+
+  @Patch('/mark-unresolved/:id')
+  @ApiOperation({
+    summary: 'Mark an alert as unresolved',
+    description: 'Marks the authenticated user\'s alert notification state as `SEEN` (unresolved).',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, type: [UserAlertStatusResponseDto] })
+  async markUnresolved(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('userId') userId: number,
+  ) {
+    return await this.alertsService.markUnresolved(id, userId);
+  }
 
 }

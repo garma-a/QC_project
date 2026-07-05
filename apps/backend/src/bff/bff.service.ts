@@ -115,8 +115,34 @@ export class BffService {
     return {
       machines,
       categories,
-      qcHistory,
+      qcHistory: [], // Emptied out to prevent massive 7380+ record payload on initial dashboard load
     };
+  }
+
+  async getDashboardMachineHistory(machineId: number): Promise<DashboardQcHistoryDto[]> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const startDate = thirtyDaysAgo.toISOString();
+
+    // Limit to 500 records max for the machine over the last 30 days
+    const paginatedResponse = await this.qcResultsService.findAll(undefined, 500, 0, machineId, startDate, undefined);
+    const allResults = Array.isArray(paginatedResponse) ? paginatedResponse : ('results' in paginatedResponse ? paginatedResponse.results : []);
+
+    return allResults.map((result: any): DashboardQcHistoryDto => {
+        const dateObj = new Date(result.testDate as string);
+        const dateStr = !Number.isNaN(dateObj.getTime())
+          ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : 'N/A N/A';
+
+        return {
+          ...result,
+          level: result.lotLevel ?? 1,
+          lotMean: result.lotMean ?? 0,
+          lotSd: result.lotSd ?? 1,
+          expectedRange: `${result.lowerControlLimit ?? 0} - ${result.upperControlLimit ?? 0}`,
+          date: dateStr,
+        };
+    });
   }
 
   async getQcPageMachines(): Promise<QcPageMachinesResponseDto> {

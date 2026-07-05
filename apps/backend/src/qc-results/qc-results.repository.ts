@@ -102,6 +102,15 @@ export class QcResultsRepository {
   }
 
   async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
+    if (updateQcResultDto.comments === undefined) {
+      const [current] = await this.databaseService.db
+        .select()
+        .from(qcResults)
+        .where(eq(qcResults.id, resultId))
+        .limit(1);
+      return current;
+    }
+
     const [updated] = await this.databaseService.db
       .update(qcResults)
       .set({ comments: updateQcResultDto.comments })
@@ -198,7 +207,7 @@ export class QcResultsRepository {
         FROM qc_results qr
         WHERE qr.lot_id = l.id
         ORDER BY qr.id DESC
-        LIMIT 30
+        LIMIT 1
       ) r
       JOIN qc_runs run ON r.run_id = run.id
       JOIN qc_tests t ON l.test_id = t.id
@@ -219,7 +228,7 @@ export class QcResultsRepository {
    * Scalability cap: default 100 results, hard max 500 per call.
    * For 100K+ rows, this still returns only the latest 100/N rows \u2014 fast and lightweight.
    */
-  async getPaginatedResults(limit?: number, offset?: number, machineId?: number) {
+  async getPaginatedResults(limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
     const safeLimit = Math.max(1, Math.min(limit ?? 100, 500));
     const safeOffset = Math.max(0, offset ?? 0);
     let query = this.databaseService.db
@@ -257,8 +266,13 @@ export class QcResultsRepository {
       .leftJoin(users, eq(qcRuns.performedBy, users.id))
       .$dynamic();
 
-    if (machineId) {
-      query = query.where(eq(machines.id, machineId));
+    const filters: any[] = [];
+    if (machineId) filters.push(eq(machines.id, machineId));
+    if (startDate) filters.push(gte(qcRuns.runDate, new Date(startDate)));
+    if (endDate) filters.push(lte(qcRuns.runDate, new Date(endDate)));
+
+    if (filters.length > 0) {
+      query = query.where(and(...filters));
     }
 
     return query

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, ParseIntPipe, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BffService } from './bff.service';
 import { DashboardBffResponseDto } from './dto/dashboard-bff.dto';
@@ -25,6 +25,19 @@ export class BffController {
   })
   getDashboardData() {
     return this.bffService.getDashboardData();
+  }
+
+  @Get('dashboard/machine-history/:machineId')
+  @ApiOperation({
+    summary: 'Get Machine History for Dashboard',
+    description: 'Returns the last 30 days of QC history for a specific machine to be used in the dashboard charts.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns machine history.',
+  })
+  getDashboardMachineHistory(@Param('machineId', ParseIntPipe) machineId: number) {
+    return this.bffService.getDashboardMachineHistory(machineId);
   }
 
   @Get('qc/machines')

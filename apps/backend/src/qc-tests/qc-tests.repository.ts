@@ -50,6 +50,15 @@ export class QcTestsRepository {
   }
 
   async updateQcTest(testId: number, data: Partial<typeof qcTests.$inferInsert>) {
+    if (Object.values(data).filter(v => v !== undefined).length === 0) {
+      const [current] = await this.databaseService.db
+        .select()
+        .from(qcTests)
+        .where(eq(qcTests.id, testId))
+        .limit(1);
+      return current;
+    }
+
     const [updated] = await this.databaseService.db
       .update(qcTests)
       .set(data)

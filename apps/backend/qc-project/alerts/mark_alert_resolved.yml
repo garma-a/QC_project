@@ -1,11 +1,11 @@
 info:
-  name: "Mark Alert Resolved"
+  name: Mark Alert Resolved
   type: http
   seq: 3
 
 http:
   method: PATCH
-  url: "{{baseUrl}}/alerts/mark-resolved/:id"
+  url: "{{baseUrl}}/alerts/mark-resolved/2465"
   auth: inherit
 
 settings:

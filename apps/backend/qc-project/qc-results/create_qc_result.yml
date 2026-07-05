@@ -1,11 +1,14 @@
 info:
-  name: "Create QC Result"
+  name: Create QC Result
   type: http
   seq: 1
 
 http:
   method: POST
   url: "{{baseUrl}}/qc-results"
+  body:
+    type: json
+    data: "{}"
   auth: inherit
 
 settings:

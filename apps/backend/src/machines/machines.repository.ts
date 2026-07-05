@@ -39,6 +39,15 @@ export class MachinesRepository {
   }
 
   async update(id: number, data: Partial<typeof machines.$inferInsert>) {
+    if (Object.values(data).filter(v => v !== undefined).length === 0) {
+      const [current] = await this.databaseService.db
+        .select()
+        .from(machines)
+        .where(eq(machines.id, id))
+        .limit(1);
+      return current;
+    }
+
     const [updatedMachine] = await this.databaseService.db
       .update(machines)
       .set(data)

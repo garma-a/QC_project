@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Activity, Calendar, AlertCircle, CheckCircle, BarChart3, ChevronRight, RefreshCw, Loader2 } from 'lucide-react';
 import { MachineCharts } from '@/features/machines/components/MachineCharts';
+import { useQuery } from '@tanstack/react-query';
+import { clientFetch } from '@/lib/api/clientFetch';
+import { useAuthStore } from '@/store/useAuthStore';
 
 import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
 
@@ -61,9 +64,23 @@ export function MonitorClient({ machines, categories, qcHistory, isFetching = fa
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const token = useAuthStore((s) => s.accessToken);
+  const { data: fetchedHistory, isFetching: isFetchingHistory } = useQuery({
+    queryKey: ['dashboard-machine-history', selectedMachineId],
+    queryFn: async ({ signal }) => {
+      const response = await clientFetch<MonitorResultEntry[]>(
+        `/api/v1/bff/dashboard/machine-history/${selectedMachineId}`,
+        { signal },
+        token
+      );
+      return response || [];
+    },
+    enabled: !!selectedMachineId && !!token,
+  });
+
   const machine = machines.find(m => m.id.toString() === selectedMachineId);
   const history = selectedMachineId
-    ? qcHistory.filter((entry) => entry.machineId.toString() === selectedMachineId)
+    ? (fetchedHistory || [])
     : [];
 
   // Show machine selection if no machine is selected
@@ -161,6 +178,12 @@ export function MonitorClient({ machines, categories, qcHistory, isFetching = fa
             <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 animate-pulse">
               <RefreshCw size={14} className="animate-spin" />
               <span>Refreshing…</span>
+            </div>
+          )}
+          {isFetchingHistory && !isFetching && (
+            <div className="flex items-center gap-2 text-xs text-[#c41e3a] dark:text-[#e84855] animate-pulse">
+              <Loader2 size={14} className="animate-spin" />
+              <span>Loading History…</span>
             </div>
           )}
         </div>

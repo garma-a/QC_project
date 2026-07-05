@@ -216,6 +216,7 @@ export const usersToAlerts = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.alertId] }),
+    statusIdx: index('idx_users_to_alerts_status').on(t.status),
   }),
 );
 

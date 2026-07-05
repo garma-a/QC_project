@@ -1,11 +1,14 @@
 info:
-  name: "Update Profile"
+  name: Update Profile
   type: http
   seq: 5
 
 http:
   method: PATCH
   url: "{{baseUrl}}/users/me/profile"
+  body:
+    type: json
+    data: "{}"
   auth: inherit
 
 settings:

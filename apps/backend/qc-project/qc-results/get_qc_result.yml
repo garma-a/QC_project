@@ -1,11 +1,11 @@
 info:
-  name: "Get QC Result"
+  name: Get QC Result
   type: http
   seq: 4
 
 http:
   method: GET
-  url: "{{baseUrl}}/qc-results/:id"
+  url: "{{baseUrl}}/qc-results/39956"
   auth: inherit
 
 settings:

@@ -57,12 +57,12 @@ export class AlertsService {
     return newAlert;
   }
 
-  async findAllByUser(userId: number, limit?: number, offset?: number) {
-    return await this.alertsRepository.findAllByUser(userId, limit, offset);
+  async findAllByUser(userId: number, limit?: number, offset?: number, status?: string, timeRange?: string) {
+    return await this.alertsRepository.findAllByUser(userId, limit, offset, status, timeRange);
   }
 
-  async findAll(userId: number, limit?: number, offset?: number, sectionId?: number, machineId?: number) {
-    const alerts = await this.alertsRepository.findAll(userId, limit, offset, sectionId, machineId);
+  async findAll(userId: number, limit?: number, offset?: number, sectionId?: number, machineId?: number, status?: string, timeRange?: string) {
+    const alerts = await this.alertsRepository.findAll(userId, limit, offset, sectionId, machineId, status, timeRange);
     return alerts.map(alert => ({
       ...alert,
       status: alert.status ?? 'UNSEEN',
@@ -82,6 +82,17 @@ export class AlertsService {
       resolutionNote,
     );
     this.alertEvents$.next({ type: 'alert-resolved', alertId, userId, resolutionNote });
+    return result;
+  }
+  async markUnseen(alertId: number, userId: number) {
+    const result = await this.alertsRepository.markUnseen(alertId, userId);
+    this.alertEvents$.next({ type: 'alert-unseen', alertId, userId });
+    return result;
+  }
+
+  async markUnresolved(alertId: number, userId: number) {
+    const result = await this.alertsRepository.markUnresolved(alertId, userId);
+    this.alertEvents$.next({ type: 'alert-unresolved', alertId, userId });
     return result;
   }
 }
