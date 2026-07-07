@@ -34,7 +34,7 @@ describe('MachinesService', () => {
   describe('create', () => {
     const newMachineData = {
       name: 'Cobas 6000',
-      hospCode: 'LAB-EQ-001',
+      hospitalCode: 'LAB-EQ-001',
       sectionId: 1,
     };
 
@@ -75,8 +75,8 @@ describe('MachinesService', () => {
   describe('findAll', () => {
     it('should return all machines', async () => {
       const machines = [
-        { id: 1, name: 'Cobas 6000', hospCode: 'LAB-EQ-001', sectionId: 1 },
-        { id: 2, name: 'Sysmex XN', hospCode: 'LAB-EQ-002', sectionId: 2 },
+        { id: 1, name: 'Cobas 6000', hospitalCode: 'LAB-EQ-001', sectionId: 1 },
+        { id: 2, name: 'Sysmex XN', hospitalCode: 'LAB-EQ-002', sectionId: 2 },
       ];
       mockRepository.findAll.mockResolvedValue(machines);
 
@@ -100,7 +100,7 @@ describe('MachinesService', () => {
       const machine = {
         id: 1,
         name: 'Cobas 6000',
-        hospCode: 'LAB-EQ-001',
+        hospitalCode: 'LAB-EQ-001',
         sectionId: 1,
       };
       mockRepository.findById.mockResolvedValue(machine);
@@ -124,7 +124,7 @@ describe('MachinesService', () => {
       const updatedMachine = {
         id: 1,
         name: 'Cobas 8000',
-        hospCode: 'LAB-EQ-001',
+        hospitalCode: 'LAB-EQ-001',
         sectionId: 1,
       };
       mockRepository.update.mockResolvedValue(updatedMachine);
@@ -156,7 +156,7 @@ describe('MachinesService', () => {
       const machine = {
         id: 1,
         name: 'Cobas 6000',
-        hospCode: 'LAB-EQ-001',
+        hospitalCode: 'LAB-EQ-001',
         sectionId: 1,
       };
       mockRepository.delete.mockResolvedValue(machine);

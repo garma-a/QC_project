@@ -1,7 +1,7 @@
 import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcResultResponseDto implements SharedTypes.QcResultResponseDto {
+export class QualityControlResultResponseDto implements SharedTypes.QualityControlResultResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC result identifier' })
   id: number;
 
@@ -22,7 +22,7 @@ export class QcResultResponseDto implements SharedTypes.QcResultResponseDto {
     enum: ['PASS', 'FAIL', 'WARNING'],
     description: 'Auto-calculated status based on Z-Score evaluation',
   })
-  status: SharedTypes.QcResultStatus;
+  status: SharedTypes.QualityControlResultStatus;
 
   @ApiPropertyOptional({
     example: 'Morning QC run',
@@ -81,7 +81,7 @@ class LotSummaryDto {
   machineName: string;
 }
 
-export class EnrichedQcResultResponseDto extends QcResultResponseDto implements SharedTypes.EnrichedQcResultResponseDto {
+export class EnrichedQualityControlResultResponseDto extends QualityControlResultResponseDto implements SharedTypes.EnrichedQualityControlResultResponseDto {
   @ApiProperty({ example: 'LOT-HGB-2026-A' })
   lotNumber: string;
   @ApiPropertyOptional({ example: 14.0 })
@@ -102,7 +102,7 @@ export class EnrichedQcResultResponseDto extends QcResultResponseDto implements 
   machineId: number;
 }
 
-export class QcResultsWithLotResponseDto implements SharedTypes.QcResultsWithLotResponseDto {
+export class QualityControlResultsWithLotResponseDto implements SharedTypes.QualityControlResultsWithLotResponseDto {
   @ApiProperty({
     type: () => LotSummaryDto,
     description: 'Control lot parameters and test/machine info. Null when querying across multiple lots.',
@@ -111,10 +111,10 @@ export class QcResultsWithLotResponseDto implements SharedTypes.QcResultsWithLot
   lot: LotSummaryDto | null;
 
   @ApiProperty({
-    type: () => [EnrichedQcResultResponseDto],
+    type: () => [EnrichedQualityControlResultResponseDto],
     description: 'Array of QC results ordered by date descending',
   })
-  results: EnrichedQcResultResponseDto[] | QcResultResponseDto[];
+  results: EnrichedQualityControlResultResponseDto[] | QualityControlResultResponseDto[];
 }
 
 class ControlLotInResultDto {
@@ -158,7 +158,7 @@ class ControlLotInResultDto {
   createdAt: Date | string;
 }
 
-export class QcResultDetailResponseDto extends QcResultResponseDto {
+export class QualityControlResultDetailResponseDto extends QualityControlResultResponseDto {
   @ApiProperty({
     type: () => ControlLotInResultDto,
     description: 'Full control lot data associated with this result',
@@ -166,7 +166,7 @@ export class QcResultDetailResponseDto extends QcResultResponseDto {
   controlLot: ControlLotInResultDto;
 }
 
-export class QcRunDto implements SharedTypes.QcRunDto {
+export class QualityControlRunDto implements SharedTypes.QualityControlRunDto {
   @ApiProperty({ example: 1, description: 'Unique QC run identifier' })
   id: number;
 
@@ -186,7 +186,7 @@ export class QcRunDto implements SharedTypes.QcRunDto {
   runDate: Date | string;
 }
 
-export class QcRunResultResponseDto implements SharedTypes.QcRunResultResponseDto {
+export class QualityControlRunResultResponseDto implements SharedTypes.QualityControlRunResultResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC result identifier' })
   id: number;
 
@@ -204,7 +204,7 @@ export class QcRunResultResponseDto implements SharedTypes.QcRunResultResponseDt
     enum: ['PASS', 'FAIL', 'WARNING'],
     description: 'Auto-calculated status based on Westgard evaluation',
   })
-  status: SharedTypes.QcResultStatus;
+  status: SharedTypes.QualityControlResultStatus;
 
   @ApiPropertyOptional({ example: 'Morning QC run', description: 'Technician comments or notes' })
   comments: string | null;
@@ -216,12 +216,12 @@ export class QcRunResultResponseDto implements SharedTypes.QcRunResultResponseDt
   lotId: number;
 }
 
-export class QcRunResponseDto implements SharedTypes.QcRunResponseDto {
-  @ApiProperty({ type: () => QcRunDto, description: 'The created QC run metadata' })
-  run: QcRunDto;
+export class QualityControlRunResponseDto implements SharedTypes.QualityControlRunResponseDto {
+  @ApiProperty({ type: () => QualityControlRunDto, description: 'The created QC run metadata' })
+  run: QualityControlRunDto;
 
-  @ApiProperty({ type: () => [QcRunResultResponseDto], description: 'The evaluated QC results in this run' })
-  results: QcRunResultResponseDto[];
+  @ApiProperty({ type: () => [QualityControlRunResultResponseDto], description: 'The evaluated QC results in this run' })
+  results: QualityControlRunResultResponseDto[];
 }
 
 

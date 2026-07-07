@@ -28,7 +28,7 @@ export class QcInteractiveHistoryEntryDto {
   numericResult: number;
   result: string;
   expectedRange: string;
-  status: SharedTypes.QcResultStatus | SharedTypes.UserAlertStatus;
+  status: SharedTypes.QualityControlResultStatus | SharedTypes.UserAlertStatus;
   notes: string;
   zScore: number;
   violatedRule: string;

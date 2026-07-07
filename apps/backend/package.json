@@ -21,6 +21,7 @@
         "test:cov": "bun test --coverage",
         "test:e2e": "bun test ./test",
         "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
+        "seed:faker": "ts-node -r tsconfig-paths/register src/database/seed-faker.ts",
         "db:migrate": "bunx drizzle-kit migrate",
         "db:seed": "bun --bun ts-node -r tsconfig-paths/register src/database/seed.ts",
         "db:cleanup": "bun --bun ts-node -r tsconfig-paths/register src/database/cleanup-benchmark.ts"
@@ -53,6 +54,7 @@
     "devDependencies": {
         "@eslint/eslintrc": "^3.3.4",
         "@eslint/js": "^9.39.3",
+        "@faker-js/faker": "^10.5.0",
         "@nestjs/cli": "^11.0.16",
         "@nestjs/schematics": "^11.0.9",
         "@nestjs/testing": "^11.1.14",

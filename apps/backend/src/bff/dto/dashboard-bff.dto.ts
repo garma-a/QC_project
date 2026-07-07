@@ -20,7 +20,7 @@ export class DashboardMachineTestDto {
 export class DashboardMachineDto {
   id: number;
   name: string;
-  status: SharedTypes.QcResultStatus | SharedTypes.UserAlertStatus;
+  status: SharedTypes.QualityControlResultStatus | SharedTypes.UserAlertStatus;
   model: string;
   serialNumber: string;
   location: string;
@@ -50,7 +50,7 @@ export class DashboardQcHistoryDto {
   testDate: string;
   value: number;
   zScore: number;
-  status: SharedTypes.QcResultStatus | SharedTypes.UserAlertStatus;
+  status: SharedTypes.QualityControlResultStatus | SharedTypes.UserAlertStatus;
   violatedRule: string;
   comments: string;
   createdAt: string;

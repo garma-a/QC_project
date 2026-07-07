@@ -62,10 +62,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "alerts_result_id_qc_results_id_fk": {
-          "name": "alerts_result_id_qc_results_id_fk",
+        "alerts_result_id_quality_control_results_id_fk": {
+          "name": "alerts_result_id_quality_control_results_id_fk",
           "tableFrom": "alerts",
-          "tableTo": "qc_results",
+          "tableTo": "quality_control_results",
           "columnsFrom": [
             "result_id"
           ],
@@ -176,10 +176,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "control_lots_test_id_qc_tests_id_fk": {
-          "name": "control_lots_test_id_qc_tests_id_fk",
+        "control_lots_test_id_quality_control_tests_id_fk": {
+          "name": "control_lots_test_id_quality_control_tests_id_fk",
           "tableFrom": "control_lots",
-          "tableTo": "qc_tests",
+          "tableTo": "quality_control_tests",
           "columnsFrom": [
             "test_id"
           ],
@@ -212,8 +212,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "hosp_code": {
-          "name": "hosp_code",
+        "hospital_code": {
+          "name": "hospital_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -281,8 +281,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.qc_results": {
-      "name": "qc_results",
+    "public.quality_control_results": {
+      "name": "quality_control_results",
       "schema": "",
       "columns": {
         "id": {
@@ -337,10 +337,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "qc_results_run_id_qc_runs_id_fk": {
-          "name": "qc_results_run_id_qc_runs_id_fk",
-          "tableFrom": "qc_results",
-          "tableTo": "qc_runs",
+        "quality_control_results_run_id_quality_control_runs_id_fk": {
+          "name": "quality_control_results_run_id_quality_control_runs_id_fk",
+          "tableFrom": "quality_control_results",
+          "tableTo": "quality_control_runs",
           "columnsFrom": [
             "run_id"
           ],
@@ -350,9 +350,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "qc_results_lot_id_control_lots_id_fk": {
-          "name": "qc_results_lot_id_control_lots_id_fk",
-          "tableFrom": "qc_results",
+        "quality_control_results_lot_id_control_lots_id_fk": {
+          "name": "quality_control_results_lot_id_control_lots_id_fk",
+          "tableFrom": "quality_control_results",
           "tableTo": "control_lots",
           "columnsFrom": [
             "lot_id"
@@ -370,8 +370,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.qc_runs": {
-      "name": "qc_runs",
+    "public.quality_control_runs": {
+      "name": "quality_control_runs",
       "schema": "",
       "columns": {
         "id": {
@@ -408,9 +408,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "qc_runs_machine_id_machines_id_fk": {
-          "name": "qc_runs_machine_id_machines_id_fk",
-          "tableFrom": "qc_runs",
+        "quality_control_runs_machine_id_machines_id_fk": {
+          "name": "quality_control_runs_machine_id_machines_id_fk",
+          "tableFrom": "quality_control_runs",
           "tableTo": "machines",
           "columnsFrom": [
             "machine_id"
@@ -421,10 +421,10 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "qc_runs_test_id_qc_tests_id_fk": {
-          "name": "qc_runs_test_id_qc_tests_id_fk",
-          "tableFrom": "qc_runs",
-          "tableTo": "qc_tests",
+        "quality_control_runs_test_id_quality_control_tests_id_fk": {
+          "name": "quality_control_runs_test_id_quality_control_tests_id_fk",
+          "tableFrom": "quality_control_runs",
+          "tableTo": "quality_control_tests",
           "columnsFrom": [
             "test_id"
           ],
@@ -434,9 +434,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "qc_runs_performed_by_users_id_fk": {
-          "name": "qc_runs_performed_by_users_id_fk",
-          "tableFrom": "qc_runs",
+        "quality_control_runs_performed_by_users_id_fk": {
+          "name": "quality_control_runs_performed_by_users_id_fk",
+          "tableFrom": "quality_control_runs",
           "tableTo": "users",
           "columnsFrom": [
             "performed_by"
@@ -454,8 +454,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.qc_tests": {
-      "name": "qc_tests",
+    "public.quality_control_tests": {
+      "name": "quality_control_tests",
       "schema": "",
       "columns": {
         "id": {
@@ -491,9 +491,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "qc_tests_machine_id_machines_id_fk": {
-          "name": "qc_tests_machine_id_machines_id_fk",
-          "tableFrom": "qc_tests",
+        "quality_control_tests_machine_id_machines_id_fk": {
+          "name": "quality_control_tests_machine_id_machines_id_fk",
+          "tableFrom": "quality_control_tests",
           "tableTo": "machines",
           "columnsFrom": [
             "machine_id"

@@ -6,10 +6,10 @@ import {
   sections,
   users,
   machines,
-  qcTests,
+  qualityControlTests,
   controlLots,
-  qcResults,
-  qcRuns,
+  qualityControlResults,
+  qualityControlRuns,
   usersToSections,
   alerts,
   usersToAlerts,
@@ -61,7 +61,7 @@ async function batchInsert(db: any, table: any, data: any[], batchSize = 5000) {
 
 async function clearDatabase(db: any) {
   console.log('🗑️  Wiping existing database records to start fresh...');
-  await db.execute('TRUNCATE TABLE users_to_alerts, users_to_sections, alerts, qc_results, qc_runs, control_lots, qc_tests, machines, users, sections RESTART IDENTITY CASCADE');
+  await db.execute('TRUNCATE TABLE users_to_alerts, users_to_sections, alerts, quality_control_results, quality_control_runs, control_lots, quality_control_tests, machines, users, sections RESTART IDENTITY CASCADE');
   console.log('✨ Database wiped successfully!');
 }
 
@@ -181,11 +181,11 @@ async function bootstrap() {
     }).returning();
 
     const techNames = [
-      'John Doe', 'Jane Smith', 'Ahmed Tarek', 'Sarah Connor', 'Michael Chang', 
+      'John Doe', 'Jane Smith', 'Ahmed Tarek', 'Sarah Connor', 'Michael Chang',
       'Emily Davis', 'Robert Wilson', 'Linda Martinez', 'William Taylor', 'Elizabeth Anderson',
       'David Thomas', 'Jennifer Jackson', 'Richard White', 'Maria Harris'
     ];
-    
+
     const techsToInsert: any[] = techNames.map(name => {
       const [first, last] = name.split(' ');
       return {
@@ -219,7 +219,7 @@ async function bootstrap() {
 
     // 3. Create Machines, Tests, and Control Lots
     console.log('Inserting machines, tests, and control lots...');
-    const allMachineTestsWithLots: any[] = []; 
+    const allMachineTestsWithLots: any[] = [];
     let eqpCounter = 1000;
 
     for (const secConfig of labStructure) {
@@ -229,13 +229,13 @@ async function bootstrap() {
       for (const mConfig of secConfig.machines) {
         const [machine] = await db.insert(machines).values({
           name: mConfig.prefix,
-          hospCode: `EQP-${eqpCounter++}`,
+          hospitalCode: `EQP-${eqpCounter++}`,
           sectionId: section.id,
           currentStatus: Math.random() < 0.1 ? 'MAINTENANCE' : 'IDLE',
         }).returning();
 
         for (const testName of mConfig.tests) {
-          const [qcTest] = await db.insert(qcTests).values({
+          const [qualityControlTest] = await db.insert(qualityControlTests).values({
             testName: testName,
             testType: testName.toUpperCase().replace(/\s/g, '_'),
             machineId: machine.id,
@@ -248,7 +248,7 @@ async function bootstrap() {
             expirationDate.setFullYear(expirationDate.getFullYear() + 1);
 
             const [lot] = await db.insert(controlLots).values({
-              testId: qcTest.id,
+              testId: qualityControlTest.id,
               lotNumber: `L${level}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
               level: level,
               expirationDate,
@@ -266,7 +266,7 @@ async function bootstrap() {
 
           allMachineTestsWithLots.push({
             machineId: machine.id,
-            testId: qcTest.id,
+            testId: qualityControlTest.id,
             lots: testLots,
           });
         }
@@ -276,7 +276,7 @@ async function bootstrap() {
     // 4. Generate Runs and Results
     console.log('Generating 3 months (90 days) of QC Runs and Results in memory...');
     const runData: any[] = [];
-    const runLotsMap: any[] = []; 
+    const runLotsMap: any[] = [];
     const previousZMap = new Map<number, number>();
 
     for (let day = 90; day >= 0; day--) {
@@ -286,7 +286,7 @@ async function bootstrap() {
 
           const runDate = getRandomDate(day, shiftHour);
           const performedBy = allUsers[Math.floor(Math.random() * allUsers.length)].id;
-          
+
           runData.push({
             machineId: testInfo.machineId,
             testId: testInfo.testId,
@@ -299,28 +299,28 @@ async function bootstrap() {
     }
 
     console.log(`Inserting ${runData.length} QC Runs...`);
-    const insertedRuns = await batchInsert(db, qcRuns, runData, 5000);
+    const insertedRuns = await batchInsert(db, qualityControlRuns, runData, 5000);
 
     console.log('Generating Results for the inserted runs...');
     const resultsData: any[] = [];
     for (let i = 0; i < insertedRuns.length; i++) {
       const run = insertedRuns[i];
       const lots: any[] = runLotsMap[i];
-      
+
       for (const lot of lots) {
-        const isAnomaly = Math.random() < 0.05; 
+        const isAnomaly = Math.random() < 0.05;
         const anomalyMultiplier = isAnomaly ? (Math.random() > 0.5 ? (Math.random() * 1.5 + 2.5) : -(Math.random() * 1.5 + 2.5)) : 0;
-        
-        const measuredValue = isAnomaly 
+
+        const measuredValue = isAnomaly
             ? gaussianRandom(lot.mean + (anomalyMultiplier * lot.standardDeviation), lot.standardDeviation * 0.6)
             : gaussianRandom(lot.mean, lot.standardDeviation * 0.8);
-            
+
         const zScore = (measuredValue - lot.mean) / lot.standardDeviation;
         const previousZ = previousZMap.get(lot.id) || 0;
-        
+
         const { status, rule } = evaluateWestgard(zScore, previousZ);
         previousZMap.set(lot.id, zScore);
-        
+
         resultsData.push({
           runId: run.id,
           lotId: lot.id,
@@ -334,12 +334,12 @@ async function bootstrap() {
     }
 
     console.log(`Inserting ${resultsData.length} QC Results...`);
-    const insertedResults = await batchInsert(db, qcResults, resultsData, 5000);
+    const insertedResults = await batchInsert(db, qualityControlResults, resultsData, 5000);
 
     // 5. Generate Alerts
     console.log('Generating Alerts for deviations...');
     const alertRows: any[] = [];
-    
+
     const runDateMap = new Map<number, Date>();
     for (const r of insertedRuns) {
       runDateMap.set(r.id, r.runDate);

@@ -23,7 +23,7 @@ export class CreateMachineDto implements SharedTypes.CreateMachineDto {
   })
   @IsOptional()
   @IsString()
-  hospCode?: string;
+  hospitalCode?: string;
 
   @ApiProperty({
     description: 'The numeric ID of the section this machine belongs to. Must be an integer.',

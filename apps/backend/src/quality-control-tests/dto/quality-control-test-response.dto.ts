@@ -1,7 +1,7 @@
 import * as SharedTypes from '@qc/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcTestResponseDto implements SharedTypes.QcTestResponseDto {
+export class QualityControlTestResponseDto implements SharedTypes.QualityControlTestResponseDto {
   @ApiProperty({ example: 1, description: 'Unique QC test identifier' })
   id: number;
 

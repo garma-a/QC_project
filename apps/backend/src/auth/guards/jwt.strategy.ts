@@ -23,7 +23,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload): Promise<RequestUser> {
     const cacheKey = `user_status_${payload.userId}`;
-    const cachedUser = await this.cacheManager.get<{ isActive: boolean; role: Role }>(cacheKey);
+    const cachedUser = await this.cacheManager.get<{
+      isActive: boolean;
+      role: Role;
+    }>(cacheKey);
 
     if (cachedUser) {
       if (!cachedUser.isActive) {
@@ -37,7 +40,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User is invalid');
     }
 
-    const minimalUser = { isActive: user.isActive ?? false, role: user.role as Role };
+    const minimalUser = {
+      isActive: user.isActive ?? false,
+      role: user.role as Role,
+    };
     await this.cacheManager.set(cacheKey, minimalUser, 300000);
 
     if (!minimalUser.isActive) {

@@ -15,9 +15,9 @@ import {
 import type { Request } from 'express';
 import { Observable, fromEvent } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
-import { QcResultsService } from './qc-results.service';
-import { CreateQcResultDto } from './dto/create-qc-result.dto';
-import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+import { QualityControlResultsService } from './quality-control-results.service';
+import { CreateQualityControlResultDto } from './dto/create-quality-control-result.dto';
+import { UpdateQualityControlResultDto } from './dto/update-quality-control-result.dto';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/users/user.decorator';
 import {
@@ -29,11 +29,11 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import {
-  QcResultResponseDto,
-  QcResultsWithLotResponseDto,
-  QcResultDetailResponseDto,
-  QcRunResponseDto,
-} from './dto/qc-result-response.dto';
+  QualityControlResultResponseDto,
+  QualityControlResultsWithLotResponseDto,
+  QualityControlResultDetailResponseDto,
+  QualityControlRunResponseDto,
+} from './dto/quality-control-result-response.dto';
 import {
   ValidationErrorResponseDto,
   UnauthorizedResponseDto,
@@ -43,9 +43,9 @@ import {
 @ApiTags('QC Results')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('qc-results')
-export class QcResultsController {
-  constructor(private readonly qcResultsService: QcResultsService) { }
+@Controller('quality-control-results')
+export class QualityControlResultsController {
+  constructor(private readonly qualityControlResultsService: QualityControlResultsService) { }
 
   @Post()
   @ApiOperation({
@@ -60,7 +60,7 @@ export class QcResultsController {
   @ApiResponse({
     status: 201,
     description: 'The QC run has been successfully recorded and evaluated.',
-    type: QcRunResponseDto,
+    type: QualityControlRunResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -79,10 +79,10 @@ export class QcResultsController {
     type: NotFoundResponseDto,
   })
   create(
-    @Body() createQcResultDto: CreateQcResultDto,
+    @Body() createQualityControlResultDto: CreateQualityControlResultDto,
     @CurrentUser('userId') userId: number,
   ) {
-    return this.qcResultsService.create(createQcResultDto, userId);
+    return this.qualityControlResultsService.create(createQualityControlResultDto, userId);
   }
 
   @Get()
@@ -100,7 +100,7 @@ export class QcResultsController {
   @ApiResponse({
     status: 200,
     description: 'Returns the results.',
-    type: QcResultsWithLotResponseDto,
+    type: QualityControlResultsWithLotResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -151,7 +151,7 @@ export class QcResultsController {
     @Query('endDate') endDate?: string,
   ) {
     const parsedLotId = lotId ? parseInt(lotId, 10) : undefined;
-    return this.qcResultsService.findAll(parsedLotId, limit, offset, machineId, startDate, endDate);
+    return this.qualityControlResultsService.findAll(parsedLotId, limit, offset, machineId, startDate, endDate);
   }
 
   @Get('recent-all')
@@ -162,7 +162,7 @@ export class QcResultsController {
   @ApiResponse({
     status: 200,
     description: 'Returns the recent results.',
-    type: QcResultsWithLotResponseDto,
+    type: QualityControlResultsWithLotResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -170,7 +170,7 @@ export class QcResultsController {
     type: UnauthorizedResponseDto,
   })
   getRecentAll() {
-    return this.qcResultsService.getRecentAll();
+    return this.qualityControlResultsService.getRecentAll();
   }
 
 
@@ -191,7 +191,7 @@ export class QcResultsController {
     status: 200,
     description:
       'Returns the QC result with its control lot and dynamically calculated Z-Score.',
-    type: QcResultDetailResponseDto,
+    type: QualityControlResultDetailResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -210,7 +210,7 @@ export class QcResultsController {
     type: NotFoundResponseDto,
   })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.qcResultsService.findOne(id);
+    return this.qualityControlResultsService.findOne(id);
   }
 
   @Patch(':id')
@@ -229,7 +229,7 @@ export class QcResultsController {
     status: 200,
     description:
       'Comment updated successfully. Returns the full result with Z-Score.',
-    type: QcResultDetailResponseDto,
+    type: QualityControlResultDetailResponseDto,
   })
   @ApiResponse({
     status: 401,
@@ -243,8 +243,8 @@ export class QcResultsController {
   })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateQcResultDto: UpdateQcResultDto,
+    @Body() updateQualityControlResultDto: UpdateQualityControlResultDto,
   ) {
-    return this.qcResultsService.update(id, updateQcResultDto);
+    return this.qualityControlResultsService.update(id, updateQualityControlResultDto);
   }
 }

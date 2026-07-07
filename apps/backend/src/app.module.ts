@@ -7,9 +7,9 @@ import { ConfigModule } from '@nestjs/config';
 import { MachinesModule } from '@/machines/machines.module';
 import { UsersModule } from '@/users/users.module';
 import { AuthModule } from '@/auth/auth.module';
-import { QcResultsModule } from '@/qc-results/qc-results.module';
+import { QualityControlResultsModule } from '@/quality-control-results/quality-control-results.module';
 import { ControlLotsModule } from '@/control-lots/control-lots.module';
-import { QcTestsModule } from '@/qc-tests/qc-tests.module';
+import { QualityControlTestsModule } from '@/quality-control-tests/quality-control-tests.module';
 import { AlertsModule } from '@/alerts/alerts.module';
 import { SectionsModule } from '@/sections/sections.module';
 import { EventsModule } from '@/events/events.module';
@@ -30,9 +30,9 @@ import { EmailModule } from './email/email.module';
     MachinesModule,
     AuthModule,
     UsersModule,
-    QcResultsModule,
+    QualityControlResultsModule,
     ControlLotsModule,
-    QcTestsModule,
+    QualityControlTestsModule,
     AlertsModule,
     SectionsModule,
     EventsModule,

@@ -75,7 +75,7 @@ export const sections = pgTable('sections', {
 export const machines = pgTable('machines', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
-  hospCode: text('hosp_code'),
+  hospitalCode: text('hospital_code'),
   sectionId: integer('section_id')
     .references(() => sections.id)
     .notNull(),
@@ -89,7 +89,7 @@ export const machines = pgTable('machines', {
   sectionIdIdx: index('idx_machines_section_id').on(t.sectionId),
 }));
 
-export const qcTests = pgTable('qc_tests', {
+export const qualityControlTests = pgTable('quality_control_tests', {
   id: serial('id').primaryKey(),
   testName: text('test_name').notNull(),
   testType: text('test_type'),
@@ -98,13 +98,13 @@ export const qcTests = pgTable('qc_tests', {
     .notNull(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
 }, (t) => ({
-  machineIdIdx: index('idx_qc_tests_machine_id').on(t.machineId),
+  machineIdIdx: index('idx_quality_control_tests_machine_id').on(t.machineId),
 }));
 
 export const controlLots = pgTable('control_lots', {
   id: serial('id').primaryKey(),
   testId: integer('test_id')
-    .references(() => qcTests.id)
+    .references(() => qualityControlTests.id)
     .notNull(),
   lotNumber: varchar('lot_number', { length: 100 }).notNull(),
   expirationDate: timestamp('expiration_date').notNull(),
@@ -128,25 +128,25 @@ export const controlLots = pgTable('control_lots', {
   uniqueActiveLevelIdx: uniqueIndex('idx_control_lots_unique_active').on(t.testId, t.level).where(eq(t.isActive, true)),
 }));
 
-export const qcRuns = pgTable('qc_runs', {
+export const qualityControlRuns = pgTable('quality_control_runs', {
   id: serial('id').primaryKey(),
   machineId: integer('machine_id')
     .references(() => machines.id)
     .notNull(),
   testId: integer('test_id')
-    .references(() => qcTests.id)
+    .references(() => qualityControlTests.id)
     .notNull(),
   performedBy: integer('performed_by')
     .references(() => users.id)
     .notNull(),
   runDate: timestamp('run_date').defaultNow(),
 }, (t) => ({
-  machineIdIdx: index('idx_qc_runs_machine_id').on(t.machineId),
-  testIdIdx: index('idx_qc_runs_test_id').on(t.testId),
-  runDateIdx: index('idx_qc_runs_run_date').on(t.runDate),
+  machineIdIdx: index('idx_quality_control_runs_machine_id').on(t.machineId),
+  testIdIdx: index('idx_quality_control_runs_test_id').on(t.testId),
+  runDateIdx: index('idx_quality_control_runs_run_date').on(t.runDate),
 }));
 
-export const qcResults = pgTable('qc_results', {
+export const qualityControlResults = pgTable('quality_control_results', {
   id: serial('id').primaryKey(),
   measuredValue: doublePrecision('measured_value').notNull(),
   zScore: doublePrecision('z_score').notNull(),             // NEW
@@ -154,15 +154,15 @@ export const qcResults = pgTable('qc_results', {
   status: statusEnum('status').notNull(),
   comments: text('comments'),
   runId: integer('run_id')
-    .references(() => qcRuns.id)
+    .references(() => qualityControlRuns.id)
     .notNull(),
   lotId: integer('lot_id')
     .references(() => controlLots.id)
     .notNull(),
 }, (t) => ({
-  runIdIdx: index('idx_qc_results_run_id').on(t.runId),
-  lotIdIdx: index('idx_qc_results_lot_id').on(t.lotId),
-  lotIdIdIdx: index('idx_qc_results_lot_id_id').on(t.lotId, t.id),
+  runIdIdx: index('idx_quality_control_results_run_id').on(t.runId),
+  lotIdIdx: index('idx_quality_control_results_lot_id').on(t.lotId),
+  lotIdIdIdx: index('idx_quality_control_results_lot_id_id').on(t.lotId, t.id),
 }));
 
 
@@ -174,7 +174,7 @@ export const alerts = pgTable('alerts', {
   ruleViolated: varchar('rule_violated', { length: 50 }),
   suggestedSolution: text('suggested_solution'),
   resultId: integer('result_id')
-    .references(() => qcResults.id)
+    .references(() => qualityControlResults.id)
     .notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
@@ -246,64 +246,64 @@ export const machinesRelations = relations(machines, ({ one, many }) => ({
     fields: [machines.sectionId],
     references: [sections.id],
   }),
-  qcTests: many(qcTests),
+  qualityControlTests: many(qualityControlTests),
 }));
 
-export const qcTestsRelations = relations(qcTests, ({ one, many }) => ({
+export const qualityControlTestsRelations = relations(qualityControlTests, ({ one, many }) => ({
   machine: one(machines, {
-    fields: [qcTests.machineId],
+    fields: [qualityControlTests.machineId],
     references: [machines.id],
   }),
   controlLots: many(controlLots),
 }));
 
 export const controlLotsRelations = relations(controlLots, ({ one, many }) => ({
-  qcTest: one(qcTests, {
+  qualityControlTest: one(qualityControlTests, {
     fields: [controlLots.testId],
-    references: [qcTests.id],
+    references: [qualityControlTests.id],
   }),
-  qcResults: many(qcResults),
+  qualityControlResults: many(qualityControlResults),
 }));
 
-export const qcRunsRelations = relations(qcRuns, ({ one, many }) => ({
+export const qualityControlRunsRelations = relations(qualityControlRuns, ({ one, many }) => ({
   machine: one(machines, {
-    fields: [qcRuns.machineId],
+    fields: [qualityControlRuns.machineId],
     references: [machines.id],
   }),
-  qcTest: one(qcTests, {
-    fields: [qcRuns.testId],
-    references: [qcTests.id],
+  qualityControlTest: one(qualityControlTests, {
+    fields: [qualityControlRuns.testId],
+    references: [qualityControlTests.id],
   }),
   performedBy: one(users, {
-    fields: [qcRuns.performedBy],
+    fields: [qualityControlRuns.performedBy],
     references: [users.id],
   }),
-  results: many(qcResults),
+  results: many(qualityControlResults),
 }));
 
-export const qcResultsRelations = relations(qcResults, ({ one }) => ({
-  run: one(qcRuns, {
-    fields: [qcResults.runId],
-    references: [qcRuns.id],
+export const qualityControlResultsRelations = relations(qualityControlResults, ({ one }) => ({
+  run: one(qualityControlRuns, {
+    fields: [qualityControlResults.runId],
+    references: [qualityControlRuns.id],
   }),
   controlLot: one(controlLots, {
-    fields: [qcResults.lotId],
+    fields: [qualityControlResults.lotId],
     references: [controlLots.id],
   }),
   alert: one(alerts),
 }));
 
 export const alertsRelations = relations(alerts, ({ one, many }) => ({
-  result: one(qcResults, {
+  result: one(qualityControlResults, {
     fields: [alerts.resultId],
-    references: [qcResults.id],
+    references: [qualityControlResults.id],
   }),
   recipients: many(usersToAlerts),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   sectionAssignments: many(usersToSections),
-  performedRuns: many(qcRuns),
+  performedRuns: many(qualityControlRuns),
   alertNotifications: many(usersToAlerts),
 }));
 

@@ -5,14 +5,14 @@ import {
   alerts,
   controlLots,
   machines,
-  qcResults,
-  qcTests,
+  qualityControlResults,
+  qualityControlTests,
   users,
   usersToAlerts,
   usersToSections,
 } from '@/drizzle/schema';
-import { QcResultsService } from '@/qc-results/qc-results.service';
-import { QcResultsRepository } from '@/qc-results/qc-results.repository';
+import { QualityControlResultsService } from '@/quality-control-results/quality-control-results.service';
+import { QualityControlResultsRepository } from '@/quality-control-results/quality-control-results.repository';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 function assert(condition: boolean, message: string) {
@@ -24,12 +24,12 @@ async function main() {
 
   try {
     const db = app.get(DatabaseService).db;
-    const qcResultsService = app.get(QcResultsService);
-    const qcResultsRepository = app.get(QcResultsRepository);
+    const qualityControlResultsService = app.get(QualityControlResultsService);
+    const qualityControlResultsRepository = app.get(QualityControlResultsRepository);
 
     const [qcCount] = await db
       .select({ c: sql<number>`count(*)` })
-      .from(qcResults);
+      .from(qualityControlResults);
     const [alertCount] = await db
       .select({ c: sql<number>`count(*)` })
       .from(alerts);
@@ -57,10 +57,10 @@ async function main() {
         sectionId: machines.sectionId,
       })
       .from(alerts)
-      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
-      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id));
+      .innerJoin(qualityControlResults, eq(alerts.resultId, qualityControlResults.id))
+      .innerJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id));
 
     const userSectionRows = await db
       .select({
@@ -128,8 +128,8 @@ async function main() {
         machineId: machines.id,
       })
       .from(controlLots)
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .where(
         and(
           isNotNull(controlLots.mean),
@@ -173,7 +173,7 @@ async function main() {
 
     const measuredValue =
       Number(targetLot.mean) + Number(targetLot.standardDeviation) * 4;
-    const createdResult = await qcResultsService.create(
+    const createdResult = await qualityControlResultsService.create(
       {
         machineId: targetLot.machineId,
         results: [
@@ -208,7 +208,7 @@ async function main() {
       'Smoke test did not assign alert to all users in the section.',
     );
 
-    const smokeSectionId = await qcResultsRepository.getSectionIdByLotId(
+    const smokeSectionId = await qualityControlResultsRepository.getSectionIdByLotId(
       targetLot.lotId,
     );
     assert(
@@ -220,7 +220,7 @@ async function main() {
     console.log(
       JSON.stringify(
         {
-          qcResults: Number(qcCount.c),
+          qualityControlResults: Number(qcCount.c),
           alerts: Number(alertCount.c),
           usersToAlerts: Number(utaCount.c),
           usersToSections: Number(utsCount.c),

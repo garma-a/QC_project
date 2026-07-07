@@ -15,7 +15,7 @@ export class MachineResponseDto implements SharedTypes.MachineResponseDto {
     example: 'LAB-EQ-001',
     description: 'Internal hospital code or asset tag',
   })
-  hospCode: string | null;
+  hospitalCode: string | null;
 
   @ApiProperty({
     example: 1,

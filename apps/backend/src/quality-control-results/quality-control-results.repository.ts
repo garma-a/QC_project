@@ -2,18 +2,18 @@ import { DatabaseService } from '@/database/database.service';
 import {
   controlLots,
   machines,
-  qcResults,
-  qcRuns,
-  qcTests,
+  qualityControlResults,
+  qualityControlRuns,
+  qualityControlTests,
   users,
 } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { desc, eq, and, inArray, sql, gte, lte } from 'drizzle-orm';
-import { QcStatus } from './qc-results.types';
-import { UpdateQcResultDto } from './dto/update-qc-result.dto';
+import { QcStatus } from './quality-control-results.types';
+import { UpdateQualityControlResultDto } from './dto/update-quality-control-result.dto';
 
 @Injectable()
-export class QcResultsRepository {
+export class QualityControlResultsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async getLotById(lotId: number) {
@@ -45,15 +45,15 @@ export class QcResultsRepository {
     const [row] = await this.databaseService.db
       .select({ sectionId: machines.sectionId })
       .from(controlLots)
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .where(eq(controlLots.id, lotId))
       .limit(1);
 
     return row?.sectionId;
   }
 
-  async createQcRun(
+  async createQualityControlRun(
     machineId: number,
     testId: number,
     userId: number,
@@ -69,7 +69,7 @@ export class QcResultsRepository {
     return this.databaseService.db.transaction(async (tx) => {
       // 1. Insert the Run
       const [run] = await tx
-        .insert(qcRuns)
+        .insert(qualityControlRuns)
         .values({
           machineId,
           testId,
@@ -87,7 +87,7 @@ export class QcResultsRepository {
 
       // 2. Insert all results tied to this Run
       const insertedResults = await tx
-        .insert(qcResults)
+        .insert(qualityControlResults)
         .values(
           results.map((r) => ({
             runId: run.id,
@@ -105,20 +105,20 @@ export class QcResultsRepository {
     });
   }
 
-  async updateQcResult(resultId: number, updateQcResultDto: UpdateQcResultDto) {
-    if (updateQcResultDto.comments === undefined) {
+  async updateQualityControlResult(resultId: number, updateQualityControlResultDto: UpdateQualityControlResultDto) {
+    if (updateQualityControlResultDto.comments === undefined) {
       const [current] = await this.databaseService.db
         .select()
-        .from(qcResults)
-        .where(eq(qcResults.id, resultId))
+        .from(qualityControlResults)
+        .where(eq(qualityControlResults.id, resultId))
         .limit(1);
       return current;
     }
 
     const [updated] = await this.databaseService.db
-      .update(qcResults)
-      .set({ comments: updateQcResultDto.comments })
-      .where(eq(qcResults.id, resultId))
+      .update(qualityControlResults)
+      .set({ comments: updateQualityControlResultDto.comments })
+      .where(eq(qualityControlResults.id, resultId))
       .returning();
 
     return updated;
@@ -129,8 +129,8 @@ export class QcResultsRepository {
       .select()
       .from(controlLots)
       .where(eq(controlLots.id, lotId))
-      .leftJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .leftJoin(machines, eq(qcTests.machineId, machines.id))
+      .leftJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .leftJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .limit(1);
 
     return lot;
@@ -156,33 +156,33 @@ export class QcResultsRepository {
 
     const baseQuery = this.databaseService.db
       .select({
-        id: qcResults.id,
-        measuredValue: qcResults.measuredValue,
-        zScore: qcResults.zScore,
-        violatedRule: qcResults.violatedRule,
-        status: qcResults.status,
-        comments: qcResults.comments,
-        runId: qcResults.runId,
-        lotId: qcResults.lotId,
-        testDate: qcRuns.runDate,
-        performedBy: qcRuns.performedBy,
+        id: qualityControlResults.id,
+        measuredValue: qualityControlResults.measuredValue,
+        zScore: qualityControlResults.zScore,
+        violatedRule: qualityControlResults.violatedRule,
+        status: qualityControlResults.status,
+        comments: qualityControlResults.comments,
+        runId: qualityControlResults.runId,
+        lotId: qualityControlResults.lotId,
+        testDate: qualityControlRuns.runDate,
+        performedBy: qualityControlRuns.performedBy,
       })
-      .from(qcResults)
-      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
+      .from(qualityControlResults)
+      .innerJoin(qualityControlRuns, eq(qualityControlResults.runId, qualityControlRuns.id))
       .$dynamic();
 
-    const filters = [eq(qcResults.lotId, lotId)];
+    const filters = [eq(qualityControlResults.lotId, lotId)];
 
     if (startDate) {
-      filters.push(gte(qcRuns.runDate, new Date(startDate)));
+      filters.push(gte(qualityControlRuns.runDate, new Date(startDate)));
     }
     if (endDate) {
-      filters.push(lte(qcRuns.runDate, new Date(endDate)));
+      filters.push(lte(qualityControlRuns.runDate, new Date(endDate)));
     }
 
     const results = await baseQuery
       .where(and(...filters))
-      .orderBy(desc(qcResults.id))
+      .orderBy(desc(qualityControlResults.id))
       .limit(safeLimit)
       .offset(safeOffset);
 
@@ -214,13 +214,13 @@ export class QcResultsRepository {
       FROM control_lots l
       CROSS JOIN LATERAL (
         SELECT id, measured_value, z_score, violated_rule, status, comments, run_id, lot_id
-        FROM qc_results qr
+        FROM quality_control_results qr
         WHERE qr.lot_id = l.id
         ORDER BY qr.id DESC
         LIMIT 1
       ) r
-      JOIN qc_runs run ON r.run_id = run.id
-      JOIN qc_tests t ON l.test_id = t.id
+      JOIN quality_control_runs run ON r.run_id = run.id
+      JOIN quality_control_tests t ON l.test_id = t.id
       JOIN machines m ON t.machine_id = m.id
       ORDER BY run.run_date DESC
     `;
@@ -250,16 +250,16 @@ export class QcResultsRepository {
     let query = this.databaseService.db
       .select({
         // Core result fields
-        id: qcResults.id,
-        measuredValue: qcResults.measuredValue,
-        zScore: qcResults.zScore,
-        violatedRule: qcResults.violatedRule,
-        status: qcResults.status,
-        comments: qcResults.comments,
-        runId: qcResults.runId,
-        lotId: qcResults.lotId,
-        testDate: qcRuns.runDate,
-        performedBy: qcRuns.performedBy,
+        id: qualityControlResults.id,
+        measuredValue: qualityControlResults.measuredValue,
+        zScore: qualityControlResults.zScore,
+        violatedRule: qualityControlResults.violatedRule,
+        status: qualityControlResults.status,
+        comments: qualityControlResults.comments,
+        runId: qualityControlResults.runId,
+        lotId: qualityControlResults.lotId,
+        testDate: qualityControlRuns.runDate,
+        performedBy: qualityControlRuns.performedBy,
         performedByFirstName: users.firstName,
         performedByLastName: users.lastName,
         // Enriched: lot context
@@ -270,29 +270,29 @@ export class QcResultsRepository {
         lowerControlLimit: controlLots.lowerControlLimit,
         upperControlLimit: controlLots.upperControlLimit,
         // Enriched: test + machine context
-        testId: qcTests.id,
-        testName: qcTests.testName,
+        testId: qualityControlTests.id,
+        testName: qualityControlTests.testName,
         machineId: machines.id,
       })
-      .from(qcResults)
-      .innerJoin(qcRuns, eq(qcResults.runId, qcRuns.id))
-      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
-      .leftJoin(users, eq(qcRuns.performedBy, users.id))
+      .from(qualityControlResults)
+      .innerJoin(qualityControlRuns, eq(qualityControlResults.runId, qualityControlRuns.id))
+      .innerJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
+      .leftJoin(users, eq(qualityControlRuns.performedBy, users.id))
       .$dynamic();
 
     const filters: any[] = [];
     if (machineId) filters.push(eq(machines.id, machineId));
-    if (startDate) filters.push(gte(qcRuns.runDate, new Date(startDate)));
-    if (endDate) filters.push(lte(qcRuns.runDate, new Date(endDate)));
+    if (startDate) filters.push(gte(qualityControlRuns.runDate, new Date(startDate)));
+    if (endDate) filters.push(lte(qualityControlRuns.runDate, new Date(endDate)));
 
     if (filters.length > 0) {
       query = query.where(and(...filters));
     }
 
     return query
-      .orderBy(desc(qcResults.id))
+      .orderBy(desc(qualityControlResults.id))
       .limit(safeLimit)
       .offset(safeOffset);
   }
@@ -300,9 +300,9 @@ export class QcResultsRepository {
   async getResultAndLotByResultId(resultId: number) {
     const [result] = await this.databaseService.db
       .select()
-      .from(qcResults)
-      .where(eq(qcResults.id, resultId))
-      .leftJoin(controlLots, eq(qcResults.lotId, controlLots.id))
+      .from(qualityControlResults)
+      .where(eq(qualityControlResults.id, resultId))
+      .leftJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
       .limit(1);
     return result;
   }
@@ -314,10 +314,10 @@ export class QcResultsRepository {
     // Returns last `limit` z-scores ordered newest-first
     // so they align with zScores[1], zScores[2], ... in the evaluator
     const rows = await this.databaseService.db
-      .select({ zScore: qcResults.zScore })
-      .from(qcResults)
-      .where(eq(qcResults.lotId, lotId))
-      .orderBy(desc(qcResults.id))
+      .select({ zScore: qualityControlResults.zScore })
+      .from(qualityControlResults)
+      .where(eq(qualityControlResults.lotId, lotId))
+      .orderBy(desc(qualityControlResults.id))
       .limit(limit);
 
     return rows.map((r) => r.zScore);
@@ -334,7 +334,7 @@ export class QcResultsRepository {
       WITH RankedScores AS (
         SELECT lot_id as "lotId", z_score as "zScore",
                ROW_NUMBER() OVER(PARTITION BY lot_id ORDER BY id DESC) as rn
-        FROM qc_results
+        FROM quality_control_results
         WHERE lot_id IN (${idsList})
       )
       SELECT "lotId", "zScore" FROM RankedScores WHERE rn <= ${limitPerLot} ORDER BY "lotId", rn ASC

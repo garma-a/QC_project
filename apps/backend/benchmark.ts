@@ -132,7 +132,7 @@ async function main() {
   const loginRes = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@lab.local', password: 'Password123!' })
+    body: JSON.stringify({ email: 'admin@fake.local', password: 'Password123!' })
   });
 
   if (!loginRes.ok) {
@@ -157,113 +157,113 @@ async function main() {
   const moduleAuth = 'Auth Module';
 
   // Test valid login
-  await runBenchmark(moduleAuth, {
-    title: 'Login Valid User (Argon2 Hashing)',
-    method: 'POST',
-    url: `${BASE_URL}/auth/login`,
-    body: { email: 'admin@lab.local', password: 'Password123!' }
-  });
-
-  // Test invalid login (Testing the failure pipeline)
-  await runBenchmark(moduleAuth, {
-    title: 'Login Invalid Credentials (Testing 401 Rejections)',
-    method: 'POST',
-    url: `${BASE_URL}/auth/login`,
-    body: { email: 'fake@example.com', password: 'WrongPassword' }
-  });
-
-  // Test signup flow initialization (Check Email)
-  await runBenchmark(moduleAuth, {
-    title: 'Signup Step 1: Check Email & Send OTP',
-    method: 'POST',
-    url: `${BASE_URL}/auth/signup/check-email`,
-    body: { email: 'newuser_[%ID%]@lab.local' }
-  });
-
-  // Test forgot password
-  await runBenchmark(moduleAuth, {
-    title: 'Forgot Password Step 1: Send OTP',
-    method: 'POST',
-    url: `${BASE_URL}/auth/forgot-password`,
-    body: { email: 'admin@lab.local' }
-  });
-
-  // Get Admin Whitelist
-  await runBenchmark(moduleAuth, {
-    title: 'Get Email Whitelist',
-    method: 'GET',
-    url: `${BASE_URL}/auth/whitelist`
-  }, authHeaders);
-
+  // await runBenchmark(moduleAuth, {
+  //   title: 'Login Valid User (Argon2 Hashing)',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/auth/login`,
+  //   body: { email: 'admin@lab.local', password: 'Password123!' }
+  // // });
+  //
+  // // Test invalid login (Testing the failure pipeline)
+  // await runBenchmark(moduleAuth, {
+  //   title: 'Login Invalid Credentials (Testing 401 Rejections)',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/auth/login`,
+  //   body: { email: 'fake@example.com', password: 'WrongPassword' }
+  // });
+  //
+  // // Test signup flow initialization (Check Email)
+  // await runBenchmark(moduleAuth, {
+  //   title: 'Signup Step 1: Check Email & Send OTP',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/auth/signup/check-email`,
+  //   body: { email: 'newuser_[%ID%]@lab.local' }
+  // });
+  //
+  // // Test forgot password
+  // await runBenchmark(moduleAuth, {
+  //   title: 'Forgot Password Step 1: Send OTP',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/auth/forgot-password`,
+  //   body: { email: 'admin@lab.local' }
+  // });
+  //
+  // // Get Admin Whitelist
+  // await runBenchmark(moduleAuth, {
+  //   title: 'Get Email Whitelist',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/auth/whitelist`
+  // }, authHeaders);
+  //
 
   // ==========================================
   // MODULE 2: USERS
   // ==========================================
   const moduleUsers = 'Users Module';
 
-  await runBenchmark(moduleUsers, {
-    title: 'Create New User',
-    method: 'POST',
-    url: `${BASE_URL}/users`,
-    body: {
-      firstName: 'Benchmark',
-      lastName: 'User',
-      email: 'bench_[%ID%]@lab.local',
-      password: 'Password123!',
-      role: 'TECHNICIAN'
-    }
-  }, authHeaders);
-
-  await runBenchmark(moduleUsers, {
-    title: 'Get All Users (Paginated)',
-    method: 'GET',
-    url: `${BASE_URL}/users`
-  }, authHeaders);
-
-  await runBenchmark(moduleUsers, {
-    title: 'Get Specific User By ID',
-    method: 'GET',
-    url: `${BASE_URL}/users/${targetId}`
-  }, authHeaders);
-
-  await runBenchmark(moduleUsers, {
-    title: 'Get Current User Profile',
-    method: 'GET',
-    url: `${BASE_URL}/users/me/profile`
-  }, authHeaders);
-
-  await runBenchmark(moduleUsers, {
-    title: 'Update Specific User By ID',
-    method: 'PATCH',
-    url: `${BASE_URL}/users/${targetId}`,
-    body: { firstName: 'UpdatedBenchmarkUser' }
-  }, authHeaders);
-
-  await runBenchmark(moduleUsers, {
-    title: 'Delete Specific User By ID',
-    method: 'DELETE',
-    url: `${BASE_URL}/users/99999` // Use non-existent ID to avoid actually destroying core user data
-  }, authHeaders);
-
-  // Missing Field payload to test DTO class-validator overhead
-  await runBenchmark(moduleUsers, {
-    title: 'Invalid User Payload (Testing DTO Validation)',
-    method: 'POST',
-    url: `${BASE_URL}/users`,
-    body: { firstName: 'Invalid' } // Missing email, password, etc.
-  }, authHeaders);
-
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Create New User',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/users`,
+  //   body: {
+  //     firstName: 'Benchmark',
+  //     lastName: 'User',
+  //     email: 'bench_[%ID%]@lab.local',
+  //     password: 'Password123!',
+  //     role: 'TECHNICIAN'
+  //   }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Get All Users (Paginated)',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/users`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Get Specific User By ID',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/users/${targetId}`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Get Current User Profile',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/users/me/profile`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Update Specific User By ID',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/users/${targetId}`,
+  //   body: { firstName: 'UpdatedBenchmarkUser' }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Delete Specific User By ID',
+  //   method: 'DELETE',
+  //   url: `${BASE_URL}/users/99999` // Use non-existent ID to avoid actually destroying core user data
+  // }, authHeaders);
+  //
+  // // Missing Field payload to test DTO class-validator overhead
+  // await runBenchmark(moduleUsers, {
+  //   title: 'Invalid User Payload (Testing DTO Validation)',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/users`,
+  //   body: { firstName: 'Invalid' } // Missing email, password, etc.
+  // }, authHeaders);
+  //
 
   // ==========================================
   // MODULE 3: SECTIONS
   // ==========================================
   const moduleSections = 'Sections Module';
 
-  await runBenchmark(moduleSections, {
-    title: 'Get All Sections',
-    method: 'GET',
-    url: `${BASE_URL}/sections`
-  }, authHeaders);
+  // await runBenchmark(moduleSections, {
+  //   title: 'Get All Sections',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/sections`
+  // }, authHeaders);
 
 
   // ==========================================
@@ -271,116 +271,116 @@ async function main() {
   // ==========================================
   const moduleMachines = 'Machines Module';
 
-  await runBenchmark(moduleMachines, {
-    title: 'Create New Machine',
-    method: 'POST',
-    url: `${BASE_URL}/machines`,
-    body: { name: 'Benchmark Auto-Analyzer [%ID%]', sectionId: 1, currentStatus: 'IDLE' }
-  }, authHeaders);
-
-  await runBenchmark(moduleMachines, {
-    title: 'Get All Machines',
-    method: 'GET',
-    url: `${BASE_URL}/machines`
-  }, authHeaders);
-
-  await runBenchmark(moduleMachines, {
-    title: 'Get Specific Machine By ID',
-    method: 'GET',
-    url: `${BASE_URL}/machines/${targetId}`
-  }, authHeaders);
-
-  await runBenchmark(moduleMachines, {
-    title: 'Update Machine Status By ID',
-    method: 'PATCH',
-    url: `${BASE_URL}/machines/${targetId}`,
-    body: { currentStatus: 'RUNNING' }
-  }, authHeaders);
-
-  await runBenchmark(moduleMachines, {
-    title: 'Delete Machine By ID',
-    method: 'DELETE',
-    url: `${BASE_URL}/machines/99999`
-  }, authHeaders);
-
+  // await runBenchmark(moduleMachines, {
+  //   title: 'Create New Machine',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/machines`,
+  //   body: { name: 'Benchmark Auto-Analyzer [%ID%]', sectionId: 1, currentStatus: 'IDLE' }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleMachines, {
+  //   title: 'Get All Machines',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/machines`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleMachines, {
+  //   title: 'Get Specific Machine By ID',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/machines/${targetId}`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleMachines, {
+  //   title: 'Update Machine Status By ID',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/machines/${targetId}`,
+  //   body: { currentStatus: 'RUNNING' }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleMachines, {
+  //   title: 'Delete Machine By ID',
+  //   method: 'DELETE',
+  //   url: `${BASE_URL}/machines/99999`
+  // }, authHeaders);
+  //
 
   // ==========================================
   // MODULE 5: QC TESTS
   // ==========================================
   const moduleQcTests = 'QC Tests Module';
 
-  await runBenchmark(moduleQcTests, {
-    title: 'Create QC Test Parameter',
-    method: 'POST',
-    url: `${BASE_URL}/qc-tests`,
-    body: { testName: 'Glucose Fasting Bench [%ID%]', machineId: 1 }
-  }, authHeaders);
-
-  await runBenchmark(moduleQcTests, {
-    title: 'Get All QC Tests (Master List)',
-    method: 'GET',
-    url: `${BASE_URL}/qc-tests`
-  }, authHeaders);
-
-  await runBenchmark(moduleQcTests, {
-    title: 'Get QC Tests For Specific Machine',
-    method: 'GET',
-    url: `${BASE_URL}/qc-tests/machine/1`
-  }, authHeaders);
-
-  await runBenchmark(moduleQcTests, {
-    title: 'Update QC Test By ID',
-    method: 'PATCH',
-    url: `${BASE_URL}/qc-tests/${targetId}`,
-    body: { testName: 'Updated Test Name Bench' }
-  }, authHeaders);
-
+  // await runBenchmark(moduleQcTests, {
+  //   title: 'Create QC Test Parameter',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/qc-tests`,
+  //   body: { testName: 'Glucose Fasting Bench [%ID%]', machineId: 1 }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleQcTests, {
+  //   title: 'Get All QC Tests (Master List)',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/qc-tests`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleQcTests, {
+  //   title: 'Get QC Tests For Specific Machine',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/qc-tests/machine/1`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleQcTests, {
+  //   title: 'Update QC Test By ID',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/qc-tests/${targetId}`,
+  //   body: { testName: 'Updated Test Name Bench' }
+  // }, authHeaders);
+  //
 
   // ==========================================
   // MODULE 6: CONTROL LOTS
   // ==========================================
   const moduleLots = 'Control Lots Module';
-
-  await runBenchmark(moduleLots, {
-    title: 'Create New Control Lot',
-    method: 'POST',
-    url: `${BASE_URL}/control-lots`,
-    body: {
-      testId: 1,
-      lotNumber: 'BNCH-LOT-[%ID%]',
-      expirationDate: '2030-01-01T00:00:00Z',
-      targetValue: 100,
-      mean: 100,
-      standardDeviation: 5,
-      level: 1
-    }
-  }, authHeaders);
-
-  await runBenchmark(moduleLots, {
-    title: 'Get All Active Control Lots',
-    method: 'GET',
-    url: `${BASE_URL}/control-lots`
-  }, authHeaders);
-
-  await runBenchmark(moduleLots, {
-    title: 'Get Specific Control Lot Details By ID',
-    method: 'GET',
-    url: `${BASE_URL}/control-lots/${targetId}`
-  }, authHeaders);
-
-  await runBenchmark(moduleLots, {
-    title: 'Update Control Lot Statistics By ID',
-    method: 'PATCH',
-    url: `${BASE_URL}/control-lots/${targetId}`,
-    body: { mean: 101.5 }
-  }, authHeaders);
-
-  await runBenchmark(moduleLots, {
-    title: 'Delete / Deactivate Control Lot By ID',
-    method: 'DELETE',
-    url: `${BASE_URL}/control-lots/99999`
-  }, authHeaders);
-
+  //
+  // await runBenchmark(moduleLots, {
+  //   title: 'Create New Control Lot',
+  //   method: 'POST',
+  //   url: `${BASE_URL}/control-lots`,
+  //   body: {
+  //     testId: 1,
+  //     lotNumber: 'BNCH-LOT-[%ID%]',
+  //     expirationDate: '2030-01-01T00:00:00Z',
+  //     targetValue: 100,
+  //     mean: 100,
+  //     standardDeviation: 5,
+  //     level: 1
+  //   }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleLots, {
+  //   title: 'Get All Active Control Lots',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/control-lots`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleLots, {
+  //   title: 'Get Specific Control Lot Details By ID',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/control-lots/${targetId}`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleLots, {
+  //   title: 'Update Control Lot Statistics By ID',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/control-lots/${targetId}`,
+  //   body: { mean: 101.5 }
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleLots, {
+  //   title: 'Delete / Deactivate Control Lot By ID',
+  //   method: 'DELETE',
+  //   url: `${BASE_URL}/control-lots/99999`
+  // }, authHeaders);
+  //
 
   // ==========================================
   // MODULE 7: QC RESULTS
@@ -430,55 +430,55 @@ async function main() {
   // MODULE 8: ALERTS
   // ==========================================
   const moduleAlerts = 'Alerts Module';
-
-  await runBenchmark(moduleAlerts, {
-    title: 'Get All User Alerts (Inbox)',
-    method: 'GET',
-    url: `${BASE_URL}/alerts`
-  }, authHeaders);
-
-  await runBenchmark(moduleAlerts, {
-    title: 'Mark Alert as Seen',
-    method: 'PATCH',
-    url: `${BASE_URL}/alerts/mark-seen/${targetId}`
-  }, authHeaders);
-
-  await runBenchmark(moduleAlerts, {
-    title: 'Mark Alert as Resolved (Providing Context)',
-    method: 'PATCH',
-    url: `${BASE_URL}/alerts/mark-resolved/${targetId}`,
-    body: { resolutionNote: 'Resolved by automated benchmark suite analysis' }
-  }, authHeaders);
-
-
+  //
+  // await runBenchmark(moduleAlerts, {
+  //   title: 'Get All User Alerts (Inbox)',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/alerts`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleAlerts, {
+  //   title: 'Mark Alert as Seen',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/alerts/mark-seen/${targetId}`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleAlerts, {
+  //   title: 'Mark Alert as Resolved (Providing Context)',
+  //   method: 'PATCH',
+  //   url: `${BASE_URL}/alerts/mark-resolved/${targetId}`,
+  //   body: { resolutionNote: 'Resolved by automated benchmark suite analysis' }
+  // }, authHeaders);
+  //
+  //
   // ==========================================
   // MODULE 9: BFF (BACKEND FOR FRONTEND)
   // ==========================================
   const moduleBff = 'BFF Module';
 
-  await runBenchmark(moduleBff, {
-    title: 'Get Dashboard Data',
-    method: 'GET',
-    url: `${BASE_URL}/bff/dashboard`
-  }, authHeaders);
-
-  await runBenchmark(moduleBff, {
-    title: 'Get Dashboard Machine History',
-    method: 'GET',
-    url: `${BASE_URL}/bff/dashboard/machine-history/1`
-  }, authHeaders);
-
-  await runBenchmark(moduleBff, {
-    title: 'Get QC Page Machines',
-    method: 'GET',
-    url: `${BASE_URL}/bff/qc/machines`
-  }, authHeaders);
-
-  await runBenchmark(moduleBff, {
-    title: 'Get QC Page History',
-    method: 'GET',
-    url: `${BASE_URL}/bff/qc/history?limit=50&offset=0`
-  }, authHeaders);
+  // await runBenchmark(moduleBff, {
+  //   title: 'Get Dashboard Data',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/bff/dashboard`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleBff, {
+  //   title: 'Get Dashboard Machine History',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/bff/dashboard/machine-history/1`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleBff, {
+  //   title: 'Get QC Page Machines',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/bff/qc/machines`
+  // }, authHeaders);
+  //
+  // await runBenchmark(moduleBff, {
+  //   title: 'Get QC Page History',
+  //   method: 'GET',
+  //   url: `${BASE_URL}/bff/qc/history?limit=50&offset=0`
+  // }, authHeaders);
 
 
 

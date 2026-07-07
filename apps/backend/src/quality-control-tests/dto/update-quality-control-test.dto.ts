@@ -2,7 +2,7 @@ import * as SharedTypes from '@qc/shared';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString } from 'class-validator';
 
-export class UpdateQcTestDto implements SharedTypes.UpdateQcTestDto {
+export class UpdateQualityControlTestDto implements SharedTypes.UpdateQualityControlTestDto {
   @IsString()
   @IsOptional()
   @ApiPropertyOptional({

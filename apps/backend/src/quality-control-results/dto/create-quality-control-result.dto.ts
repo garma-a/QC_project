@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { IsArray, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class QcResultItemDto implements SharedTypes.QcResultItemDto {
+export class QualityControlResultItemDto implements SharedTypes.QualityControlResultItemDto {
   @ApiProperty({
     description: 'The ID of the active control lot this measurement belongs to',
     example: 1,
@@ -29,7 +29,7 @@ export class QcResultItemDto implements SharedTypes.QcResultItemDto {
   comments?: string;
 }
 
-export class CreateQcResultDto implements SharedTypes.CreateQcResultDto {
+export class CreateQualityControlResultDto implements SharedTypes.CreateQualityControlResultDto {
   @ApiProperty({
     description: 'The ID of the machine running this QC batch',
     example: 1,
@@ -40,11 +40,11 @@ export class CreateQcResultDto implements SharedTypes.CreateQcResultDto {
 
   @ApiProperty({
     description: 'Array of QC results for the different control levels in this run',
-    type: [QcResultItemDto],
+    type: [QualityControlResultItemDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => QcResultItemDto)
+  @Type(() => QualityControlResultItemDto)
   @IsNotEmpty()
-  results: QcResultItemDto[];
+  results: QualityControlResultItemDto[];
 }

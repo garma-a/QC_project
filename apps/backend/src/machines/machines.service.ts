@@ -20,7 +20,7 @@ export class MachinesService {
     try {
       const newMachine = await this.machinesRepository.create({
         name: createMachineDto.name,
-        hospCode: createMachineDto.hospCode,
+        hospitalCode: createMachineDto.hospitalCode,
         sectionId: createMachineDto.sectionId,
       });
 

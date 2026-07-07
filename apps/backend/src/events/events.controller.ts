@@ -7,8 +7,8 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/users/user.decorator';
 import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
-import { QcTestsService } from '@/qc-tests/qc-tests.service';
-import { QcResultsService } from '@/qc-results/qc-results.service';
+import { QualityControlTestsService } from '@/quality-control-tests/quality-control-tests.service';
+import { QualityControlResultsService } from '@/quality-control-results/quality-control-results.service';
 import { AlertsService } from '@/alerts/alerts.service';
 import { UsersRepository } from '@/users/users.repository';
 
@@ -20,8 +20,8 @@ export class EventsController {
   constructor(
     private readonly machinesService: MachinesService,
     private readonly controlLotsService: ControlLotsService,
-    private readonly qcTestsService: QcTestsService,
-    private readonly qcResultsService: QcResultsService,
+    private readonly qualityControlTestsService: QualityControlTestsService,
+    private readonly qualityControlResultsService: QualityControlResultsService,
     private readonly alertsService: AlertsService,
     private readonly usersRepository: UsersRepository,
   ) {}
@@ -30,7 +30,7 @@ export class EventsController {
   @ApiOperation({
     summary: 'Unified real-time event stream',
     description:
-      'Single SSE endpoint that multiplexes all entity events (machines, control-lots, qc-tests, qc-results, alerts). ' +
+      'Single SSE endpoint that multiplexes all entity events (machines, control-lots, quality-control-tests, quality-control-results, alerts). ' +
       'Includes a 30-second heartbeat to keep the connection alive through proxies.',
   })
   stream(@CurrentUser('userId') userId: number, @Req() req: Request): Observable<MessageEvent> {
@@ -64,14 +64,14 @@ export class EventsController {
           map((event) => ({ data: { entity: 'control-lots', ...event } }) as MessageEvent),
         );
 
-        const tests$ = this.qcTestsService.testEvents$.pipe(
+        const tests$ = this.qualityControlTestsService.testEvents$.pipe(
           filter((event) => hasAccess(event.sectionId)),
-          map((event) => ({ data: { entity: 'qc-tests', ...event } }) as MessageEvent),
+          map((event) => ({ data: { entity: 'quality-control-tests', ...event } }) as MessageEvent),
         );
 
-        const results$ = this.qcResultsService.qcResultEvents$.pipe(
+        const results$ = this.qualityControlResultsService.qualityControlResultEvents$.pipe(
           filter((event) => hasAccess(event.sectionId)),
-          map((event) => ({ data: { entity: 'qc-results', ...event } }) as MessageEvent),
+          map((event) => ({ data: { entity: 'quality-control-results', ...event } }) as MessageEvent),
         );
 
         const alerts$ = this.alertsService.alertEvents$.pipe(

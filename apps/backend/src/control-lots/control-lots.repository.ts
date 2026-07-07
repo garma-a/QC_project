@@ -1,5 +1,5 @@
 import { DatabaseService } from '@/database/database.service';
-import { controlLots, qcTests, machines } from '@/drizzle/schema';
+import { controlLots, qualityControlTests, machines } from '@/drizzle/schema';
 import { Injectable } from '@nestjs/common';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -19,7 +19,7 @@ export type ActiveLotWithTestContext = {
   lowerWarningLimit: number | null;
   isActive: boolean | null;
   createdAt: Date | null;
-  // Embedded from qc_tests join
+  // Embedded from quality_control_tests join
   testName: string;
   testType: string | null;
   machineId: number;
@@ -32,17 +32,17 @@ export class ControlLotsRepository {
   async findTestById(testId: number) {
     const [test] = await this.databaseService.db
       .select()
-      .from(qcTests)
-      .where(eq(qcTests.id, testId));
+      .from(qualityControlTests)
+      .where(eq(qualityControlTests.id, testId));
     return test;
   }
 
   async getSectionIdByTestId(testId: number) {
     const res = await this.databaseService.db
       .select({ sectionId: machines.sectionId })
-      .from(qcTests)
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
-      .where(eq(qcTests.id, testId))
+      .from(qualityControlTests)
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
+      .where(eq(qualityControlTests.id, testId))
       .limit(1);
     return res[0]?.sectionId;
   }
@@ -51,8 +51,8 @@ export class ControlLotsRepository {
     const res = await this.databaseService.db
       .select({ sectionId: machines.sectionId })
       .from(controlLots)
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .where(eq(controlLots.id, lotId))
       .limit(1);
     return res[0]?.sectionId;
@@ -96,7 +96,7 @@ export class ControlLotsRepository {
 
   /**
    * Returns ALL active control lots joined with their parent QC test.
-   * Used by the dashboard to get test context without a separate /qc-tests call.
+   * Used by the dashboard to get test context without a separate /quality-control-tests call.
    * Scales well because active lots are a tiny fraction of total lots.
    */
   async findActiveWithTestContext(): Promise<ActiveLotWithTestContext[]> {
@@ -117,12 +117,12 @@ export class ControlLotsRepository {
         isActive: controlLots.isActive,
         createdAt: controlLots.createdAt,
         // Embedded test context
-        testName: qcTests.testName,
-        testType: qcTests.testType,
-        machineId: qcTests.machineId,
+        testName: qualityControlTests.testName,
+        testType: qualityControlTests.testType,
+        machineId: qualityControlTests.machineId,
       })
       .from(controlLots)
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
       .where(eq(controlLots.isActive, true))
       .orderBy(desc(controlLots.id))
       .limit(1000);

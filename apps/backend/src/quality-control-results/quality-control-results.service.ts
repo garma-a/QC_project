@@ -5,21 +5,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Subject } from 'rxjs';
-import { CreateQcResultDto } from './dto/create-qc-result.dto';
-import { UpdateQcResultDto } from './dto/update-qc-result.dto';
-import { QcResultsRepository } from './qc-results.repository';
-import { QcStatus } from './qc-results.types';
+import { CreateQualityControlResultDto } from './dto/create-quality-control-result.dto';
+import { UpdateQualityControlResultDto } from './dto/update-quality-control-result.dto';
+import { QualityControlResultsRepository } from './quality-control-results.repository';
+import { QcStatus } from './quality-control-results.types';
 import { AlertsService } from '@/alerts/alerts.service';
 import { AlertPriority } from '@/alerts/alerts.types';
 import { UsersRepository } from '@/users/users.repository';
 import { evaluateWestgardRules, WESTGARD_HISTORY_SIZE, RunResultItem } from './westgard.utils';
-import { QcResultItemDto } from './dto/create-qc-result.dto';
+import { QualityControlResultItemDto } from './dto/create-quality-control-result.dto';
 import { controlLots } from '@/drizzle/schema';
 
 /** Typed shape of a fully evaluated result item before persisting */
 interface EvaluatedResultItem {
   lot: typeof controlLots.$inferSelect;
-  resultItem: QcResultItemDto;
+  resultItem: QualityControlResultItemDto;
   zScore: number;
   status: QcStatus;
   violatedRule: string | null;
@@ -27,18 +27,18 @@ interface EvaluatedResultItem {
 }
 
 @Injectable()
-export class QcResultsService {
-  private readonly logger = new Logger(QcResultsService.name);
-  public readonly qcResultEvents$ = new Subject<any>();
+export class QualityControlResultsService {
+  private readonly logger = new Logger(QualityControlResultsService.name);
+  public readonly qualityControlResultEvents$ = new Subject<any>();
 
   constructor(
-    private readonly qcResultsRepository: QcResultsRepository,
+    private readonly qualityControlResultsRepository: QualityControlResultsRepository,
     private readonly alertsService: AlertsService,
     private readonly usersRepository: UsersRepository,
   ) { }
 
-  async create(createQcResultDto: CreateQcResultDto, userId: number) {
-    if (!createQcResultDto.results || createQcResultDto.results.length === 0) {
+  async create(createQualityControlResultDto: CreateQualityControlResultDto, userId: number) {
+    if (!createQualityControlResultDto.results || createQualityControlResultDto.results.length === 0) {
       throw new BadRequestException('A QC run must contain at least one result');
     }
 
@@ -49,24 +49,24 @@ export class QcResultsService {
     const currentZScoreMap = new Map<number, number>();
 
     // 0. PRE-VALIDATION: Check that the run contains ALL active lots for the test
-    const firstLot = await this.qcResultsRepository.getLotById(createQcResultDto.results[0].lotId);
-    if (!firstLot) throw new NotFoundException(`Control lot ${createQcResultDto.results[0].lotId} not found`);
+    const firstLot = await this.qualityControlResultsRepository.getLotById(createQualityControlResultDto.results[0].lotId);
+    if (!firstLot) throw new NotFoundException(`Control lot ${createQualityControlResultDto.results[0].lotId} not found`);
     const testId = firstLot.testId;
 
     // Validate that the run's machineId matches the machine owning this QC test
-    const lotContext = await this.qcResultsRepository.getLotTestMachineByLotId(firstLot.id);
-    const expectedMachineId = lotContext?.qc_tests?.machineId;
+    const lotContext = await this.qualityControlResultsRepository.getLotTestMachineByLotId(firstLot.id);
+    const expectedMachineId = lotContext?.quality_control_tests?.machineId;
     if (!expectedMachineId) throw new NotFoundException(`QC test for lot ${firstLot.id} not found`);
-    if (createQcResultDto.machineId !== expectedMachineId) {
+    if (createQualityControlResultDto.machineId !== expectedMachineId) {
       throw new BadRequestException(
-        `Invalid QC Run: machineId ${createQcResultDto.machineId} does not match QC test machine ${expectedMachineId}.`,
+        `Invalid QC Run: machineId ${createQualityControlResultDto.machineId} does not match QC test machine ${expectedMachineId}.`,
       );
     }
 
-    const activeLots = await this.qcResultsRepository.getActiveLotsByTestId(testId);
+    const activeLots = await this.qualityControlResultsRepository.getActiveLotsByTestId(testId);
     // Ensure every active lot was submitted
     for (const activeLot of activeLots) {
-      if (!createQcResultDto.results.some((r) => r.lotId === activeLot.id)) {
+      if (!createQualityControlResultDto.results.some((r) => r.lotId === activeLot.id)) {
         throw new BadRequestException(
           `Incomplete QC Run: Missing result for active lot ${activeLot.lotNumber} (ID: ${activeLot.id}). All active lots must be run together.`
         );
@@ -74,7 +74,7 @@ export class QcResultsService {
     }
 
     // Ensure no submitted result belongs to a DIFFERENT test
-    for (const resultItem of createQcResultDto.results) {
+    for (const resultItem of createQualityControlResultDto.results) {
       if (!activeLots.some((l) => l.id === resultItem.lotId)) {
         throw new BadRequestException(
           `Invalid QC Run: Lot ${resultItem.lotId} does not belong to the active lots for test ID ${testId}.`
@@ -89,11 +89,11 @@ export class QcResultsService {
     const completeRunContext: RunResultItem[] = [];
 
     // BATCH FETCH ALL LOTS
-    const lotIds = [...new Set(createQcResultDto.results.map((r) => r.lotId))];
-    const lotsList = await this.qcResultsRepository.getLotsByIds(lotIds);
+    const lotIds = [...new Set(createQualityControlResultDto.results.map((r) => r.lotId))];
+    const lotsList = await this.qualityControlResultsRepository.getLotsByIds(lotIds);
     for (const lot of lotsList) lotMap.set(lot.id, lot);
 
-    for (const resultItem of createQcResultDto.results) {
+    for (const resultItem of createQualityControlResultDto.results) {
       const lot = lotMap.get(resultItem.lotId);
       if (!lot) throw new NotFoundException(`Control lot ${resultItem.lotId} not found`);
 
@@ -120,12 +120,12 @@ export class QcResultsService {
     //    Every lot now has full omniscient visibility of all other levels' z-scores.
 
     // BATCH FETCH ALL PREVIOUS Z-SCORES
-    const allPriorZScoresMap = await this.qcResultsRepository.getRecentZScoresByLotIds(
+    const allPriorZScoresMap = await this.qualityControlResultsRepository.getRecentZScoresByLotIds(
       lotIds,
       WESTGARD_HISTORY_SIZE
     );
 
-    for (const resultItem of createQcResultDto.results) {
+    for (const resultItem of createQualityControlResultDto.results) {
       const lot = lotMap.get(resultItem.lotId)!;
       const zScore = currentZScoreMap.get(resultItem.lotId)!;
 
@@ -152,8 +152,8 @@ export class QcResultsService {
     }
 
     // 3. THIRD PASS: Persist the entire RUN and all RESULTS atomically
-    const savedRunData = await this.qcResultsRepository.createQcRun(
-      createQcResultDto.machineId,
+    const savedRunData = await this.qualityControlResultsRepository.createQualityControlRun(
+      createQualityControlResultDto.machineId,
       evaluatedResults[0].lot.testId, // All lots in the run belong to the same test
       userId,
       evaluatedResults.map((e) => ({
@@ -180,7 +180,7 @@ export class QcResultsService {
           const absZScore = Number(Math.abs(e.zScore).toFixed(2));
           const alertPriority = e.status === QcStatus.FAIL ? AlertPriority.HIGH : AlertPriority.MEDIUM;
 
-          const sectionId = await this.qcResultsRepository.getSectionIdByLotId(e.resultItem.lotId);
+          const sectionId = await this.qualityControlResultsRepository.getSectionIdByLotId(e.resultItem.lotId);
           const sectionUserIds = sectionId ? await this.usersRepository.getUserIdsBySectionId(sectionId) : [];
 
           await this.alertsService.createForUsers(
@@ -201,9 +201,9 @@ export class QcResultsService {
     }
 
     if (savedRunData?.results) {
-      const sectionId = await this.qcResultsRepository.getSectionIdByLotId(savedRunData.results[0].lotId);
+      const sectionId = await this.qualityControlResultsRepository.getSectionIdByLotId(savedRunData.results[0].lotId);
       for (const result of savedRunData.results) {
-        this.qcResultEvents$.next({ type: 'create', data: result, sectionId });
+        this.qualityControlResultEvents$.next({ type: 'create', data: result, sectionId });
       }
     }
 
@@ -212,12 +212,12 @@ export class QcResultsService {
 
   async findAll(lotId?: number, limit?: number, offset?: number, machineId?: number, startDate?: string, endDate?: string) {
     if (lotId) {
-      const lot = await this.qcResultsRepository.getLotById(lotId);
+      const lot = await this.qualityControlResultsRepository.getLotById(lotId);
       if (!lot) throw new NotFoundException('Control lot not found');
 
       const lotContext =
-        await this.qcResultsRepository.getLotTestMachineByLotId(lotId);
-      const results = await this.qcResultsRepository.getResultsByLotId(lotId, limit, offset, startDate, endDate);
+        await this.qualityControlResultsRepository.getLotTestMachineByLotId(lotId);
+      const results = await this.qualityControlResultsRepository.getResultsByLotId(lotId, limit, offset, startDate, endDate);
 
       return {
         lot: {
@@ -229,7 +229,7 @@ export class QcResultsService {
           lowerControlLimit: lot.lowerControlLimit,
           upperWarningLimit: lot.upperWarningLimit,
           lowerWarningLimit: lot.lowerWarningLimit,
-          testName: lotContext?.qc_tests?.testName ?? 'Unknown Test',
+          testName: lotContext?.quality_control_tests?.testName ?? 'Unknown Test',
           machineName: lotContext?.machines?.name ?? 'Unknown Machine',
         },
         results,
@@ -237,39 +237,39 @@ export class QcResultsService {
     } else {
       const parsedLimit = limit ?? 50;
       const parsedOffset = offset ?? 0;
-      const results = await this.qcResultsRepository.getPaginatedResults(parsedLimit, parsedOffset, machineId, startDate, endDate);
+      const results = await this.qualityControlResultsRepository.getPaginatedResults(parsedLimit, parsedOffset, machineId, startDate, endDate);
       return { lot: null, results };
     }
   }
 
   async getRecentAll() {
-    const results = await this.qcResultsRepository.getRecentResultsAll();
+    const results = await this.qualityControlResultsRepository.getRecentResultsAll();
     return { lot: null, results };
   }
 
   async findOne(id: number) {
-    const result = await this.qcResultsRepository.getResultAndLotByResultId(id);
+    const result = await this.qualityControlResultsRepository.getResultAndLotByResultId(id);
 
     if (!result) throw new NotFoundException('QC Result not found');
 
     return {
       ...result,
-      zScore: result.qc_results!.zScore,
-      violatedRule: result.qc_results!.violatedRule,
+      zScore: result.quality_control_results!.zScore,
+      violatedRule: result.quality_control_results!.violatedRule,
     };
   }
-  async update(id: number, updateQcResultDto: UpdateQcResultDto) {
-    const updated = await this.qcResultsRepository.updateQcResult(
+  async update(id: number, updateQualityControlResultDto: UpdateQualityControlResultDto) {
+    const updated = await this.qualityControlResultsRepository.updateQualityControlResult(
       id,
-      updateQcResultDto,
+      updateQualityControlResultDto,
     );
 
     if (!updated)
       throw new NotFoundException(`QC Result with ID ${id} not found`);
 
     const updatedResult = await this.findOne(id);
-    const sectionId = await this.qcResultsRepository.getSectionIdByLotId(updatedResult.qc_results!.lotId);
-    this.qcResultEvents$.next({ type: 'update', data: updatedResult, sectionId });
+    const sectionId = await this.qualityControlResultsRepository.getSectionIdByLotId(updatedResult.quality_control_results!.lotId);
+    this.qualityControlResultEvents$.next({ type: 'update', data: updatedResult, sectionId });
     return updatedResult;
   }
 }

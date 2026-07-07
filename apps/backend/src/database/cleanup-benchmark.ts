@@ -5,10 +5,10 @@ import { like, or, inArray } from 'drizzle-orm';
 import {
   users,
   machines,
-  qcTests,
+  qualityControlTests,
   controlLots,
-  qcResults,
-  qcRuns,
+  qualityControlResults,
+  qualityControlRuns,
   alerts,
   usersToAlerts,
 } from '@/drizzle/schema';
@@ -28,10 +28,10 @@ async function bootstrap() {
     console.log(`Deleted ${deletedUsersToAlerts.length} benchmark users_to_alerts resolutions.`);
 
     // 2. Delete Benchmark QC Results
-    const benchmarkResults = await db.delete(qcResults).where(
+    const benchmarkResults = await db.delete(qualityControlResults).where(
       or(
-        like(qcResults.comments, '%Benchmark%'),
-        like(qcResults.comments, '%benchmark%')
+        like(qualityControlResults.comments, '%Benchmark%'),
+        like(qualityControlResults.comments, '%benchmark%')
       )
     ).returning();
     console.log(`Deleted ${benchmarkResults.length} benchmark QC results.`);
@@ -43,8 +43,8 @@ async function bootstrap() {
     console.log(`Deleted ${deletedLots.length} benchmark control lots.`);
 
     // 4. Delete Benchmark QC Tests
-    const deletedTests = await db.delete(qcTests).where(
-      like(qcTests.testName, '%Bench%')
+    const deletedTests = await db.delete(qualityControlTests).where(
+      like(qualityControlTests.testName, '%Bench%')
     ).returning();
     console.log(`Deleted ${deletedTests.length} benchmark QC tests.`);
 

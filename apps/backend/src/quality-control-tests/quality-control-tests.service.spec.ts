@@ -1,26 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { QcTestsService } from './qc-tests.service';
-import { QcTestsRepository } from './qc-tests.repository';
+import { QualityControlTestsService } from './quality-control-tests.service';
+import { QualityControlTestsRepository } from './quality-control-tests.repository';
 
-describe('QcTestsService', () => {
-  let service: QcTestsService;
+describe('QualityControlTestsService', () => {
+  let service: QualityControlTestsService;
 
-  const mockQcTestsRepository = {
+  const mockQualityControlTestsRepository = {
     getMachineById: jest.fn(),
-    createQcTest: jest.fn(),
+    createQualityControlTest: jest.fn(),
     getTestsByMachine: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        QcTestsService,
-        { provide: QcTestsRepository, useValue: mockQcTestsRepository },
+        QualityControlTestsService,
+        { provide: QualityControlTestsRepository, useValue: mockQualityControlTestsRepository },
       ],
     }).compile();
 
-    service = module.get<QcTestsService>(QcTestsService);
+    service = module.get<QualityControlTestsService>(QualityControlTestsService);
     jest.clearAllMocks();
   });
 
@@ -32,7 +32,7 @@ describe('QcTestsService', () => {
     const createDto = { machineId: 1, testName: 'Pressure Test', value: 42 };
 
     it('throws NotFoundException when machine does not exist', async () => {
-      mockQcTestsRepository.getMachineById.mockResolvedValueOnce(undefined);
+      mockQualityControlTestsRepository.getMachineById.mockResolvedValueOnce(undefined);
 
       await expect(service.create(createDto)).rejects.toThrow(
         NotFoundException,
@@ -43,11 +43,11 @@ describe('QcTestsService', () => {
     });
 
     it('returns the created test when machine exists', async () => {
-      mockQcTestsRepository.getMachineById.mockResolvedValueOnce({
+      mockQualityControlTestsRepository.getMachineById.mockResolvedValueOnce({
         id: 1,
         name: 'Machine A',
       });
-      mockQcTestsRepository.createQcTest.mockResolvedValueOnce({
+      mockQualityControlTestsRepository.createQualityControlTest.mockResolvedValueOnce({
         id: 99,
         ...createDto,
       });
@@ -62,7 +62,7 @@ describe('QcTestsService', () => {
     const machineId = 5;
 
     it('throws NotFoundException when machine does not exist', async () => {
-      mockQcTestsRepository.getMachineById.mockResolvedValueOnce(undefined);
+      mockQualityControlTestsRepository.getMachineById.mockResolvedValueOnce(undefined);
 
       await expect(service.getTestsByMachine(machineId)).rejects.toThrow(
         NotFoundException,
@@ -73,10 +73,10 @@ describe('QcTestsService', () => {
     });
 
     it('returns an empty array when machine exists but has no tests', async () => {
-      mockQcTestsRepository.getMachineById.mockResolvedValueOnce({
+      mockQualityControlTestsRepository.getMachineById.mockResolvedValueOnce({
         id: machineId,
       });
-      mockQcTestsRepository.getTestsByMachine.mockResolvedValueOnce([]);
+      mockQualityControlTestsRepository.getTestsByMachine.mockResolvedValueOnce([]);
 
       const result = await service.getTestsByMachine(machineId);
 
@@ -88,10 +88,10 @@ describe('QcTestsService', () => {
         { id: 1, machineId, testName: 'Pressure' },
         { id: 2, machineId, testName: 'Voltage' },
       ];
-      mockQcTestsRepository.getMachineById.mockResolvedValueOnce({
+      mockQualityControlTestsRepository.getMachineById.mockResolvedValueOnce({
         id: machineId,
       });
-      mockQcTestsRepository.getTestsByMachine.mockResolvedValueOnce(mockTests);
+      mockQualityControlTestsRepository.getTestsByMachine.mockResolvedValueOnce(mockTests);
 
       const result = await service.getTestsByMachine(machineId);
 

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BffService } from './bff.service';
 import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
-import { QcResultsService } from '@/qc-results/qc-results.service';
+import { QualityControlResultsService } from '@/quality-control-results/quality-control-results.service';
 import { SectionsService } from '@/sections/sections.service';
 import { DatabaseService } from '@/database/database.service';
 
@@ -10,7 +10,7 @@ describe('BffService', () => {
   let service: BffService;
   let mockMachinesService: Record<string, jest.Mock>;
   let mockControlLotsService: Record<string, jest.Mock>;
-  let mockQcResultsService: Record<string, jest.Mock>;
+  let mockQualityControlResultsService: Record<string, jest.Mock>;
   let mockSectionsService: Record<string, jest.Mock>;
   let mockDatabaseService: Record<string, any>;
 
@@ -23,7 +23,7 @@ describe('BffService', () => {
       findActiveWithTestContext: jest.fn(),
     };
 
-    mockQcResultsService = {
+    mockQualityControlResultsService = {
       getRecentAll: jest.fn(),
       findAll: jest.fn(),
     };
@@ -47,7 +47,7 @@ describe('BffService', () => {
         BffService,
         { provide: MachinesService, useValue: mockMachinesService },
         { provide: ControlLotsService, useValue: mockControlLotsService },
-        { provide: QcResultsService, useValue: mockQcResultsService },
+        { provide: QualityControlResultsService, useValue: mockQualityControlResultsService },
         { provide: SectionsService, useValue: mockSectionsService },
         { provide: DatabaseService, useValue: mockDatabaseService },
       ],
@@ -76,7 +76,7 @@ describe('BffService', () => {
           id: 1, 
           name: 'Alinity Analyzer 1014', 
           section: { id: 3, name: 'Hematology' },
-          qcTests: [
+          qualityControlTests: [
             {
               testName: 'Hemoglobin',
               testType: 'Routine',
@@ -117,7 +117,7 @@ describe('BffService', () => {
       ];
 
       mockDatabaseService.db.query.machines.findMany.mockResolvedValue(mockMachines);
-      mockQcResultsService.getRecentAll.mockResolvedValue(mockRecentResults);
+      mockQualityControlResultsService.getRecentAll.mockResolvedValue(mockRecentResults);
 
       // Act
       const result = await service.getDashboardData();
@@ -137,7 +137,7 @@ describe('BffService', () => {
     it('should handle empty responses gracefully without crashing', async () => {
       // Arrange
       mockDatabaseService.db.query.machines.findMany.mockResolvedValue([]);
-      mockQcResultsService.getRecentAll.mockResolvedValue([]);
+      mockQualityControlResultsService.getRecentAll.mockResolvedValue([]);
 
       // Act
       const result = await service.getDashboardData();
@@ -151,9 +151,9 @@ describe('BffService', () => {
     it('should correctly map fallback statuses (WARNING -> warning, FAIL -> fail, unknown -> pass)', async () => {
       // Arrange
       mockDatabaseService.db.query.machines.findMany.mockResolvedValue([
-        { id: 1, name: 'Machine 1', section: null, qcTests: [] },
+        { id: 1, name: 'Machine 1', section: null, qualityControlTests: [] },
       ]);
-      mockQcResultsService.getRecentAll.mockResolvedValue([
+      mockQualityControlResultsService.getRecentAll.mockResolvedValue([
         { id: 1, machineId: 1, status: 'WARNING', testDate: '2026-10-24T10:00:00Z' },
         { id: 2, machineId: 1, status: 'FAIL', testDate: '2026-10-24T11:00:00Z' },
         { id: 3, machineId: 1, status: 'UNKNOWN_STATUS', testDate: '2026-10-24T12:00:00Z' }, // This will be the latest
@@ -174,9 +174,9 @@ describe('BffService', () => {
         { 
           id: 2, 
           name: 'Sysmex', 
-          hospCode: 'SYS-101',
+          hospitalCode: 'SYS-101',
           section: { id: 5, name: 'Microbiology' },
-          qcTests: [
+          qualityControlTests: [
             {
               testName: 'WBC',
               testType: null,
@@ -219,7 +219,7 @@ describe('BffService', () => {
   });
 
   describe('getQcHistory', () => {
-    it('should successfully map paginated results from QcResultsService', async () => {
+    it('should successfully map paginated results from QualityControlResultsService', async () => {
       // Arrange
       const mockRawResults = {
         results: [
@@ -239,13 +239,13 @@ describe('BffService', () => {
         ]
       };
       
-      mockQcResultsService.findAll.mockResolvedValue(mockRawResults);
+      mockQualityControlResultsService.findAll.mockResolvedValue(mockRawResults);
 
       // Act
       const result = await service.getQcHistory(50, 0, 2);
 
       // Assert
-      expect(mockQcResultsService.findAll).toHaveBeenCalledWith(undefined, 50, 0, 2);
+      expect(mockQualityControlResultsService.findAll).toHaveBeenCalledWith(undefined, 50, 0, 2);
       expect(result.results).toHaveLength(1);
       expect(result.results[0]?.expectedRange).toBe('150 - 250');
       expect(result.results[0]?.performedBy).toBe('Admin Seeder');
@@ -256,7 +256,7 @@ describe('BffService', () => {
       // Arrange
       const limit = 2;
       const offset = 10;
-      mockQcResultsService.findAll.mockResolvedValue([
+      mockQualityControlResultsService.findAll.mockResolvedValue([
         { id: 1, machineId: 2, value: 10 }, { id: 2, machineId: 2, value: 20 } // Returns 2 items (equal to limit)
       ]);
 
@@ -271,7 +271,7 @@ describe('BffService', () => {
       // Arrange
       const limit = 50;
       const offset = 0;
-      mockQcResultsService.findAll.mockResolvedValue([
+      mockQualityControlResultsService.findAll.mockResolvedValue([
         { id: 1, machineId: 2, value: 10 } // Only returns 1 item, meaning it's the end of the list
       ]);
 

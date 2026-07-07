@@ -26,14 +26,14 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { QcTestsService } from './qc-tests.service';
+import { QualityControlTestsService } from './quality-control-tests.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
-import { CreateQcTestDto } from './dto/create-qc-test.dto';
-import { UpdateQcTestDto } from './dto/update-qc-test.dto';
+import { CreateQualityControlTestDto } from './dto/create-quality-control-test.dto';
+import { UpdateQualityControlTestDto } from './dto/update-quality-control-test.dto';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { Role } from '@/auth/auth.types';
-import { QcTestResponseDto } from './dto/qc-test-response.dto';
+import { QualityControlTestResponseDto } from './dto/quality-control-test-response.dto';
 import {
   ValidationErrorResponseDto,
   UnauthorizedResponseDto,
@@ -43,10 +43,10 @@ import {
 
 @ApiTags('QC Tests')
 @ApiBearerAuth()
-@Controller('qc-tests')
+@Controller('quality-control-tests')
 @UseGuards(JwtAuthGuard, RolesGuard)
-export class QcTestsController {
-  constructor(private readonly qcTestsService: QcTestsService) {}
+export class QualityControlTestsController {
+  constructor(private readonly qualityControlTestsService: QualityControlTestsService) {}
 
   @Post()
   @Roles(Role.ADMIN)
@@ -55,11 +55,11 @@ export class QcTestsController {
     description:
       'Creates a new quality control test definition linked to a specific machine. The machine must exist. Only administrators can create QC tests.',
   })
-  @ApiBody({ type: CreateQcTestDto })
+  @ApiBody({ type: CreateQualityControlTestDto })
   @ApiResponse({
     status: 201,
     description: 'QC test created successfully.',
-    type: QcTestResponseDto,
+    type: QualityControlTestResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -82,8 +82,8 @@ export class QcTestsController {
     description: 'Machine not found.',
     type: NotFoundResponseDto,
   })
-  async create(@Body() createQcTestDto: CreateQcTestDto) {
-    return this.qcTestsService.create(createQcTestDto);
+  async create(@Body() createQualityControlTestDto: CreateQualityControlTestDto) {
+    return this.qualityControlTestsService.create(createQualityControlTestDto);
   }
 
   @Get('machine/:machineId')
@@ -103,7 +103,7 @@ export class QcTestsController {
   @ApiResponse({
     status: 200,
     description: 'Array of QC tests for the specified machine.',
-    type: [QcTestResponseDto],
+    type: [QualityControlTestResponseDto],
   })
   @ApiResponse({
     status: 401,
@@ -132,7 +132,7 @@ export class QcTestsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    return this.qcTestsService.getTestsByMachine(machineId, limit, offset);
+    return this.qualityControlTestsService.getTestsByMachine(machineId, limit, offset);
   }
 
   @Get()
@@ -143,7 +143,7 @@ export class QcTestsController {
   @ApiResponse({
     status: 200,
     description: 'Array of all QC tests.',
-    type: [QcTestResponseDto],
+    type: [QualityControlTestResponseDto],
   })
   @ApiResponse({
     status: 401,
@@ -166,7 +166,7 @@ export class QcTestsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
-    return this.qcTestsService.getAll(limit, offset);
+    return this.qualityControlTestsService.getAll(limit, offset);
   }
 
 
@@ -184,11 +184,11 @@ export class QcTestsController {
     description: 'The unique ID of the QC test to update',
     example: 1,
   })
-  @ApiBody({ type: UpdateQcTestDto })
+  @ApiBody({ type: UpdateQualityControlTestDto })
   @ApiResponse({
     status: 200,
     description: 'QC test updated successfully.',
-    type: QcTestResponseDto,
+    type: QualityControlTestResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -212,8 +212,8 @@ export class QcTestsController {
   })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateQcTestDto: UpdateQcTestDto,
+    @Body() updateQualityControlTestDto: UpdateQualityControlTestDto,
   ) {
-    return this.qcTestsService.update(id, updateQcTestDto);
+    return this.qualityControlTestsService.update(id, updateQualityControlTestDto);
   }
 }

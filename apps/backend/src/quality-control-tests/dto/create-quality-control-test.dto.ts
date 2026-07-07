@@ -2,7 +2,7 @@ import * as SharedTypes from '@qc/shared';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsInt, IsOptional } from 'class-validator';
 
-export class CreateQcTestDto implements SharedTypes.CreateQcTestDto {
+export class CreateQualityControlTestDto implements SharedTypes.CreateQualityControlTestDto {
 
   @IsString()
   @IsNotEmpty()

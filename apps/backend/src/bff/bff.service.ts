@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { MachinesService } from '@/machines/machines.service';
 import { ControlLotsService } from '@/control-lots/control-lots.service';
-import { QcResultsService } from '@/qc-results/qc-results.service';
+import { QualityControlResultsService } from '@/quality-control-results/quality-control-results.service';
 import { SectionsService } from '@/sections/sections.service';
 import { DatabaseService } from '@/database/database.service';
 import { DashboardBffResponseDto, DashboardMachineDto, DashboardCategoryDto, DashboardQcHistoryDto } from './dto/dashboard-bff.dto';
-import { QcPageMachinesResponseDto, QcPageHistoryResponseDto, QcInteractiveHistoryEntryDto } from './dto/qc-bff.dto';
+import { QcPageMachinesResponseDto, QcPageHistoryResponseDto, QcInteractiveHistoryEntryDto } from './dto/quality-control-bff.dto';
 
 @Injectable()
 export class BffService {
   constructor(
     private readonly machinesService: MachinesService,
     private readonly controlLotsService: ControlLotsService,
-    private readonly qcResultsService: QcResultsService,
+    private readonly qualityControlResultsService: QualityControlResultsService,
     private readonly sectionsService: SectionsService,
     private readonly databaseService: DatabaseService,
   ) { }
@@ -47,7 +47,7 @@ export class BffService {
         where: (machines, { eq }) => eq(machines.isActive, true),
         with: {
           section: true,
-          qcTests: {
+          qualityControlTests: {
             with: {
               controlLots: {
                 // @ts-ignore: Drizzle ORM type resolution bug with Bun
@@ -57,7 +57,7 @@ export class BffService {
           },
         },
       }),
-      this.qcResultsService.getRecentAll(),
+      this.qualityControlResultsService.getRecentAll(),
     ]);
 
     const allResults = Array.isArray(allResultsResponse)
@@ -88,12 +88,12 @@ export class BffService {
       }
 
       const tests: any[] = [];
-      for (const qcTest of machine.qcTests) {
-        for (const lot of qcTest.controlLots) {
+      for (const qualityControlTest of machine.qualityControlTests) {
+        for (const lot of qualityControlTest.controlLots) {
           tests.push({
             id: lot.testId.toString(),
-            name: qcTest.testName,
-            category: qcTest.testType ?? 'General',
+            name: qualityControlTest.testName,
+            category: qualityControlTest.testType ?? 'General',
             code: lot.testId.toString(),
             unit: 'unit',
             lowRange: lot.lowerControlLimit ?? 0,
@@ -128,7 +128,7 @@ export class BffService {
         id: machine.id.toString(),
         name: machine.name,
         category: machine.section?.id.toString() ?? '',
-        model: machine.hospCode ?? '',
+        model: machine.hospitalCode ?? '',
         testsToday: qcData?.count ?? 0,
         lastQC,
         tests,
@@ -166,7 +166,7 @@ export class BffService {
     const startDate = thirtyDaysAgo.toISOString();
 
     // Limit to 500 records max for the machine over the last 30 days
-    const paginatedResponse = await this.qcResultsService.findAll(undefined, 500, 0, machineId, startDate, undefined);
+    const paginatedResponse = await this.qualityControlResultsService.findAll(undefined, 500, 0, machineId, startDate, undefined);
     const allResults = Array.isArray(paginatedResponse) ? paginatedResponse : ('results' in paginatedResponse ? paginatedResponse.results : []);
 
     return allResults.map((result: any): DashboardQcHistoryDto => {
@@ -209,7 +209,7 @@ export class BffService {
       where: (machines, { eq }) => eq(machines.isActive, true),
       with: {
         section: true,
-        qcTests: {
+        qualityControlTests: {
           with: {
             controlLots: {
               // @ts-ignore: Drizzle ORM type resolution bug with Bun
@@ -228,12 +228,12 @@ export class BffService {
       }
 
       const tests: any[] = [];
-      for (const qcTest of machine.qcTests) {
-        for (const lot of qcTest.controlLots) {
+      for (const qualityControlTest of machine.qualityControlTests) {
+        for (const lot of qualityControlTest.controlLots) {
           tests.push({
             id: lot.testId.toString(),
-            name: qcTest.testName,
-            category: qcTest.testType ?? 'General',
+            name: qualityControlTest.testName,
+            category: qualityControlTest.testType ?? 'General',
             code: lot.testId.toString(),
             unit: 'unit',
             lowRange: lot.lowerControlLimit ?? 0,
@@ -253,7 +253,7 @@ export class BffService {
         id: machine.id.toString(),
         name: machine.name,
         category: machine.section?.id.toString() ?? '',
-        model: machine.hospCode ?? '',
+        model: machine.hospitalCode ?? '',
         tests,
       };
     });
@@ -282,7 +282,7 @@ export class BffService {
   }
 
   private async _getQcHistory(limit: number, offset: number, machineId?: number): Promise<QcPageHistoryResponseDto> {
-    const paginatedResponse = await this.qcResultsService.findAll(undefined, limit, offset, machineId);
+    const paginatedResponse = await this.qualityControlResultsService.findAll(undefined, limit, offset, machineId);
 
     const rawResults = Array.isArray(paginatedResponse) ? paginatedResponse : ('results' in paginatedResponse ? paginatedResponse.results : []);
 

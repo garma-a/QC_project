@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database/database.service';
-import { alerts, controlLots, qcResults, qcTests, usersToAlerts, machines, sections } from '@/drizzle/schema';
+import { alerts, controlLots, qualityControlResults, qualityControlTests, usersToAlerts, machines, sections } from '@/drizzle/schema';
 import { and, desc, eq, gte, or, isNull } from 'drizzle-orm';
 
 @Injectable()
@@ -35,19 +35,19 @@ export class AlertsRepository {
         seenAt: usersToAlerts.seenAt,
         resolvedAt: usersToAlerts.resolvedAt,
         resolutionNote: usersToAlerts.resolutionNote,
-        machineId: qcTests.machineId,
-        testId: qcTests.id,
+        machineId: qualityControlTests.machineId,
+        testId: qualityControlTests.id,
         machineName: machines.name,
         sectionId: sections.id,
         sectionName: sections.name,
-        testName: qcTests.testName,
+        testName: qualityControlTests.testName,
       })
       .from(usersToAlerts)
       .innerJoin(alerts, eq(usersToAlerts.alertId, alerts.id))
-      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
-      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlResults, eq(alerts.resultId, qualityControlResults.id))
+      .innerJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .innerJoin(sections, eq(machines.sectionId, sections.id))
       .where(and(...conditions))
       .orderBy(desc(alerts.createdAt))
@@ -77,18 +77,18 @@ export class AlertsRepository {
         seenAt: usersToAlerts.seenAt,
         resolvedAt: usersToAlerts.resolvedAt,
         resolutionNote: usersToAlerts.resolutionNote,
-        machineId: qcTests.machineId,
-        testId: qcTests.id,
+        machineId: qualityControlTests.machineId,
+        testId: qualityControlTests.id,
         machineName: machines.name,
         sectionId: sections.id,
         sectionName: sections.name,
-        testName: qcTests.testName,
+        testName: qualityControlTests.testName,
       })
       .from(alerts)
-      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
-      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlResults, eq(alerts.resultId, qualityControlResults.id))
+      .innerJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .innerJoin(sections, eq(machines.sectionId, sections.id))
       .leftJoin(
         usersToAlerts,
@@ -266,18 +266,18 @@ export class AlertsRepository {
         message: alerts.message,
         ruleViolated: alerts.ruleViolated,
         suggestedSolution: alerts.suggestedSolution,
-        measuredValue: qcResults.measuredValue,
-        zScore: qcResults.zScore,
-        testName: qcTests.testName,
+        measuredValue: qualityControlResults.measuredValue,
+        zScore: qualityControlResults.zScore,
+        testName: qualityControlTests.testName,
         machineName: machines.name,
         sectionId: sections.id,
         sectionName: sections.name,
       })
       .from(alerts)
-      .innerJoin(qcResults, eq(alerts.resultId, qcResults.id))
-      .innerJoin(controlLots, eq(qcResults.lotId, controlLots.id))
-      .innerJoin(qcTests, eq(controlLots.testId, qcTests.id))
-      .innerJoin(machines, eq(qcTests.machineId, machines.id))
+      .innerJoin(qualityControlResults, eq(alerts.resultId, qualityControlResults.id))
+      .innerJoin(controlLots, eq(qualityControlResults.lotId, controlLots.id))
+      .innerJoin(qualityControlTests, eq(controlLots.testId, qualityControlTests.id))
+      .innerJoin(machines, eq(qualityControlTests.machineId, machines.id))
       .innerJoin(sections, eq(machines.sectionId, sections.id))
       .where(eq(alerts.id, alertId));
 

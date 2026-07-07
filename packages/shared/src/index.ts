@@ -9,7 +9,7 @@ export type Specialization =
   | 'MICROBIOLOGY'
   | 'IMMUNOLOGY'
   | 'OTHER';
-export type QcResultStatus = 'PASS' | 'FAIL' | 'WARNING';
+export type QualityControlResultStatus = 'PASS' | 'FAIL' | 'WARNING';
 export type MachineStatus =
   | 'IDLE'
   | 'RUNNING'
@@ -125,7 +125,7 @@ export interface SectionResponseDto {
 export interface MachineResponseDto {
   id: number;
   name: string;
-  hospCode?: string | null;
+  hospitalCode?: string | null;
   sectionId: number;
   currentStatus: MachineStatus;
   lastRunAt?: string | Date | null;
@@ -137,12 +137,12 @@ export interface MachineResponseDto {
 export interface CreateMachineDto {
   name: string;
   sectionId: number;
-  hospCode?: string;
+  hospitalCode?: string;
 }
 
 export interface UpdateMachineDto {
   name?: string;
-  hospCode?: string;
+  hospitalCode?: string;
   sectionId?: number;
 }
 
@@ -150,7 +150,7 @@ export interface UpdateMachineDto {
 // QC Test DTOs
 // ===================================================================
 
-export interface QcTestResponseDto {
+export interface QualityControlTestResponseDto {
   id: number;
   testName: string;
   testType?: string | null;
@@ -158,13 +158,13 @@ export interface QcTestResponseDto {
   updatedAt?: string | Date | null;
 }
 
-export interface CreateQcTestDto {
+export interface CreateQualityControlTestDto {
   testName: string;
   testType?: string;
   machineId: number;
 }
 
-export interface UpdateQcTestDto {
+export interface UpdateQualityControlTestDto {
   testName?: string;
   testType?: string;
   machineId?: number;
@@ -228,14 +228,14 @@ export interface ControlLotDeactivateResponseDto {
 /**
  * Returned by GET /api/v1/control-lots?isActive=true
  * Extends the base lot DTO with embedded test context from a SQL JOIN,
- * eliminating the need to separately fetch /qc-tests on the frontend.
+ * eliminating the need to separately fetch /quality-control-tests on the frontend.
  */
 export interface EnrichedControlLotResponseDto extends ControlLotResponseDto {
-  /** Name of the parent QC test (from qc_tests JOIN) */
+  /** Name of the parent QC test (from quality_control_tests JOIN) */
   testName: string;
   /** Category/type of the parent QC test */
   testType?: string | null;
-  /** ID of the machine this test belongs to (from qc_tests JOIN) */
+  /** ID of the machine this test belongs to (from quality_control_tests JOIN) */
   machineId: number;
   /** Computed: number of days since lot was created */
   daysActive: number;
@@ -264,11 +264,11 @@ export interface ControlLotInResultDto {
 // QC Result DTOs
 // ===================================================================
 
-export interface QcResultResponseDto {
+export interface QualityControlResultResponseDto {
   id: number;
   measuredValue: number;
   testDate: string | Date;
-  status: QcResultStatus;
+  status: QualityControlResultStatus;
   comments?: string | null;
   lotId: number;
   performedBy: number;
@@ -277,11 +277,11 @@ export interface QcResultResponseDto {
 }
 
 /**
- * Returned by GET /api/v1/qc-results (without lotId param).
+ * Returned by GET /api/v1/quality-control-results (without lotId param).
  * Enriched with lot/test/machine context via server-side JOINs.
  * The frontend no longer needs to cross-reference separate lot and test fetches.
  */
-export interface EnrichedQcResultResponseDto extends QcResultResponseDto {
+export interface EnrichedQualityControlResultResponseDto extends QualityControlResultResponseDto {
   /** Lot details (from control_lots JOIN) */
   lotNumber: string;
   lotMean: number | null;
@@ -289,24 +289,24 @@ export interface EnrichedQcResultResponseDto extends QcResultResponseDto {
   lotLevel: number;
   lowerControlLimit: number | null;
   upperControlLimit: number | null;
-  /** Test + machine context (from qc_tests / machines JOIN) */
+  /** Test + machine context (from quality_control_tests / machines JOIN) */
   testId: number;
   testName: string;
   machineId: number;
 }
 
-export interface QcResultItemDto {
+export interface QualityControlResultItemDto {
   lotId: number;
   measuredValue: number;
   comments?: string;
 }
 
-export interface CreateQcResultDto {
+export interface CreateQualityControlResultDto {
   machineId: number;
-  results: QcResultItemDto[];
+  results: QualityControlResultItemDto[];
 }
 
-export interface QcRunDto {
+export interface QualityControlRunDto {
   id: number;
   machineId: number;
   testId: number;
@@ -314,32 +314,32 @@ export interface QcRunDto {
   runDate: string | Date;
 }
 
-export interface QcRunResultResponseDto {
+export interface QualityControlRunResultResponseDto {
   id: number;
   measuredValue: number;
   zScore: number;
   violatedRule: string | null;
-  status: QcResultStatus;
+  status: QualityControlResultStatus;
   comments?: string | null;
   runId: number;
   lotId: number;
 }
 
-export interface QcRunResponseDto {
-  run: QcRunDto;
-  results: QcRunResultResponseDto[];
+export interface QualityControlRunResponseDto {
+  run: QualityControlRunDto;
+  results: QualityControlRunResultResponseDto[];
 }
 
 
-export interface UpdateQcResultDto {
+export interface UpdateQualityControlResultDto {
   comments?: string;
 }
 
-export interface QcResultDetailResponseDto {
+export interface QualityControlResultDetailResponseDto {
   id: number;
   measuredValue: number;
   testDate: string | Date;
-  status: QcResultStatus;
+  status: QualityControlResultStatus;
   comments?: string | null;
   lotId: number;
   performedBy: number;
@@ -361,9 +361,9 @@ export interface LotSummaryDto {
   machineName: string;
 }
 
-export interface QcResultsWithLotResponseDto {
+export interface QualityControlResultsWithLotResponseDto {
   lot: LotSummaryDto | null;
-  results: QcResultResponseDto[];
+  results: QualityControlResultResponseDto[];
 }
 
 // ===================================================================

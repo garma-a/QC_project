@@ -21,7 +21,7 @@ export class UsersService {
     private readonly usersRepository: UsersRepository,
     private readonly workerService: WorkerService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-  ) { }
+  ) {}
 
   private async validateSectionIds(
     sectionIds: number[] | undefined,
@@ -32,7 +32,8 @@ export class UsersService {
     const uniqueSectionIds = [...new Set(sectionIds)];
     if (uniqueSectionIds.length === 0) return [];
 
-    const existingSections = await this.usersRepository.findSectionsByIds(uniqueSectionIds);
+    const existingSections =
+      await this.usersRepository.findSectionsByIds(uniqueSectionIds);
     const existingIds = new Set(existingSections.map((s) => s.id));
     const missing = uniqueSectionIds.filter((id) => !existingIds.has(id));
 
@@ -48,7 +49,10 @@ export class UsersService {
   }
 
   async createUser(adminCreateUserDto: AdminCreateUserDto) {
-    const validSections = await this.validateSectionIds(adminCreateUserDto.sectionIds, 'create');
+    const validSections = await this.validateSectionIds(
+      adminCreateUserDto.sectionIds,
+      'create',
+    );
 
     const existing = await this.usersRepository.findByEmail(
       adminCreateUserDto.email,
@@ -119,7 +123,10 @@ export class UsersService {
         );
       }
     }
-    const validSections = await this.validateSectionIds(adminUpdateUserDto.sectionIds, 'update');
+    const validSections = await this.validateSectionIds(
+      adminUpdateUserDto.sectionIds,
+      'update',
+    );
 
     const { sectionIds: nextSectionIds, ...updatableUserFields } =
       adminUpdateUserDto;
@@ -143,7 +150,10 @@ export class UsersService {
       finalSectionNames = validSections.map((s) => s.name);
     }
 
-    if (adminUpdateUserDto.isActive !== undefined || adminUpdateUserDto.role !== undefined) {
+    if (
+      adminUpdateUserDto.isActive !== undefined ||
+      adminUpdateUserDto.role !== undefined
+    ) {
       await this.cacheManager.del(`user_status_${id}`);
     }
 
@@ -161,7 +171,11 @@ export class UsersService {
         `"${roleFilter}" is not a valid user role.`,
       );
     }
-    return await this.usersRepository.findAllWithSections(roleFilter, limit, offset);
+    return await this.usersRepository.findAllWithSections(
+      roleFilter,
+      limit,
+      offset,
+    );
   }
 
   async getUserById(id: number) {
@@ -194,7 +208,7 @@ export class UsersService {
     if (Object.keys(dto).length > 0) {
       await this.usersRepository.update(userId, dto);
     }
-    
+
     return this.getProfile(userId);
   }
 }

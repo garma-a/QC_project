@@ -13,8 +13,8 @@ http:
     type: json
     data: |-
       {
-        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInJvbGUiOiJBRE1JTiIsImp0aSI6ImI4Nzk2NTVjLWRkYWYtNDdiZC1hOGM4LTkxZGMzNTJkYTlmYyIsImlhdCI6MTc4MzI0MjkzNywiZXhwIjoxNzgzODQ3NzM3fQ.RvglbXomHr0R6fmO8c4kNwFRWqEvbrKGuEAcOUSZZt0" 
-      }
+        "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInJvbGUiOiJBRE1JTiIsImp0aSI6IjQ1Mzk3MjFhLWVhNWUtNDJlNy04OGRlLWYzNzE1YTBkMDQxMSIsImlhdCI6MTc4MzI1MTA5MywiZXhwIjoxNzgzODU1ODkzfQ.RhBUNrw2N8d152rhx8lvmPNvq96DyrPKsJwCigft2jY" 
+      } 
   auth: inherit
 
 settings:
