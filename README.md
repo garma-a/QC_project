@@ -21,12 +21,7 @@ https://github.com/user-attachments/assets/bcf2121d-d396-4e4e-82ba-5d02165f2b7e
 ### 🔔 Real-time Alerting Workflow
 *Comprehensive alert management inbox for tracking and resolving QC deviations.*
 
-<p align="center">
-  <video src="https://github.com/garma-a/QC_project/raw/main/imgs/alerts_cropped.mp4"
-         controls
-         title="Real-time Alerting Workflow">
-  </video>
-</p>
+https://github.com/user-attachments/assets/46f372b0-e36d-4ba7-abf5-87e5ee0f0e29
 
 ---
 
