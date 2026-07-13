@@ -60,6 +60,7 @@ export async function serverFetch<T>(
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
+  console.log('>>> serverFetch URL:', url);
 
   const res = await fetch(url, {
     cache: 'no-store',

@@ -1,24 +1,44 @@
-# AHC QC Frontend
+# 🧪 AHC QC Platform - Frontend Application
 
-Next.js dashboard for the AHC QC platform. The frontend provides authenticated workflows for laboratory monitoring, QC history analysis, alert handling, and user administration.
+> **A modern, high-performance Next.js dashboard for the AHC Quality Control platform.** 
+> Providing authenticated workflows for laboratory monitoring, real-time QC history analysis, strict Westgard rules evaluation, alert handling, and comprehensive user administration.
 
-## Main Screens
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-- Login
-- Dashboard overview
-- Machine monitor view
-- QC history and submission flows
-- Alerts inbox and resolution actions
-- User management (admin)
+---
 
-## Backend Integration Focus
+## 🌟 Platform Preview
 
-This frontend is primarily an API consumer for backend workflows:
+### 📈 Westgard Rules & Error Detection
+*Real-time evaluation of QC results against standard Westgard rules.*
+<img src="../../imgs/westgard_graph_cropped.gif" alt="Westgard Rules & Error Detection" width="100%" />
 
-- authenticated requests to protected endpoints
-- QC entity creation/update flows via server actions
-- dashboard rendering from backend datasets
-- alert acknowledgement and resolution actions
+### 🔔 Alerts & Notifications Inbox
+*Centralized management for tracking and resolving QC deviations.*
+<img src="../../imgs/alerts_cropped.gif" alt="Alerts & Notifications Inbox" width="100%" />
+
+---
+
+## 📱 Main Screens & Features
+
+- **🔐 Secure Login:** Role-based access control (Admin & Technician).
+- **📊 Dashboard Overview:** High-level metrics and machine statuses.
+- **🖥️ Machine Monitor View:** Live tracking of connected laboratory equipment.
+- **🧪 QC History & Submissions:** Intuitive flows for submitting new tests and reviewing historical data.
+- **⚠️ Alerts Inbox:** Actionable alert resolution and acknowledgment flows.
+- **👥 User Management:** Full administrative control over lab personnel.
+
+## 🔗 Backend Integration Focus
+
+This frontend is designed as a robust API consumer for the AHC backend workflows:
+
+- 🔒 Authenticated requests to protected endpoints.
+- 🔄 QC entity creation/update flows via efficient server actions.
+- 📈 Dashboard rendering derived from backend datasets.
+- ✅ Alert acknowledgement and resolution actions.
 
 ## Stack
 

@@ -1,6 +1,27 @@
-# AHC QC Project
+# 🔬 AHC QC Project - Monorepo
 
-AHC QC Project is a laboratory quality control platform built as a monorepo with a NestJS backend and a Next.js frontend. It centralizes machine monitoring, QC execution, control-lot management, and alert workflows for lab teams.
+> **An enterprise-grade laboratory quality control platform built as a monorepo.**  
+> It centralizes machine monitoring, QC execution, control-lot management, and alert workflows for lab teams.
+
+![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&logo=nestjs&logoColor=white)
+![Next JS](https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=for-the-badge&logo=bun&logoColor=white)
+
+---
+
+## 🌟 Platform Preview
+
+### 📈 QC Monitoring & Westgard Rules Validation
+*Real-time evaluation of QC results against standard Westgard rules with interactive charts.*
+<video src="imgs/westgard_rule_graph.mp4" autoplay loop muted controls width="100%"></video>
+
+### 🔔 Real-time Alerting Workflow
+*Comprehensive alert management inbox for tracking and resolving QC deviations.*
+<video src="imgs/alerts_cropped.mp4" autoplay loop muted controls width="100%"></video>
+
+---
 
 ## Repository Structure
 
