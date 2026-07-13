@@ -15,11 +15,15 @@
 
 ### 📈 QC Monitoring & Westgard Rules Validation
 *Real-time evaluation of QC results against standard Westgard rules with interactive charts.*
-<video src="imgs/westgard_rule_graph.mp4" autoplay loop muted controls width="100%"></video>
+<a href="imgs/westgard_rule_graph.mp4">
+  <img src="imgs/westgard_graph_cropped.gif" alt="QC Monitoring & Westgard Rules Validation" width="100%" />
+</a>
 
 ### 🔔 Real-time Alerting Workflow
 *Comprehensive alert management inbox for tracking and resolving QC deviations.*
-<video src="imgs/alerts_cropped.mp4" autoplay loop muted controls width="100%"></video>
+<a href="imgs/alerts_cropped.mp4">
+  <img src="imgs/alerts_cropped.gif" alt="Real-time Alerting Workflow" width="100%" />
+</a>
 
 ---
 
