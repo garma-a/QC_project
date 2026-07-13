@@ -16,12 +16,7 @@
 ### 📈 QC Monitoring & Westgard Rules Validation
 *Real-time evaluation of QC results against standard Westgard rules with interactive charts.*
 
-<p align="center">
-  <video src="https://github.com/garma-a/QC_project/raw/main/imgs/westgard_rule_graph.mp4"
-         controls
-         title="QC Monitoring & Westgard Rules Validation">
-  </video>
-</p>
+https://github.com/user-attachments/assets/bcf2121d-d396-4e4e-82ba-5d02165f2b7e
 
 ### 🔔 Real-time Alerting Workflow
 *Comprehensive alert management inbox for tracking and resolving QC deviations.*
