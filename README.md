@@ -11,6 +11,10 @@
 
 ---
 
+## Motivation
+
+This platform was built to modernize laboratory quality control operations by offering an enterprise-grade monorepo solution. The goal is to provide reliable, real-time alert workflows and Westgard rule evaluations, ensuring the accuracy of medical laboratory instruments.
+
 ## 🌟 Platform Preview
 
 ### 📈 QC Monitoring & Westgard Rules Validation
@@ -128,6 +132,10 @@ bun run dev
 ```
 
 Frontend default URL: `http://localhost:3000` (Next.js)
+
+## Usage
+
+After starting both backend and frontend servers, you can navigate to `http://localhost:3000` to access the QC Dashboard. Log in with the technician or admin credentials created by the seed script to start monitoring machine tests, recording QC results, and resolving alerts.
 
 ## API Domains (Backend)
 
@@ -293,6 +301,10 @@ From `apps/frontend`:
 - `bun run dev` - run Next.js app locally
 - `bun run build` - build frontend
 - `bun run lint` - lint frontend code
+
+## Contributing
+
+We welcome contributions to the AHC QC Project! If you want to contribute, please clone the repo, run the local environment as described in the Quick Start section, and open a pull request with your changes.
 
 ## Contributors
 
