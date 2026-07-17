@@ -7,7 +7,17 @@ import { useAuthStore } from '@/store/useAuthStore';
  * Server components should use `serverFetch.ts` instead.
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl && envUrl !== 'http://localhost:3000') return envUrl;
+    return '';
+  }
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 export class ClientApiError extends Error {
   public statusCode: number;

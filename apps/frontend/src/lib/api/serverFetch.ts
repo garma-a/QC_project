@@ -1,7 +1,13 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') return ''; // Browser
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // Vercel
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'; // Local
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export interface ApiError {
   statusCode: number;
