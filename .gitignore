@@ -28,6 +28,7 @@ build/
 # Ignore local docker volumes or artifacts
 **/tmp/
 **/data/
+!apps/frontend/src/data/
 **/docker-data/
 **/docker-volume/
 **/.docker/
