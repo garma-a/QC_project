@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import { createQcTest, updateQcTest } from '@/lib/actions';
-import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 import { Plus, Heart, X, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface QcTestFormDialogProps {
   mode: 'create' | 'edit';
-  initialData?: QcTestResponseDto;
+  initialData?: QualityControlTestResponseDto;
   machines: MachineResponseDto[];
 }
 

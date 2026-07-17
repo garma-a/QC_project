@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { X, Heart } from 'lucide-react';
 import { submitQcResult } from '@/lib/actions';
-import { CreateQcResultDto } from '@/lib/types/api';
+import { CreateQualityControlResultDto } from '@/lib/types/api';
 
 interface RecordQcResultProps {
   onClose: () => void;
@@ -79,7 +79,7 @@ export function RecordQcResult({ onClose, machines, categories }: RecordQcResult
     }
 
     setIsPending(true);
-    const payload: CreateQcResultDto = {
+    const payload: CreateQualityControlResultDto = {
       machineId: numericMachineId,
       results
     };

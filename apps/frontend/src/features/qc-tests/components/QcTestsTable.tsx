@@ -12,12 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Trash2, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useQcTests } from '@/hooks/useQcTests';
-import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 import { QcTestFormDialog } from './QcTestFormDialog';
 
 interface QcTestsTableProps {
   machines: MachineResponseDto[];
-  allTests: QcTestResponseDto[];
+  allTests: QualityControlTestResponseDto[];
 }
 
 export function QcTestsTable({ machines, allTests }: QcTestsTableProps) {

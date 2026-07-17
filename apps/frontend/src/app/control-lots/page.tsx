@@ -1,5 +1,5 @@
 import { api } from '@/lib/api/serverFetch';
-import type { ControlLotResponseDto, QcTestResponseDto, MachineResponseDto } from '@/lib/types/api';
+import type { ControlLotResponseDto, QualityControlTestResponseDto, MachineResponseDto } from '@/lib/types/api';
 import { ControlLotsManager } from '@/features/control-lots/components/ControlLotsManager';
 
 export default async function ControlLotsPage() {
@@ -7,7 +7,7 @@ export default async function ControlLotsPage() {
   const [lots, machines, allTests] = await Promise.all([
     api.get<ControlLotResponseDto[]>('/api/v1/control-lots'),
     api.get<MachineResponseDto[]>('/api/v1/machines'),
-    api.get<QcTestResponseDto[]>('/api/v1/qc-tests'),
+    api.get<QualityControlTestResponseDto[]>('/api/v1/qc-tests'),
   ]);
 
   return (

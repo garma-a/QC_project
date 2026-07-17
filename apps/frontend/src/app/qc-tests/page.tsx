@@ -1,11 +1,11 @@
 import { api } from '@/lib/api/serverFetch';
-import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 import { QcTestsManager } from '@/features/qc-tests/components/QcTestsManager';
 
 export default async function QcTestsPage() {
   const [machines, allTests] = await Promise.all([
     api.get<MachineResponseDto[]>('/api/v1/machines'),
-    api.get<QcTestResponseDto[]>('/api/v1/qc-tests'),
+    api.get<QualityControlTestResponseDto[]>('/api/v1/qc-tests'),
   ]);
 
   return (

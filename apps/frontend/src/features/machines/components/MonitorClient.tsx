@@ -8,9 +8,9 @@ import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 
-import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlResultResponseDto } from '@/lib/types/api';
 
-type MonitorResultEntry = QcResultResponseDto & {
+type MonitorResultEntry = QualityControlResultResponseDto & {
   machineId: number;
   testId: number;
   testName: string;
@@ -123,7 +123,7 @@ export function MonitorClient({ machines, categories, qcHistory, isFetching = fa
                       <div className="flex items-start justify-between mb-4 relative z-10">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-gray-900 dark:text-white mb-1 truncate group-hover:text-[#c41e3a] dark:group-hover:text-[#e84855] transition-colors font-semibold">{machine.name}</h3>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospCode}</p>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospitalCode}</p>
                         </div>
                         <div className="relative flex-shrink-0 ml-2">
                           <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${
@@ -225,7 +225,7 @@ export function MonitorClient({ machines, categories, qcHistory, isFetching = fa
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2 relative z-10">
             <div className="flex-1 min-w-0">
               <h1 className="text-gray-900 dark:text-white mb-1 break-words font-bold">{machine.name}</h1>
-              <p className="text-gray-600 dark:text-gray-400">{machine.hospCode}</p>
+              <p className="text-gray-600 dark:text-gray-400">{machine.hospitalCode}</p>
             </div>
             <div className={`px-4 py-2 rounded-xl font-semibold whitespace-nowrap self-start border-2 ${
               machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]/10 dark:bg-[#10b981]/20 text-[#10b981] border-[#10b981]/30' :

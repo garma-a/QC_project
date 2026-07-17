@@ -3,10 +3,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { QcResultsWithLotResponseDto } from '@/lib/types/api';
+import type { QualityControlResultsWithLotResponseDto } from '@/lib/types/api';
 
 interface UseQcResultsReturn {
-  data: QcResultsWithLotResponseDto | null;
+  data: QualityControlResultsWithLotResponseDto | null;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -29,7 +29,7 @@ export function useQcResults(lotId: number | null, startDate?: string, endDate?:
       if (endDate) url += `&endDate=${endDate}`;
       if (limit) url += `&limit=${limit}`;
       
-      return clientFetch<QcResultsWithLotResponseDto>(
+      return clientFetch<QualityControlResultsWithLotResponseDto>(
         url,
         { signal },
         token,

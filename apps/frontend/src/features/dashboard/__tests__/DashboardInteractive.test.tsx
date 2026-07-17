@@ -26,7 +26,7 @@ describe('DashboardInteractive', () => {
     const malformedMachines = [{
       id: 1,
       name: 'Machine A',
-      hospCode: 'H-A',
+      hospitalCode: 'H-A',
       sectionId: 999,
       currentStatus: 'IDLE' as const,
       qcStatus: 'pass' as const,
@@ -52,7 +52,7 @@ describe('DashboardInteractive', () => {
     const machines = [{
       id: 1,
       name: 'Machine A',
-      hospCode: 'H-A',
+      hospitalCode: 'H-A',
       sectionId: 1,
       currentStatus: 'IDLE' as const,
       qcStatus: 'pass' as const,
@@ -79,11 +79,11 @@ describe('DashboardInteractive', () => {
   it('renders warning and error QC states without crashing', () => {
     const machines = [
       {
-        id: 1, name: 'Machine B', hospCode: 'H-B', sectionId: 1, currentStatus: 'MAINTENANCE' as const,
+        id: 1, name: 'Machine B', hospitalCode: 'H-B', sectionId: 1, currentStatus: 'MAINTENANCE' as const,
         qcStatus: 'warning' as const, violationCount: 1, isActive: true, createdAt: '', updatedAt: ''
       },
       {
-        id: 2, name: 'Machine C', hospCode: 'H-C', sectionId: 1, currentStatus: 'OFFLINE' as const,
+        id: 2, name: 'Machine C', hospitalCode: 'H-C', sectionId: 1, currentStatus: 'OFFLINE' as const,
         qcStatus: 'error' as const, violationCount: 3, isActive: true, createdAt: '', updatedAt: ''
       }
     ];

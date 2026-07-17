@@ -70,7 +70,7 @@ export function DashboardInteractive({ machinesWithStatus, categories }: Dashboa
                   <h3 className="text-gray-900 dark:text-white mb-1.5 truncate group-hover:text-[#c41e3a] dark:group-hover:text-[#e84855] transition-colors font-semibold text-lg">
                     {machine.name}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospCode}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm truncate">{machine.hospitalCode}</p>
                 </div>
                 <div className="relative flex-shrink-0 ml-2">
                   <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white dark:ring-[#1e1e1e] ${machine.currentStatus === 'IDLE' || machine.currentStatus === 'RUNNING' ? 'bg-[#10b981]' :

@@ -6,10 +6,10 @@ import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
 import type {
   MachineResponseDto,
-  EnrichedQcResultResponseDto,
+  EnrichedQualityControlResultResponseDto,
 } from '@/lib/types/api';
 
-export type MonitorResultEntry = EnrichedQcResultResponseDto & {
+export type MonitorResultEntry = EnrichedQualityControlResultResponseDto & {
   date: string;
   expectedRange: string;
   level: number;

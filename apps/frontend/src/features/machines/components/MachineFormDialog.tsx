@@ -26,7 +26,7 @@ export function MachineFormDialog({ mode, initialData, sections }: MachineFormDi
 
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
-    const hospCode = formData.get('hospCode') as string;
+    const hospitalCode = formData.get('hospCode') as string;
 
     if (!name || !sectionId) {
       setError('Machine Name and Section are required.');
@@ -35,7 +35,7 @@ export function MachineFormDialog({ mode, initialData, sections }: MachineFormDi
 
     const payload = {
       name,
-      hospCode: hospCode || undefined,
+      hospitalCode: hospitalCode || undefined,
       sectionId: Number(sectionId),
     };
 
@@ -140,7 +140,7 @@ export function MachineFormDialog({ mode, initialData, sections }: MachineFormDi
                   name="hospCode"
                   type="text"
                   placeholder="e.g. LAB-HEM-01"
-                  defaultValue={initialData?.hospCode || ''}
+                  defaultValue={initialData?.hospitalCode || ''}
                   className="w-full px-4 py-3 border-2 border-[#c41e3a]/20 dark:border-[#e84855]/30 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c41e3a] dark:focus:ring-[#e84855] focus:border-transparent placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
               </div>

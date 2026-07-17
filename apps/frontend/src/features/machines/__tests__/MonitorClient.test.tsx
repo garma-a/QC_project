@@ -57,7 +57,7 @@ describe('MonitorClient', () => {
     const malformedMachines = [{
       id: 1,
       name: 'Partial Machine',
-      hospCode: 'H-01',
+      hospitalCode: 'H-01',
       sectionId: 1,
       currentStatus: 'IDLE' as const,
       isActive: true,
@@ -84,7 +84,7 @@ describe('MonitorClient', () => {
     const machine = {
       id: 1,
       name: 'Test Machine',
-      hospCode: 'H-02',
+      hospitalCode: 'H-02',
       sectionId: 1,
       currentStatus: 'RUNNING' as const,
       isActive: true,
@@ -107,7 +107,7 @@ describe('MonitorClient', () => {
     currentSearchParams = new URLSearchParams('?machineId=1&tab=charts');
     
     const machine = {
-      id: 1, name: 'Analytics Machine', hospCode: 'H-03', sectionId: 1, currentStatus: 'IDLE' as const, isActive: true, createdAt: '', updatedAt: ''
+      id: 1, name: 'Analytics Machine', hospitalCode: 'H-03', sectionId: 1, currentStatus: 'IDLE' as const, isActive: true, createdAt: '', updatedAt: ''
     };
     renderWithProviders(<MonitorClient machines={[machine]} categories={[{id: '1', name: 'Cat'}]} qcHistory={[]} />);
     

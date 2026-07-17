@@ -7,13 +7,13 @@ import { createControlLot } from "@/lib/actions";
 import type {
   ControlLotResponseDto,
   MachineResponseDto,
-  QcTestResponseDto,
+  QualityControlTestResponseDto,
 } from "@/lib/types/api";
 
 interface ControlLotManagerProps {
   initialLots: ControlLotResponseDto[];
   machines: MachineResponseDto[];
-  allTests: { machineId: number; test: QcTestResponseDto }[];
+  allTests: { machineId: number; test: QualityControlTestResponseDto }[];
 }
 
 // ─── shared input / select class strings ────────────────────────────────────

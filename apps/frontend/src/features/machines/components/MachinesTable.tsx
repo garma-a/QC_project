@@ -183,7 +183,7 @@ export function MachinesTable({ initialMachines, sections }: MachinesTableProps)
                     className="border-b border-[#c41e3a]/10 dark:border-[#e84855]/10 hover:bg-[#fff8f0] dark:hover:bg-[#2a2a2a] transition-colors"
                   >
                     <TableCell className="font-semibold text-sm py-4 pl-6 text-gray-900 dark:text-white">{machine.name}</TableCell>
-                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospCode || '-'}</TableCell>
+                    <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{machine.hospitalCode || '-'}</TableCell>
                     <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getSectionName(machine.sectionId)}</TableCell>
                     <TableCell className="text-sm py-4 text-gray-700 dark:text-gray-300">{getStatusBadge(machine.currentStatus)}</TableCell>
                     <TableCell className="text-sm py-4 text-gray-600 dark:text-gray-400 font-mono">

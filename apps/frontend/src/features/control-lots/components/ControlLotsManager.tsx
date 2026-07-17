@@ -1,12 +1,12 @@
 'use client';
 
-import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { ControlLotResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 import { ControlLotFormDialog } from './ControlLotFormDialog';
 import { ControlLotsTable } from './ControlLotsTable';
 
 interface ControlLotsManagerProps {
   initialLots: ControlLotResponseDto[];
-  availableTests: QcTestResponseDto[];
+  availableTests: QualityControlTestResponseDto[];
 }
 
 export function ControlLotsManager({ initialLots, availableTests }: ControlLotsManagerProps) {

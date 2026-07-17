@@ -1,12 +1,12 @@
 'use client';
 
-import type { MachineResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 
 import { QcTestsTable } from './QcTestsTable';
 
 interface QcTestsManagerProps {
   machines: MachineResponseDto[];
-  allTests: QcTestResponseDto[];
+  allTests: QualityControlTestResponseDto[];
 }
 
 export function QcTestsManager({ machines, allTests }: QcTestsManagerProps) {

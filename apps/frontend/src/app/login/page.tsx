@@ -52,7 +52,7 @@ export default function LoginPage() {
             Welcome Back
           </h2>
 
-          <LoginForm />
+          <LoginForm isMockMode={!process.env.BACKEND_URL || process.env.NODE_ENV === 'development'} />
         </div>
 
         {/* Footer */}

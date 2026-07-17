@@ -9,11 +9,11 @@ import type {
   AdminCreateUserDto,
   AdminUpdateUserDto,
   UserResponseDto,
-  CreateQcTestDto,
-  UpdateQcTestDto,
-  QcTestResponseDto,
-  CreateQcResultDto,
-  QcRunResponseDto,
+  CreateQualityControlTestDto,
+  UpdateQualityControlTestDto,
+  QualityControlTestResponseDto,
+  CreateQualityControlResultDto,
+  QualityControlRunResponseDto,
   CreateMachineDto,
   MachineResponseDto,
   UpdateMachineDto,
@@ -447,9 +447,9 @@ export async function deleteMachine(machineId: number) {
 // QC Test Actions
 // ===================================================================
 
-export async function createQcTest(payload: CreateQcTestDto) {
+export async function createQcTest(payload: CreateQualityControlTestDto) {
   try {
-    await api.post<QcTestResponseDto>('/api/v1/qc-tests', payload);
+    await api.post<QualityControlTestResponseDto>('/api/v1/qc-tests', payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
     revalidatePath('/dashboard');
@@ -463,9 +463,9 @@ export async function createQcTest(payload: CreateQcTestDto) {
   }
 }
 
-export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
+export async function updateQcTest(testId: number, payload: UpdateQualityControlTestDto) {
   try {
-    await api.patch<QcTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
+    await api.patch<QualityControlTestResponseDto>(`/api/v1/qc-tests/${testId}`, payload);
     revalidatePath('/qc');
     revalidatePath('/qc-tests');
     revalidatePath('/dashboard');
@@ -482,9 +482,9 @@ export async function updateQcTest(testId: number, payload: UpdateQcTestDto) {
 // QC Result Actions
 // ===================================================================
 
-export async function submitQcResult(payload: CreateQcResultDto) {
+export async function submitQcResult(payload: CreateQualityControlResultDto) {
   try {
-    const result = await api.post<QcRunResponseDto>(
+    const result = await api.post<QualityControlRunResponseDto>(
       '/api/v1/qc-results',
       payload,
     );

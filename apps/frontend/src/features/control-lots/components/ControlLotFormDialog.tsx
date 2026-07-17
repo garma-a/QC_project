@@ -15,13 +15,13 @@ import {
 import { Button } from '@/components/ui/button';
 
 import { createControlLot, updateControlLot, deactivateControlLot } from '@/lib/actions';
-import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { ControlLotResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 import { useControlLotForm } from '../hooks/useControlLotForm';
 
 interface ControlLotFormDialogProps {
   mode: 'create' | 'edit';
   initialData?: ControlLotResponseDto;
-  availableTests: QcTestResponseDto[];
+  availableTests: QualityControlTestResponseDto[];
   initialLots?: ControlLotResponseDto[];
 }
 

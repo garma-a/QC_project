@@ -3,10 +3,10 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { clientFetch } from '@/lib/api/clientFetch';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { QcTestResponseDto } from '@/lib/types/api';
+import type { QualityControlTestResponseDto } from '@/lib/types/api';
 
 interface UseQcTestsReturn {
-  tests: QcTestResponseDto[];
+  tests: QualityControlTestResponseDto[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -33,7 +33,7 @@ export function useQcTests(machineId?: number | null): UseQcTestsReturn {
       const url = machineId != null
         ? `/api/v1/qc-tests/machine/${machineId}?limit=50&offset=${pageParam}`
         : `/api/v1/qc-tests?limit=50&offset=${pageParam}`;
-      return clientFetch<QcTestResponseDto[]>(url, { signal }, token);
+      return clientFetch<QualityControlTestResponseDto[]>(url, { signal }, token);
     },
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === 50 ? allPages.length * 50 : undefined;

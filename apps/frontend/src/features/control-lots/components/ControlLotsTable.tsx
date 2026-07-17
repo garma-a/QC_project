@@ -26,11 +26,11 @@ import { Trash2, Search, AlertTriangle } from 'lucide-react';
 import { deactivateControlLot } from '@/lib/actions';
 import { ControlLotFormDialog } from './ControlLotFormDialog';
 import { useControlLots } from '@/hooks/useControlLots';
-import type { ControlLotResponseDto, QcTestResponseDto } from '@/lib/types/api';
+import type { ControlLotResponseDto, QualityControlTestResponseDto } from '@/lib/types/api';
 
 interface ControlLotsTableProps {
   initialLots: ControlLotResponseDto[];
-  availableTests: QcTestResponseDto[];
+  availableTests: QualityControlTestResponseDto[];
 }
 
 export function ControlLotsTable({ initialLots, availableTests }: ControlLotsTableProps) {

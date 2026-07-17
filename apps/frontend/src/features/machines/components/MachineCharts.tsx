@@ -18,7 +18,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 import { TrendingUp, AlertTriangle, CheckCircle2, XCircle, Filter, Loader2 } from 'lucide-react';
 import { useQcResults } from '@/hooks/useQcResults';
-import type { MachineResponseDto, QcResultResponseDto } from '@/lib/types/api';
+import type { MachineResponseDto, QualityControlResultResponseDto } from '@/lib/types/api';
 
 const getPointColor = (status: string, isDark: boolean) => {
   if (status === 'reject') return isDark ? '#e84855' : '#c41e3a';
@@ -42,7 +42,7 @@ interface MachineChartsProps {
   qcHistory: MonitorResultEntry[];
 }
 
-type MonitorResultEntry = QcResultResponseDto & {
+type MonitorResultEntry = QualityControlResultResponseDto & {
   machineId: number;
   testId: number;
   testName: string;

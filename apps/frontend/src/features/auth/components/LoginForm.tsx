@@ -7,9 +7,9 @@ import { loginAccount } from '@/lib/actions';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { UserResponseDto } from '@/lib/types/api';
 
-export function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export function LoginForm({ isMockMode }: { isMockMode?: boolean }) {
+  const [email, setEmail] = useState(isMockMode ? 'admin@qc.local' : '');
+  const [password, setPassword] = useState(isMockMode ? 'password123' : '');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
